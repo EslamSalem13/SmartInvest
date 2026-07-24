@@ -15,6 +15,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<MainProject> MainProjects => Set<MainProject>();
     public DbSet<SubProject> SubProjects => Set<SubProject>();
 
+    //MARWA
+    public DbSet<Plan> Plans { get; set; }
+    public DbSet<MainProgram> MainPrograms { get; set; }
+    public DbSet<SubProgram> SubPrograms { get; set; }
+    public DbSet<FinancialYear> FinancialYears { get; set; }
+
+    // end MARWA
+
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

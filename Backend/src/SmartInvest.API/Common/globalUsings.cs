@@ -1,0 +1,17 @@
+﻿global using Microsoft.AspNetCore.Mvc;
+global using Microsoft.AspNetCore.Authentication.JwtBearer;
+global using Microsoft.AspNetCore.Identity;
+global using Microsoft.IdentityModel.Tokens;
+global using Microsoft.OpenApi.Models;
+global using SmartInvest.Application;
+global using SmartInvest.Application.Common;
+global using SmartInvest.Domain.Common;
+global using SmartInvest.Infrastructure;
+global using SmartInvest.Infrastructure.Data;
+global using SmartInvest.Infrastructure.Identity;
+global using System.Text;
+global using Microsoft.AspNetCore.Authorization;
+global using SmartInvest.Application.Interfaces;
+global using SmartInvest.Application.Services;
+global using SmartInvest.Domain.Interfaces;
+global using SmartInvest.Infrastructure.Repositories;

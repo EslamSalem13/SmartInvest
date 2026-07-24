@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartInvest.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260724213917_updatePlan")]
+    partial class updatePlan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -285,7 +288,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("FinancialYearId");
 
-                    b.ToTable("FinancialYears");
+                    b.ToTable("FinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -319,7 +322,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ProgramId");
 
-                    b.ToTable("MainPrograms");
+                    b.ToTable("MainProgram");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
@@ -403,8 +406,9 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PlanStatus")
-                        .HasColumnType("int");
+                    b.Property<string>("PlanStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
@@ -416,7 +420,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FinancialYearId");
 
-                    b.ToTable("Plans");
+                    b.ToTable("Plan");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
@@ -647,7 +651,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ProgramId");
 
-                    b.ToTable("SubPrograms");
+                    b.ToTable("SubProgram");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>

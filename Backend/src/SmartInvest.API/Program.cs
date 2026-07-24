@@ -1,14 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using SmartInvest.Application;
-using SmartInvest.Application.Common;
-using SmartInvest.Domain.Common;
-using SmartInvest.Infrastructure;
-using SmartInvest.Infrastructure.Data;
-using SmartInvest.Infrastructure.Identity;
-using System.Text;
+using SmartInvest.Application.Common.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +10,22 @@ var builder = WebApplication.CreateBuilder(args);
 // ---------------------------------------------------------------------------
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+    //Auto MApper
+    builder.Services.AddAutoMapper(options =>
+    options.AddProfile<PlansAndPrograms>());
+
+    #region Repositories
+    builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+    builder.Services.AddScoped<IPlanRepo, PlanRepo>();
+    #endregion
+
+    #region Services
+    builder.Services.AddScoped<IPlanService, PlanService>();
+    #endregion
+
+
+
 
 // ---------------------------------------------------------------------------
 // JWT Authentication
