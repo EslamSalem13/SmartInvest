@@ -14,6 +14,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<MainProject> MainProjects => Set<MainProject>();
     public DbSet<SubProject> SubProjects => Set<SubProject>();
+    public DbSet<ProjectAssignmentChangeRequest> ProjectAssignmentChangeRequests => Set<ProjectAssignmentChangeRequest>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     //MARWA
     public DbSet<Plan> Plans { get; set; }
