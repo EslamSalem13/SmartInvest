@@ -1,6 +1,4 @@
-﻿using SmartInvest.Domain.Enums;
-
-namespace SmartInvest.Domain.Entities
+﻿namespace SmartInvest.Domain.Entities
 {
     public class ProjectFollowUp
     {

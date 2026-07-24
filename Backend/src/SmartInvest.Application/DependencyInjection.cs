@@ -21,7 +21,6 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly);
 
         // Application services
-        services.AddScoped<IInvestmentProjectService, InvestmentProjectService>();
 
         return services;
     }
