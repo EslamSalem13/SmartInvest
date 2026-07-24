@@ -169,7 +169,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ContractTypeId");
 
-                    b.ToTable("ContractType");
+                    b.ToTable("ContractType", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Contractor", b =>
@@ -213,7 +213,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ContractorId");
 
-                    b.ToTable("Contractor");
+                    b.ToTable("Contractor", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.DelayReason", b =>
@@ -230,7 +230,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DelayReason");
+                    b.ToTable("DelayReason", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ExecutiveAgency", b =>
@@ -259,7 +259,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ExecutiveAgencyId");
 
-                    b.ToTable("ExecutiveAgency");
+                    b.ToTable("ExecutiveAgency", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialYear", b =>
@@ -285,7 +285,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("FinancialYearId");
 
-                    b.ToTable("FinancialYear");
+                    b.ToTable("FinancialYear", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -302,7 +302,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("GovernorateId");
 
-                    b.ToTable("Governorate");
+                    b.ToTable("Governorate", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProgram", b =>
@@ -319,7 +319,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ProgramId");
 
-                    b.ToTable("MainProgram");
+                    b.ToTable("MainProgram", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
@@ -354,7 +354,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProgramId");
 
-                    b.ToTable("MainProjects");
+                    b.ToTable("MainProjects", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Markaz", b =>
@@ -376,7 +376,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("GovernorateId");
 
-                    b.ToTable("Markaz");
+                    b.ToTable("Markaz", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Plan", b =>
@@ -408,7 +408,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FinancialYearId");
 
-                    b.ToTable("Plan");
+                    b.ToTable("Plan", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
@@ -432,7 +432,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("PlanId", "SubProjectId")
                         .IsUnique();
 
-                    b.ToTable("PlanProject");
+                    b.ToTable("PlanProject", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignment", b =>
@@ -483,7 +483,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectId");
 
-                    b.ToTable("ProjectAssignment");
+                    b.ToTable("ProjectAssignment", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAttachment", b =>
@@ -516,7 +516,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FollowUpId");
 
-                    b.ToTable("ProjectAttachment");
+                    b.ToTable("ProjectAttachment", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectFollowUp", b =>
@@ -553,7 +553,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectFinancialYearId");
 
-                    b.ToTable("ProjectFollowUp");
+                    b.ToTable("ProjectFollowUp", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectPriority", b =>
@@ -570,7 +570,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProjectPriority");
+                    b.ToTable("ProjectPriority", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectSpecification", b =>
@@ -600,7 +600,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectId");
 
-                    b.ToTable("ProjectSpecification");
+                    b.ToTable("ProjectSpecification", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectStatus", b =>
@@ -617,7 +617,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("StatusId");
 
-                    b.ToTable("ProjectStatus");
+                    b.ToTable("ProjectStatus", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProgram", b =>
@@ -639,7 +639,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ProgramId");
 
-                    b.ToTable("SubProgram");
+                    b.ToTable("SubProgram", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
@@ -730,7 +730,7 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("[SubProjectCode] IS NOT NULL");
 
-                    b.ToTable("SubProjects");
+                    b.ToTable("SubProjects", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
@@ -754,7 +754,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("SubProjectId", "FinancialYearId")
                         .IsUnique();
 
-                    b.ToTable("SubProjectFinancialYear");
+                    b.ToTable("SubProjectFinancialYear", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
@@ -776,7 +776,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("MarkazId");
 
-                    b.ToTable("Village");
+                    b.ToTable("Village", (string)null);
                 });
 
             modelBuilder.Entity("SmartInvest.Infrastructure.Identity.ApplicationUser", b =>

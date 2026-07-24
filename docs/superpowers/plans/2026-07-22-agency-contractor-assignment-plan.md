@@ -240,12 +240,28 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SmartInvest.Application.Interfaces.ICurrentUserService, SmartInvest.API.Common.CurrentUserService>();
 ```
 
-- [ ] **Step 7: Build and verify**
+- [ ] **Step 7: Seed the two new roles at startup**
+
+In `Backend/src/SmartInvest.API/Program.cs`, find:
+
+```csharp
+    string[] roles = { Roles.PlanningEmployee, Roles.PlanningManager };
+```
+
+Replace with:
+
+```csharp
+    string[] roles = { Roles.PlanningEmployee, Roles.PlanningManager, Roles.ExecutiveAgency, Roles.Contractor };
+```
+
+This must land in this task (not later) — Task 5/6 create users with `UserManager.AddToRoleAsync(user, Roles.ExecutiveAgency/Contractor)`, which fails at runtime if the role does not already exist in `AspNetRoles`.
+
+- [ ] **Step 8: Build and verify**
 
 Run: `dotnet build Backend`
 Expected: `Build succeeded. 0 Error(s)`
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add Backend/src/SmartInvest.Domain/Common/Roles.cs \
@@ -265,16 +281,22 @@ git commit -m "feat: add agency/contractor roles, ForbiddenAccessException, and 
 - Create: `Backend/src/SmartInvest.Domain/Enums/ChangeRequestStatus.cs`
 - Modify: `Backend/src/SmartInvest.Domain/Entities/SubProject.cs`
 - Modify: `Backend/src/SmartInvest.Domain/Entities/ProjectAssignment.cs`
+- Modify: `Backend/src/SmartInvest.Domain/Entities/ExecutiveAgency.cs`
 - Create: `Backend/src/SmartInvest.Domain/Entities/ProjectAssignmentChangeRequest.cs`
 - Create: `Backend/src/SmartInvest.Domain/Entities/AuditLog.cs`
 - Modify: `Backend/src/SmartInvest.Infrastructure/Identity/ApplicationUser.cs`
 - Create: `Backend/src/SmartInvest.Infrastructure/Data/Configurations/ApplicationUserConfiguration.cs`
 - Modify: `Backend/src/SmartInvest.Infrastructure/Data/Configurations/SubProjectConfiguration.cs`
 - Create: `Backend/src/SmartInvest.Infrastructure/Data/Configurations/ProjectAssignmentConfiguration.cs`
+- Modify: `Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs`
 
 **Interfaces:**
 - Consumes: nothing from Task 1 directly (pure data model).
-- Produces: `SubProject.ExecutiveAgencyId` (`int?`), `SubProject.ExecutiveAgency` (nav). `ProjectAssignment.IsLocked` (`bool`), no more `ProjectAssignment.ExecutiveAgencyId`. `ApplicationUser.ExecutiveAgencyId`/`ContractorId` (`int?`) + navs. `ProjectAssignmentChangeRequest` entity with `ChangeRequestId, AssignmentId, RequestedContractValue, RequestedExpectedEndDate, Status, RequestedByUserId, RequestedAt, ReviewedByUserId, ReviewedAt, ReviewNote`. `AuditLog` entity with `AuditLogId, EntityName, EntityId, FieldName, OldValue, NewValue, ChangedByUserId, ChangedAt`. These exact names are used by every later task.
+- Produces: `SubProject.ExecutiveAgencyId` (`int?`), `SubProject.ExecutiveAgency` (nav). `ProjectAssignment.IsLocked` (`bool`), no more `ProjectAssignment.ExecutiveAgencyId`. `ApplicationUser.ExecutiveAgencyId`/`ContractorId` (`int?`) + navs. `ProjectAssignmentChangeRequest` entity with `ChangeRequestId, AssignmentId, RequestedContractValue, RequestedExpectedEndDate, Status, RequestedByUserId, RequestedAt, ReviewedByUserId, ReviewedAt, ReviewNote` — mapped to a real table via `DbSet<ProjectAssignmentChangeRequest>`. `AuditLog` entity with `AuditLogId, EntityName, EntityId, FieldName, OldValue, NewValue, ChangedByUserId, ChangedAt` — mapped to a real table via `DbSet<AuditLog>`. These exact names are used by every later task.
+
+**Why `ExecutiveAgency.cs` is now in scope:** it currently has `public virtual ICollection<ProjectAssignment> ProjectAssignments { get; set; }`, the inverse side of the FK Step 3 removes from `ProjectAssignment`. Left in place, EF Core's convention-based discovery re-pairs that orphaned collection into a *shadow* FK on `ProjectAssignment` instead of actually dropping the column — the migration would silently keep `ProjectAssignment.ExecutiveAgencyId` (nullable) rather than remove it. That collection must be deleted in the same task.
+
+**Why `AppDbContext.cs` is now in scope:** `AuditLog` has no navigation property to/from any other entity (by design — it's a flat, generic log row keyed by string `EntityName` + int `EntityId`), so EF Core's model discovery can never reach it through the existing `DbSet<SubProject>`/`DbSet<MainProject>`/`DbSet<InvestmentProject>` roots. `ProjectAssignmentChangeRequest` has a one-way nav *to* `ProjectAssignment` but nothing points *to* `ProjectAssignmentChangeRequest`, so it's equally unreachable. Both need an explicit `DbSet<T>` or neither gets a table.
 
 - [ ] **Step 1: Add the `ChangeRequestStatus` enum**
 
@@ -340,7 +362,32 @@ namespace SmartInvest.Domain.Entities
 }
 ```
 
-- [ ] **Step 4: Add `ProjectAssignmentChangeRequest` entity**
+- [ ] **Step 4: Remove the now-orphaned inverse navigation on `ExecutiveAgency`**
+
+In `Backend/src/SmartInvest.Domain/Entities/ExecutiveAgency.cs`, remove this line (it was the inverse side of the FK Step 3 just deleted from `ProjectAssignment`; leaving it in place makes EF Core reintroduce the column as a shadow property instead of dropping it):
+
+```csharp
+        public virtual ICollection<ProjectAssignment> ProjectAssignments { get; set; }
+```
+
+The file should read:
+
+```csharp
+namespace SmartInvest.Domain.Entities
+{
+    public class ExecutiveAgency
+    {
+        [Key]
+        public int ExecutiveAgencyId { get; set; }
+        public string AgencyName { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+}
+```
+
+- [ ] **Step 5: Add `ProjectAssignmentChangeRequest` entity**
 
 Create `Backend/src/SmartInvest.Domain/Entities/ProjectAssignmentChangeRequest.cs`:
 
@@ -375,7 +422,7 @@ namespace SmartInvest.Domain.Entities
 }
 ```
 
-- [ ] **Step 5: Add `AuditLog` entity**
+- [ ] **Step 6: Add `AuditLog` entity**
 
 Create `Backend/src/SmartInvest.Domain/Entities/AuditLog.cs`:
 
@@ -406,7 +453,7 @@ namespace SmartInvest.Domain.Entities
 }
 ```
 
-- [ ] **Step 6: Link `ApplicationUser` to at most one agency or contractor**
+- [ ] **Step 7: Link `ApplicationUser` to at most one agency or contractor**
 
 In `Backend/src/SmartInvest.Infrastructure/Identity/ApplicationUser.cs`, replace the full file contents:
 
@@ -436,7 +483,7 @@ public class ApplicationUser : IdentityUser
 }
 ```
 
-- [ ] **Step 7: Configure the new `ApplicationUser` FKs (uniqueness + no cascade)**
+- [ ] **Step 8: Configure the new `ApplicationUser` FKs (uniqueness + no cascade)**
 
 Create `Backend/src/SmartInvest.Infrastructure/Data/Configurations/ApplicationUserConfiguration.cs`:
 
@@ -473,7 +520,7 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 }
 ```
 
-- [ ] **Step 8: Configure `SubProject.ExecutiveAgency` (no cascade)**
+- [ ] **Step 9: Configure `SubProject.ExecutiveAgency` (no cascade)**
 
 In `Backend/src/SmartInvest.Infrastructure/Data/Configurations/SubProjectConfiguration.cs`, add this block right before the final closing `}` of the `Configure` method (after the `Markaz` block):
 
@@ -485,7 +532,7 @@ In `Backend/src/SmartInvest.Infrastructure/Data/Configurations/SubProjectConfigu
                .OnDelete(DeleteBehavior.Restrict);
 ```
 
-- [ ] **Step 9: Configure `ProjectAssignment` relations (no cascade)**
+- [ ] **Step 10: Configure `ProjectAssignment` relations (no cascade)**
 
 Create `Backend/src/SmartInvest.Infrastructure/Data/Configurations/ProjectAssignmentConfiguration.cs`:
 
@@ -518,44 +565,70 @@ public class ProjectAssignmentConfiguration : IEntityTypeConfiguration<ProjectAs
 }
 ```
 
-- [ ] **Step 10: Generate the migration**
+- [ ] **Step 11: Add explicit `DbSet`s so `AuditLog`/`ProjectAssignmentChangeRequest` are discovered**
 
-Run (from `Backend/src/SmartInvest.API`):
+In `Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs`, the file currently has:
+
+```csharp
+    public DbSet<InvestmentProject> InvestmentProjects => Set<InvestmentProject>();
+    public DbSet<MainProject> MainProjects => Set<MainProject>();
+    public DbSet<SubProject> SubProjects => Set<SubProject>();
+```
+
+Replace that block with:
+
+```csharp
+    public DbSet<InvestmentProject> InvestmentProjects => Set<InvestmentProject>();
+    public DbSet<MainProject> MainProjects => Set<MainProject>();
+    public DbSet<SubProject> SubProjects => Set<SubProject>();
+    public DbSet<ProjectAssignmentChangeRequest> ProjectAssignmentChangeRequests => Set<ProjectAssignmentChangeRequest>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+```
+
+- [ ] **Step 12: Generate the migration**
+
+Run from `Backend/src/SmartInvest.API`:
 
 ```bash
 cd Backend/src/SmartInvest.API
-dotnet ef migrations add AddAgencyContractorAssignmentSystem
+dotnet ef migrations add AddAgencyContractorAssignmentSystem --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
 ```
 
-Expected: `Done.` and a new set of files under `Backend/src/SmartInvest.Infrastructure/Migrations/` (`..._AddAgencyContractorAssignmentSystem.cs`, `.Designer.cs`, updated `AppDbContextModelSnapshot.cs`). A warning about tool version `9.0.4` vs runtime `10.0.10` is expected and harmless (pre-existing, unrelated to this change).
+The plain `dotnet ef migrations add AddAgencyContractorAssignmentSystem` (no flags) is known to fail on this machine's `dotnet-ef` 9.0.4 / .NET 10 SDK combination with `Your target project 'SmartInvest.API' doesn't match your migrations assembly 'SmartInvest.Infrastructure'...` — use the flagged form above directly.
 
-- [ ] **Step 11: Build and verify**
+Expected: `Done. To undo this action, use 'ef migrations remove'` and a new set of files under `Backend/src/SmartInvest.Infrastructure/Migrations/` (`..._AddAgencyContractorAssignmentSystem.cs`, `.Designer.cs`, updated `AppDbContextModelSnapshot.cs`). A warning about tool version `9.0.4` vs runtime `10.0.10`, and pre-existing decimal-precision warnings for `InvestmentProject.TargetAmount`/`ProjectFollowUp.ProgressPercentage`, are expected and harmless (unrelated to this change — do not fix them, out of scope).
+
+**Verify before moving on:** open the generated migration's `Up()` method and confirm it (a) does NOT retain or alter `ProjectAssignment.ExecutiveAgencyId` in any form (no `AlterColumn`/`AddForeignKey` referencing it — Step 4 should make it disappear entirely), and (b) DOES contain `CreateTable` calls for both `ProjectAssignmentChangeRequests` and `AuditLogs`. If either check fails, Steps 4 or 11 were not applied correctly — fix them and regenerate (`dotnet ef migrations remove` with the same two flags, then re-run `migrations add`) rather than hand-editing the generated migration.
+
+- [ ] **Step 13: Build and verify**
 
 Run: `dotnet build Backend`
 Expected: `Build succeeded. 0 Error(s)`
 
-- [ ] **Step 12: Apply the migration (skip if no local SQL Server is reachable)**
+- [ ] **Step 14: Apply the migration (skip if no local SQL Server is reachable)**
 
-Run (still inside `Backend/src/SmartInvest.API`):
+Run from `Backend/src/SmartInvest.API`:
 
 ```bash
-dotnet ef database update
+dotnet ef database update --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
 ```
 
 Expected: `Done.` If this fails with a connection error (no local SQL Server instance), skip this step — it is not required to continue the plan, only useful for local manual verification later.
 
-- [ ] **Step 13: Commit**
+- [ ] **Step 15: Commit**
 
 ```bash
 git add Backend/src/SmartInvest.Domain/Enums/ChangeRequestStatus.cs \
         Backend/src/SmartInvest.Domain/Entities/SubProject.cs \
         Backend/src/SmartInvest.Domain/Entities/ProjectAssignment.cs \
+        Backend/src/SmartInvest.Domain/Entities/ExecutiveAgency.cs \
         Backend/src/SmartInvest.Domain/Entities/ProjectAssignmentChangeRequest.cs \
         Backend/src/SmartInvest.Domain/Entities/AuditLog.cs \
         Backend/src/SmartInvest.Infrastructure/Identity/ApplicationUser.cs \
         Backend/src/SmartInvest.Infrastructure/Data/Configurations/ApplicationUserConfiguration.cs \
         Backend/src/SmartInvest.Infrastructure/Data/Configurations/SubProjectConfiguration.cs \
         Backend/src/SmartInvest.Infrastructure/Data/Configurations/ProjectAssignmentConfiguration.cs \
+        Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs \
         Backend/src/SmartInvest.Infrastructure/Migrations/
 git commit -m "feat: add agency/contractor assignment data model and migration"
 ```
@@ -1812,7 +1885,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/contract-types")]
-[Authorize(Roles = Roles.PlanningStaff)]
+[Authorize]
 public class ContractTypesController : ControllerBase
 {
     private readonly IContractTypeService _contractTypeService;
@@ -1823,7 +1896,6 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
     public async Task<ActionResult<IReadOnlyList<ContractTypeDto>>> GetAll(CancellationToken cancellationToken)
     {
         var result = await _contractTypeService.GetAllAsync(cancellationToken);
@@ -1831,6 +1903,7 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ContractTypeDto>> Create(CreateContractTypeDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractTypeService.CreateAsync(dto, cancellationToken);
@@ -1838,6 +1911,7 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ContractTypeDto>> Update(int id, UpdateContractTypeDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractTypeService.UpdateAsync(id, dto, cancellationToken);
@@ -1854,7 +1928,7 @@ public class ContractTypesController : ControllerBase
 }
 ```
 
-Note: `GetAll` is opened to any authenticated role (`[Authorize]` override) since agencies and contractors also need this list to display/select contract types; create/update stay `PlanningStaff` (Manager+Employee) per your explicit answer; delete stays Manager-only.
+**Post-hoc correction (found during Task 10, applied retroactively):** the original code above put `[Authorize(Roles = Roles.PlanningStaff)]` on the class and a bare `[Authorize]` override on `GetAll`, intending to widen `GetAll` to any authenticated role. ASP.NET Core does not compose `[Authorize]` attributes that way — class-level and method-level attributes are ANDed (all must pass), never overridden, so a role NOT in the class-level list can never satisfy both regardless of what the method-level attribute says. `GetAll` was therefore silently still `PlanningStaff`-only despite the override's intent. The class-level attribute is now bare `[Authorize]` (require authentication only), with `Create`/`Update` individually carrying `[Authorize(Roles = Roles.PlanningStaff)]` — narrowing (subset of an unrestricted class-level gate) works fine with AND-composition; only widening beyond the class-level set was ever broken. `Delete` was already narrowing correctly and needed no change.
 
 - [ ] **Step 7: Register in DI**
 
@@ -2210,13 +2284,21 @@ public class ProjectAssignmentRepository : GenericRepository<ProjectAssignment>,
 }
 ```
 
-- [ ] **Step 2: Register the repository in DI**
+- [ ] **Step 2: Register the repository AND the service in DI**
 
 In `Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs`, add right after `services.AddScoped<ISubProjectRepository, SubProjectRepository>();`:
 
 ```csharp
         services.AddScoped<IProjectAssignmentRepository, ProjectAssignmentRepository>();
 ```
+
+And add the service registration at the end of the service-registration block, right after `services.AddScoped<IContractTypeService, ContractTypeService>();` (added in Task 7):
+
+```csharp
+        services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
+```
+
+**Both lines are required** — without the second one, `ProjectAssignmentsController` cannot be constructed at runtime (the DI container has no registration for `IProjectAssignmentService`), and every request to it fails.
 
 - [ ] **Step 3: DTOs**
 
@@ -2382,6 +2464,9 @@ public class ProjectAssignmentService : IProjectAssignmentService
 
     public async Task<IReadOnlyList<ProjectAssignmentDto>> GetBySubProjectAsync(int subProjectId, CancellationToken cancellationToken = default)
     {
+        var subProject = await GetSubProjectOrThrowAsync(subProjectId, cancellationToken);
+        EnsureAgencyOwnership(subProject);
+
         var assignments = await _assignmentRepository.GetBySubProjectAsync(subProjectId, cancellationToken);
         return _mapper.Map<List<ProjectAssignmentDto>>(assignments);
     }
@@ -3121,48 +3206,9 @@ git commit -m "feat: add contractor change-request approval workflow and reusabl
 
 ---
 
-### Task 11: Seed the two new roles at startup
-
-**Files:**
-- Modify: `Backend/src/SmartInvest.API/Program.cs`
-
-**Interfaces:**
-- Consumes: `Roles.ExecutiveAgency`, `Roles.Contractor` (Task 1).
-- Produces: nothing consumed by later tasks — this is the last task.
-
-- [ ] **Step 1: Add the two roles to the seeding array**
-
-In `Backend/src/SmartInvest.API/Program.cs`, find:
-
-```csharp
-    string[] roles = { Roles.PlanningEmployee, Roles.PlanningManager };
-```
-
-Replace with:
-
-```csharp
-    string[] roles = { Roles.PlanningEmployee, Roles.PlanningManager, Roles.ExecutiveAgency, Roles.Contractor };
-```
-
-- [ ] **Step 2: Build and verify**
-
-Run: `dotnet build Backend`
-Expected: `Build succeeded. 0 Error(s)`
-
-- [ ] **Step 3: Manual verification**
-
-Run the API once (`dotnet run --project Backend/src/SmartInvest.API`) so the seeding block in `Program.cs` executes, then check the `AspNetRoles` table (or re-run `GET /api/agencies` login flow from Task 5, which already implicitly required the `ExecutiveAgency` role to exist) confirms no `BusinessRuleException`/role-not-found error occurs on `AddToRoleAsync`.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add Backend/src/SmartInvest.API/Program.cs
-git commit -m "feat: seed ExecutiveAgency and Contractor roles at startup"
-```
-
----
-
 ## Self-Review Notes
+
+**Pre-flight fix (applied before dispatch):** role seeding for `ExecutiveAgency`/`Contractor` was originally a separate Task 11 dispatched last. Moved into Task 1 (Step 7) instead, because Task 5/6's `UserManager.AddToRoleAsync` calls fail at runtime if the role isn't already in `AspNetRoles` — dispatching it last would have broken every task from 5 onward until the very end.
 
 **Spec coverage:**
 - إسناد مشروع فرعي لجهة تنفيذية واحدة → Task 8.
