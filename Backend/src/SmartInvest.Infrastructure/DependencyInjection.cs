@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IFinancialYearService, FinancialYearService>();
+        services.AddScoped<ISubProjectFinancialYearService, SubProjectFinancialYearService>();
 
         return services;
     }
