@@ -12,5 +12,10 @@ public class ProjectFollowUpConfiguration : IEntityTypeConfiguration<ProjectFoll
                .WithMany(s => s.ProjectFollowUps)
                .HasForeignKey(x => x.StatusId)
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.SubProjectFinancialYear)
+               .WithMany(s => s.ProjectFollowUps)
+               .HasForeignKey(x => x.SubProjectFinancialYearId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }

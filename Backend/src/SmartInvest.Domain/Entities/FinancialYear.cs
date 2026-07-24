@@ -9,5 +9,6 @@
         public DateTime EndDate { get; set; }
         public bool IsClosed { get; set; }
         public virtual ICollection<Plan> Plans { get; set; }
+        public virtual ICollection<SubProjectFinancialYear> SubProjectFinancialYears { get; set; }
     }
 }

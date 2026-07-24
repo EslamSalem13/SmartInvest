@@ -1,4 +1,4 @@
-﻿namespace SmartInvest.Domain.Entities
+namespace SmartInvest.Domain.Entities
 {
     public class PlanProject
     {
@@ -12,9 +12,5 @@
         [ForeignKey("SubProject")]
         public int SubProjectId { get; set; }
         public virtual SubProject SubProject { get; set; }
-
-        public string ApprovalStatus { get; set; } = string.Empty;
-
-        public virtual ICollection<ProjectFollowUp> ProjectFollowUps { get; set; }
     }
 }

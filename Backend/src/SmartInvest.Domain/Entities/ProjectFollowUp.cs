@@ -1,13 +1,13 @@
-﻿namespace SmartInvest.Domain.Entities
+namespace SmartInvest.Domain.Entities
 {
     public class ProjectFollowUp
     {
         [Key]
         public int FollowUpId { get; set; }
 
-        [ForeignKey("PlanProject")]
-        public int PlanProjectId { get; set; }
-        public virtual PlanProject PlanProject { get; set; }
+        [ForeignKey("SubProjectFinancialYear")]
+        public int SubProjectFinancialYearId { get; set; }
+        public virtual SubProjectFinancialYear SubProjectFinancialYear { get; set; }
         [ForeignKey("Status")]
         public int StatusId { get; set; }
         public virtual ProjectStatus Status { get; set; }

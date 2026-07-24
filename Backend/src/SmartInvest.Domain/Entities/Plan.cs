@@ -1,4 +1,4 @@
-﻿namespace SmartInvest.Domain.Entities
+namespace SmartInvest.Domain.Entities
 {
     public class Plan
     {
@@ -6,6 +6,9 @@
         public int PlanId { get; set; }
         public string PlanName { get; set; } = string.Empty;
         public string PlanStatus { get; set; } = string.Empty;
+
+        public DateTime SuggestionDate { get; set; } = DateTime.UtcNow;
+        public DateTime? ApprovalDate { get; set; }
 
         [ForeignKey("FinancialYear")]
         public int FinancialYearId { get; set; }

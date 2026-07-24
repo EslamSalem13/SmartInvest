@@ -47,6 +47,7 @@
         public virtual ProjectStatus Status { get; set; }
 
         public virtual ICollection<PlanProject> PlanProjects { get; set; }
+        public virtual ICollection<SubProjectFinancialYear> FinancialYears { get; set; }
         public virtual ICollection<ProjectAssignment>? ProjectAssignments { get; set; }
         public virtual ICollection<ProjectSpecification>? ProjectSpecifications { get; set; }
     }
