@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using SmartInvest.API.Common;
 using SmartInvest.Application.Common.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +24,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
     #region Services
     builder.Services.AddScoped<IPlanService, PlanService>();
+    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     #endregion
 
 

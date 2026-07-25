@@ -2,7 +2,6 @@
 global using Microsoft.AspNetCore.Authentication.JwtBearer;
 global using Microsoft.AspNetCore.Identity;
 global using Microsoft.IdentityModel.Tokens;
-global using Microsoft.OpenApi.Models;
 global using SmartInvest.Application;
 global using SmartInvest.Application.Common;
 global using SmartInvest.Domain.Common;
