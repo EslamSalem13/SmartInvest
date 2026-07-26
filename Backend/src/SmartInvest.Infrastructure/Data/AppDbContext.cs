@@ -19,11 +19,12 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     //MARWA
     public DbSet<Plan> Plans { get; set; }
+    public DbSet<PlanProject> PlanProjects { get; set; }
     public DbSet<MainProgram> MainPrograms { get; set; }
     public DbSet<SubProgram> SubPrograms { get; set; }
     public DbSet<FinancialYear> FinancialYears { get; set; }
 
-    // end MARWA
+    // end 
 
 
     protected override void OnModelCreating(ModelBuilder builder)

@@ -18,8 +18,8 @@ namespace SmartInvest.Domain.Entities
 
         [ForeignKey("FinancialYear")]
         public int FinancialYearId { get; set; }
-        public virtual FinancialYear FinancialYear { get; set; }
+        public virtual FinancialYear? FinancialYear { get; set; }
 
-        public virtual ICollection<PlanProject> PlanProjects { get; set; }
+        public virtual ICollection<PlanProject>? PlanProjects { get; set; }
     }
 }

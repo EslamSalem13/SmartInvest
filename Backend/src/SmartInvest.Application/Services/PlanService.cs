@@ -11,13 +11,13 @@ public class PlanService : IPlanService
         this.planRepo = planRepo;
     }
     // Plans with filter
-    public Plan GetPlansByNameAndStatus(PlanStatus planStatus, string planName)
+    public List<Plan>? GetPlansByNameAndStatus(PlanStatus? planStatus, string? planName)
     {
-        return planRepo.GetPlanByStatus(planStatus, planName);
+        return planRepo.GetPlanByStatusAndName(planStatus, planName);
     }
-    public Task<Plan> GetPlanDetails(int planId)
+    public Plan GetPlanDetails(int planId)
     {
-        return planRepo.GetByIdAsync(planId)!;
+        return  planRepo.GetPlanWithProjectsById(planId)!;
     }
     public Plan GetCurrentPlan()
     {
@@ -38,9 +38,29 @@ public class PlanService : IPlanService
         planRepo.Remove(plan);
         await unitOfWork.SaveChangesAsync();
     }
-    ////////////// manage PlanProject  ///////////////
-
-
-
-
+    public async Task DeletePlanById(int planId)
+    {
+        var plan = await planRepo.GetByIdAsync(planId);
+        if (plan != null)
+        {
+            planRepo.Remove(plan);
+            await unitOfWork.SaveChangesAsync();
+        }
+    }
+    ////////////// manage Projects in A Plan  ///////////////
+    public async Task AddExistingProjectToPlan(int Planid, int ProjectId)
+    {
+        await planRepo.AddExistingProject(Planid, ProjectId);
+        await unitOfWork.SaveChangesAsync();
+    }
+    public async Task AddProjectToPlan(int Planid,SubProject project) 
+    {
+        await planRepo.AddProject(Planid, project);
+        await unitOfWork.SaveChangesAsync();
+    }
+    public async Task DeleteProjectFromPlan(int PlanId, int ProjectId)
+    {
+        planRepo.DeleteProjectFromPlan(PlanId, ProjectId);
+        await unitOfWork.SaveChangesAsync();
+    }
 }

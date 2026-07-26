@@ -50,4 +50,9 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         DbSet.Remove(entity);
     }
+    public async Task DeleteById(int id)
+    {
+        var entity =await GetByIdAsync(id);
+        if(entity != null)   DbSet.Remove(entity);
+    }
 }
