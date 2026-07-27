@@ -48,6 +48,6 @@ export class MainLayout {
 
   protected logout(): void {
     this.auth.logout();
-    this.router.navigate(['/login']);
+    this.router.navigate(['/']);
   }
 }

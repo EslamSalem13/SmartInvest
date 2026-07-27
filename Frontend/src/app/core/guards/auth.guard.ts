@@ -10,7 +10,7 @@ export const authGuard: CanActivateFn = () => {
     return true;
   }
 
-  return router.createUrlTree(['/login']);
+  return router.createUrlTree(['/']);
 };
 
 export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
@@ -19,7 +19,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
     const router = inject(Router);
 
     if (!auth.isAuthenticated()) {
-      return router.createUrlTree(['/login']);
+      return router.createUrlTree(['/']);
     }
 
     const role = auth.role();
