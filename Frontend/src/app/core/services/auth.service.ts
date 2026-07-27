@@ -16,7 +16,10 @@ export class AuthService {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly role = computed(() => this._user()?.role ?? null);
-  readonly isManager = computed(() => this._user()?.role === Roles.PlanningManager);
+  readonly isSuperAdmin = computed(() => this._user()?.role === Roles.SuperAdmin);
+  readonly isManager = computed(
+    () => this._user()?.role === Roles.PlanningManager || this.isSuperAdmin(),
+  );
 
   login(request: LoginRequest): Observable<AuthResult> {
     return this.http.post<AuthResult>(`${environment.apiUrl}/auth/login`, request).pipe(
@@ -36,7 +39,7 @@ export class AuthService {
 
   /** المسار الافتراضي بعد تسجيل الدخول حسب الدور */
   homeRouteForRole(role: string | null): string {
-    if (role === Roles.PlanningManager) {
+    if (role === Roles.PlanningManager || role === Roles.SuperAdmin) {
       return '/app/dashboard';
     }
     return '/app/projects';

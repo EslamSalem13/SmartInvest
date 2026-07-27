@@ -57,6 +57,7 @@ builder.Services.AddAuthentication(options =>
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, SuperAdminAuthorizationHandler>();
 
 // ---------------------------------------------------------------------------
 // CORS (Angular client)
@@ -107,7 +108,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    string[] roles = { Roles.PlanningEmployee, Roles.PlanningManager, Roles.ExecutiveAgency, Roles.Contractor };
+    string[] roles = { Roles.SuperAdmin, Roles.PlanningEmployee, Roles.PlanningManager, Roles.ExecutiveAgency, Roles.Contractor };
 
     foreach (var role in roles)
     {
@@ -136,6 +137,27 @@ using (var scope = app.Services.CreateScope())
         if (createResult.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, Roles.PlanningManager);
+        }
+    }
+
+    const string superAdminEmail = "superadmin@gmail.com";
+    var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
+
+    if (superAdminUser == null)
+    {
+        superAdminUser = new ApplicationUser
+        {
+            UserName = "superadmin",
+            Email = superAdminEmail,
+            FullName = "السوبر أدمن",
+            EmailConfirmed = true,
+            IsActive = true
+        };
+
+        var createResult = await userManager.CreateAsync(superAdminUser, "SuperAdmin@123");
+        if (createResult.Succeeded)
+        {
+            await userManager.AddToRoleAsync(superAdminUser, Roles.SuperAdmin);
         }
     }
 

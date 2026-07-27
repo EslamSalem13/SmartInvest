@@ -119,7 +119,9 @@
             <div class="si-fld"><label>الدور الوظيفي <span class="req">*</span></label>
               <select [ngModel]="fRole()" (ngModelChange)="fRole.set($event)">
                 <option [value]="Roles.PlanningEmployee">موظف تخطيط</option>
-                <option [value]="Roles.PlanningManager">مدير التخطيط</option>
+                @if (isSuperAdmin()) {
+                  <option [value]="Roles.PlanningManager">مدير التخطيط</option>
+                }
               </select>
             </div>
             <div class="si-fld"><label>كلمة المرور <span class="req">*</span></label><input type="password" [ngModel]="fPassword()" (ngModelChange)="fPassword.set($event)" placeholder="••••••••" /></div>

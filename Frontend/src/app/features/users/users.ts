@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { UsersService } from '../../core/services/users.service';
 import { AppUser } from '../../core/models/user.models';
 import { Roles } from '../../core/models/auth.models';
+import { AuthService } from '../../core/services/auth.service';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -15,7 +16,9 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 })
 export class Users {
   private readonly usersService = inject(UsersService);
+  private readonly auth = inject(AuthService);
   protected readonly Roles = Roles;
+  protected readonly isSuperAdmin = this.auth.isSuperAdmin;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -106,7 +109,18 @@ export class Users {
   }
 
   protected roleLabel(role: string): string {
-    return role === Roles.PlanningManager ? 'مدير التخطيط' : 'موظف تخطيط';
+    switch (role) {
+      case Roles.SuperAdmin:
+        return 'سوبر أدمن';
+      case Roles.PlanningManager:
+        return 'مدير التخطيط';
+      case Roles.ExecutiveAgency:
+        return 'جهة تنفيذية';
+      case Roles.Contractor:
+        return 'مقاول';
+      default:
+        return 'موظف تخطيط';
+    }
   }
 
   protected toggleActive(u: AppUser): void {

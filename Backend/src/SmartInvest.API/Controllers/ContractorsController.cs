@@ -33,7 +33,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagerAndAgency)]
     public async Task<ActionResult<ContractorDto>> Create(CreateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.CreateAsync(dto, cancellationToken);

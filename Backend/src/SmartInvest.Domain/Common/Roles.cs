@@ -2,6 +2,8 @@
 
 public static class Roles
 {
+    public const string SuperAdmin = "SuperAdmin";
+
     public const string PlanningEmployee = "PlanningEmployee";
 
     public const string PlanningManager = "PlanningManager";
@@ -15,6 +17,9 @@ public static class Roles
 
     /// <summary>مدير + موظف تخطيط + الجهة التنفيذية.</summary>
     public const string StaffAndAgency = "PlanningEmployee,PlanningManager,ExecutiveAgency";
+
+    /// <summary>مدير التخطيط + الجهة التنفيذية (مثلاً: إنشاء حساب مقاول).</summary>
+    public const string ManagerAndAgency = "PlanningManager,ExecutiveAgency";
 
     /// <summary>كل الأطراف المشاركة في تعيين مقاول: تخطيط + جهة + مقاول.</summary>
     public const string AssignmentParties = "PlanningEmployee,PlanningManager,ExecutiveAgency,Contractor";

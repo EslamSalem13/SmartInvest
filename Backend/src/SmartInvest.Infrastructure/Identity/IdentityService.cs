@@ -17,11 +17,13 @@ public class IdentityService : IIdentityService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly JwtSettings _jwtSettings;
+    private readonly ICurrentUserService _currentUser;
 
-    public IdentityService(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> jwtOptions)
+    public IdentityService(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> jwtOptions, ICurrentUserService currentUser)
     {
         _userManager = userManager;
         _jwtSettings = jwtOptions.Value;
+        _currentUser = currentUser;
     }
 
     public async Task<AuthResultDto> LoginAsync(string usernameOrEmail, string password, CancellationToken cancellationToken = default)
@@ -88,6 +90,11 @@ public class IdentityService : IIdentityService
         if (dto.Role != Roles.PlanningEmployee && dto.Role != Roles.PlanningManager)
         {
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
+        }
+
+        if (dto.Role == Roles.PlanningManager && _currentUser.Role != Roles.SuperAdmin)
+        {
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حساب مدير تخطيط");
         }
 
         var user = new ApplicationUser
