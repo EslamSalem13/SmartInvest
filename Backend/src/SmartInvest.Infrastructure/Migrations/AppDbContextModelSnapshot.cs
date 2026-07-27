@@ -324,7 +324,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("FinancialYearId");
 
-                    b.ToTable("FinancialYear");
+                    b.ToTable("FinancialYears");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -358,7 +358,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ProgramId");
 
-                    b.ToTable("MainProgram");
+                    b.ToTable("MainPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
@@ -429,16 +429,24 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<DateTime?>("ApprovalDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("FinancialYearId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PlanName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PlanStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("PlanStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("SuggestionDate")
                         .HasColumnType("datetime2");
@@ -447,7 +455,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FinancialYearId");
 
-                    b.ToTable("Plan");
+                    b.ToTable("Plans");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
@@ -471,7 +479,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("PlanId", "SubProjectId")
                         .IsUnique();
 
-                    b.ToTable("PlanProject");
+                    b.ToTable("PlanProjects");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignment", b =>
@@ -719,7 +727,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ProgramId");
 
-                    b.ToTable("SubProgram");
+                    b.ToTable("SubPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>

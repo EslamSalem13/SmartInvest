@@ -17,6 +17,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProjectAssignmentChangeRequest> ProjectAssignmentChangeRequests => Set<ProjectAssignmentChangeRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    //MARWA
+    public DbSet<Plan> Plans { get; set; }
+    public DbSet<PlanProject> PlanProjects { get; set; }
+    public DbSet<MainProgram> MainPrograms { get; set; }
+    public DbSet<SubProgram> SubPrograms { get; set; }
+    public DbSet<FinancialYear> FinancialYears { get; set; }
+
+    // end 
+
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

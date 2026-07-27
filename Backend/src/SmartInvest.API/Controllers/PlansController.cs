@@ -1,9 +1,3 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using SmartInvest.Application.DTOs;
-using SmartInvest.Application.Interfaces;
-using SmartInvest.Domain.Common;
-
 namespace SmartInvest.API.Controllers;
 
 [ApiController]
@@ -11,72 +5,106 @@ namespace SmartInvest.API.Controllers;
 [Authorize]
 public class PlansController : ControllerBase
 {
-    private readonly IPlanService _planService;
+    private readonly IPlanService planService;
+    private readonly IMapper mapper;
 
-    public PlansController(IPlanService planService)
+    public PlansController(IPlanService planService, IMapper mapper)
     {
-        _planService = planService;
+        this.planService = planService;
+        this.mapper = mapper;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<PlanDto>>> GetAll(CancellationToken cancellationToken)
+    public IActionResult GetPlansByNameAndStatus(PlanStatus? planStatus, string? planName)
     {
-        var result = await _planService.GetAllAsync(cancellationToken);
-        return Ok(result);
+        List<Plan>? PlansFromDb = planService.GetPlansByNameAndStatus(planStatus, planName);
+
+        var plans = mapper.Map<List<PlanWithoutProjectsDto>>(PlansFromDb);
+        return Ok(plans);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<PlanDetailDto>> GetById(int id, CancellationToken cancellationToken)
+    [HttpGet("{id}")]
+    public IActionResult GetPlanDetailsById(int id)
     {
-        var result = await _planService.GetByIdAsync(id, cancellationToken);
-        return Ok(result);
+        Plan PlanFromDb = planService.GetPlanDetails(id);
+
+        if (PlanFromDb == null)
+        {
+            return NotFound();
+        }
+
+        var Plan = mapper.Map<PlanInfoDto>(PlanFromDb);
+        return Ok(Plan);
+    }
+
+    [HttpGet("Current")]
+    public IActionResult GetCurrentPlan()
+    {
+        Plan PlanFromDb = planService.GetCurrentPlan();
+
+        if (PlanFromDb == null)
+        {
+            return NotFound();
+        }
+
+        var plan = mapper.Map<PlanInfoDto>(PlanFromDb);
+        return Ok(plan);
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<ActionResult<PlanDto>> Create(CreatePlanDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddPlan(AddAndEditPlanInfoDto Plandto)
     {
-        var result = await _planService.CreateAsync(dto, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        var plan = mapper.Map<Plan>(Plandto);
+        await planService.AddPlan(plan);
+
+        return CreatedAtAction(nameof(GetPlanDetailsById), new { id = plan.PlanId }, plan);
     }
 
-    [HttpPut("{id:int}")]
-    [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<ActionResult<PlanDto>> Update(int id, UpdatePlanDto dto, CancellationToken cancellationToken)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdatePlan(int id, AddAndEditPlanInfoDto planDto)
     {
-        var result = await _planService.UpdateAsync(id, dto, cancellationToken);
-        return Ok(result);
-    }
+        var plan = planService.GetPlanDetails(id);
 
-    [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
-    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
-    {
-        await _planService.DeleteAsync(id, cancellationToken);
+        if (plan == null)
+        {
+            return NotFound();
+        }
+
+        mapper.Map(planDto, plan);
+        await planService.UpdatePlan(plan);
+
         return NoContent();
     }
 
-    [HttpPost("{id:int}/suggested-projects")]
-    [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<ActionResult<PlanDetailDto>> AddSuggestedProject(int id, AddSuggestedProjectDto dto, CancellationToken cancellationToken)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePlan(int id)
     {
-        var result = await _planService.AddSuggestedProjectAsync(id, dto.SubProjectId, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpDelete("{id:int}/suggested-projects/{subProjectId:int}")]
-    [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<IActionResult> RemoveSuggestedProject(int id, int subProjectId, CancellationToken cancellationToken)
-    {
-        await _planService.RemoveSuggestedProjectAsync(id, subProjectId, cancellationToken);
+        await planService.DeletePlanById(id);
         return NoContent();
     }
 
-    [HttpPut("{id:int}/approve")]
-    [Authorize(Roles = Roles.PlanningManager)]
-    public async Task<ActionResult<PlanDto>> Approve(int id, CancellationToken cancellationToken)
+    //// manage Projects in A Plan /////
+
+    [HttpPost("{planId}/newProject")]
+    public async Task<IActionResult> AddNewProjectToPlan(int planId, AddNewProjectDto projectDto)
     {
-        var result = await _planService.ApproveAsync(id, cancellationToken);
-        return Ok(result);
+        var project = mapper.Map<SubProject>(projectDto);
+        await planService.AddProjectToPlan(planId, project);
+        var projectToReturn = mapper.Map<ProjectInfoDto>(project);
+        return Ok(projectToReturn);
+    }
+
+    [HttpPost("{Planid}/existingProject/{ProjectId}")]
+    public async Task<IActionResult> AddExistingProjectToPlan(int Planid, int ProjectId)
+    {
+        await planService.AddExistingProjectToPlan(Planid, ProjectId);
+        return NoContent();
+    }
+
+    [HttpDelete("{planId}/projects/{ProjectId}")]
+    public async Task<IActionResult> DeleteProjectFromPlan(int planId, int ProjectId)
+    {
+        await planService.DeleteProjectFromPlan(planId, ProjectId);
+        return NoContent();
     }
 }

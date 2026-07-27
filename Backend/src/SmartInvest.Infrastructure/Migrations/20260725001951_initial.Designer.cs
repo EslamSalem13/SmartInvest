@@ -12,8 +12,8 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260721100601_AddExecutingAgencyToMainProject")]
-    partial class AddExecutingAgencyToMainProject
+    [Migration("20260725001951_initial")]
+    partial class initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -158,6 +158,45 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<int>("AuditLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AuditLogId"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("AuditLogId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractType", b =>
                 {
                     b.Property<int>("ContractTypeId")
@@ -288,7 +327,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("FinancialYearId");
 
-                    b.ToTable("FinancialYear");
+                    b.ToTable("FinancialYears");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -308,50 +347,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.ToTable("Governorate");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.InvestmentProject", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Location")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Sector")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("TargetAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("InvestmentProjects");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProgram", b =>
                 {
                     b.Property<int>("ProgramId")
@@ -366,7 +361,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ProgramId");
 
-                    b.ToTable("MainProgram");
+                    b.ToTable("MainPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
@@ -434,22 +429,36 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanId"));
 
+                    b.Property<DateTime?>("ApprovalDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("FinancialYearId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsClosed")
+                        .HasColumnType("bit");
 
                     b.Property<string>("PlanName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("PlanStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("PlanStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("SuggestionDate")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("PlanId");
 
                     b.HasIndex("FinancialYearId");
 
-                    b.ToTable("Plan");
+                    b.ToTable("Plans");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
@@ -460,10 +469,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanProjectId"));
 
-                    b.Property<string>("ApprovalStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("PlanId")
                         .HasColumnType("int");
 
@@ -472,9 +477,10 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("PlanProjectId");
 
-                    b.HasIndex("PlanId");
-
                     b.HasIndex("SubProjectId");
+
+                    b.HasIndex("PlanId", "SubProjectId")
+                        .IsUnique();
 
                     b.ToTable("PlanProject");
                 });
@@ -502,14 +508,14 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<int?>("ContractorId")
                         .HasColumnType("int");
 
-                    b.Property<int>("ExecutiveAgencyId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("ExpectedEndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("ExpectedStartDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -523,11 +529,52 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ContractorId");
 
-                    b.HasIndex("ExecutiveAgencyId");
-
                     b.HasIndex("SubProjectId");
 
                     b.ToTable("ProjectAssignment");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignmentChangeRequest", b =>
+                {
+                    b.Property<int>("ChangeRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChangeRequestId"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("RequestedContractValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("RequestedExpectedEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByUserId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("ChangeRequestId");
+
+                    b.HasIndex("AssignmentId");
+
+                    b.ToTable("ProjectAssignmentChangeRequests");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAttachment", b =>
@@ -580,22 +627,22 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PlanProjectId")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("ProgressPercentage")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
+                    b.Property<int>("SubProjectFinancialYearId")
+                        .HasColumnType("int");
+
                     b.HasKey("FollowUpId");
 
                     b.HasIndex("DelayReasonId");
 
-                    b.HasIndex("PlanProjectId");
-
                     b.HasIndex("StatusId");
+
+                    b.HasIndex("SubProjectFinancialYearId");
 
                     b.ToTable("ProjectFollowUp");
                 });
@@ -683,7 +730,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ProgramId");
 
-                    b.ToTable("SubProgram");
+                    b.ToTable("SubPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
@@ -710,6 +757,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<string>("EnvironmentalImpact")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ExecutiveAgencyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("GreenInvestmentLink")
                         .HasColumnType("nvarchar(max)");
@@ -762,6 +812,8 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("SubProjectId");
 
+                    b.HasIndex("ExecutiveAgencyId");
+
                     b.HasIndex("MainProjectId");
 
                     b.HasIndex("MarkazId");
@@ -775,6 +827,30 @@ namespace SmartInvest.Infrastructure.Migrations
                         .HasFilter("[SubProjectCode] IS NOT NULL");
 
                     b.ToTable("SubProjects");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
+                {
+                    b.Property<int>("SubProjectFinancialYearId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubProjectFinancialYearId"));
+
+                    b.Property<int>("FinancialYearId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SubProjectFinancialYearId");
+
+                    b.HasIndex("FinancialYearId");
+
+                    b.HasIndex("SubProjectId", "FinancialYearId")
+                        .IsUnique();
+
+                    b.ToTable("SubProjectFinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
@@ -811,6 +887,9 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ContractorId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -820,6 +899,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<int?>("ExecutiveAgencyId")
+                        .HasColumnType("int");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -862,6 +944,14 @@ namespace SmartInvest.Infrastructure.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ContractorId")
+                        .IsUnique()
+                        .HasFilter("[ContractorId] IS NOT NULL");
+
+                    b.HasIndex("ExecutiveAgencyId")
+                        .IsUnique()
+                        .HasFilter("[ExecutiveAgencyId] IS NOT NULL");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -963,7 +1053,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasOne("SmartInvest.Domain.Entities.Plan", "Plan")
                         .WithMany("PlanProjects")
                         .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
@@ -982,32 +1072,36 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasOne("SmartInvest.Domain.Entities.ContractType", "ContractType")
                         .WithMany("ProjectAssignments")
                         .HasForeignKey("ContractTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SmartInvest.Domain.Entities.Contractor", "Contractor")
                         .WithMany("ProjectAssignments")
-                        .HasForeignKey("ContractorId");
-
-                    b.HasOne("SmartInvest.Domain.Entities.ExecutiveAgency", "ExecutiveAgency")
-                        .WithMany("ProjectAssignments")
-                        .HasForeignKey("ExecutiveAgencyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("ContractorId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
                         .WithMany("ProjectAssignments")
                         .HasForeignKey("SubProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ContractType");
 
                     b.Navigation("Contractor");
 
-                    b.Navigation("ExecutiveAgency");
-
                     b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignmentChangeRequest", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.ProjectAssignment", "Assignment")
+                        .WithMany()
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAttachment", b =>
@@ -1027,23 +1121,23 @@ namespace SmartInvest.Infrastructure.Migrations
                         .WithMany("ProjectFollowUps")
                         .HasForeignKey("DelayReasonId");
 
-                    b.HasOne("SmartInvest.Domain.Entities.PlanProject", "PlanProject")
-                        .WithMany("ProjectFollowUps")
-                        .HasForeignKey("PlanProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("SmartInvest.Domain.Entities.ProjectStatus", "Status")
                         .WithMany("ProjectFollowUps")
                         .HasForeignKey("StatusId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SmartInvest.Domain.Entities.SubProjectFinancialYear", "SubProjectFinancialYear")
+                        .WithMany("ProjectFollowUps")
+                        .HasForeignKey("SubProjectFinancialYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("DelayReason");
 
-                    b.Navigation("PlanProject");
-
                     b.Navigation("Status");
+
+                    b.Navigation("SubProjectFinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectSpecification", b =>
@@ -1070,6 +1164,11 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
                 {
+                    b.HasOne("SmartInvest.Domain.Entities.ExecutiveAgency", "ExecutiveAgency")
+                        .WithMany()
+                        .HasForeignKey("ExecutiveAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SmartInvest.Domain.Entities.MainProject", "MainProject")
                         .WithMany("SubProjects")
                         .HasForeignKey("MainProjectId")
@@ -1094,6 +1193,8 @@ namespace SmartInvest.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("ExecutiveAgency");
+
                     b.Navigation("MainProject");
 
                     b.Navigation("Markaz");
@@ -1101,6 +1202,25 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Priority");
 
                     b.Navigation("Status");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.FinancialYear", "FinancialYear")
+                        .WithMany("SubProjectFinancialYears")
+                        .HasForeignKey("FinancialYearId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithMany("FinancialYears")
+                        .HasForeignKey("SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FinancialYear");
+
+                    b.Navigation("SubProject");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
@@ -1112,6 +1232,23 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Markaz");
+                });
+
+            modelBuilder.Entity("SmartInvest.Infrastructure.Identity.ApplicationUser", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.Contractor", "Contractor")
+                        .WithMany()
+                        .HasForeignKey("ContractorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SmartInvest.Domain.Entities.ExecutiveAgency", "ExecutiveAgency")
+                        .WithMany()
+                        .HasForeignKey("ExecutiveAgencyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Contractor");
+
+                    b.Navigation("ExecutiveAgency");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractType", b =>
@@ -1129,14 +1266,11 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("ProjectFollowUps");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.ExecutiveAgency", b =>
-                {
-                    b.Navigation("ProjectAssignments");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialYear", b =>
                 {
                     b.Navigation("Plans");
+
+                    b.Navigation("SubProjectFinancialYears");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -1166,11 +1300,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("PlanProjects");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
-                {
-                    b.Navigation("ProjectFollowUps");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectFollowUp", b =>
                 {
                     b.Navigation("Attachments");
@@ -1195,11 +1324,18 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
                 {
+                    b.Navigation("FinancialYears");
+
                     b.Navigation("PlanProjects");
 
                     b.Navigation("ProjectAssignments");
 
                     b.Navigation("ProjectSpecifications");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
+                {
+                    b.Navigation("ProjectFollowUps");
                 });
 #pragma warning restore 612, 618
         }

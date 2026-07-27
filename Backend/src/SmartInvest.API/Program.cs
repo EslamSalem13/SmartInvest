@@ -2,13 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using SmartInvest.Application;
-using SmartInvest.Application.Common;
-using SmartInvest.Domain.Common;
-using SmartInvest.Infrastructure;
-using SmartInvest.Infrastructure.Data;
-using SmartInvest.Infrastructure.Identity;
-using System.Text;
+using SmartInvest.API.Common;
+using SmartInvest.Application.Common.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +13,22 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<SmartInvest.Application.Interfaces.ICurrentUserService, SmartInvest.API.Common.CurrentUserService>();
+    //Auto MApper
+    builder.Services.AddAutoMapper(options =>
+    options.AddProfile<PlansAndPrograms>());
+
+    #region Repositories
+    builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+    builder.Services.AddScoped<IPlanRepo, PlanRepo>();
+    builder.Services.AddScoped<IProgramRepo, ProgramRepo>();
+    #endregion
+
+    #region Services
+    builder.Services.AddScoped<IPlanService, PlanService>();
+    builder.Services.AddScoped<IProgramService, ProgramService>();
+    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+#endregion
+
 
 // ---------------------------------------------------------------------------
 // JWT Authentication
@@ -91,7 +100,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 
-app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
+//app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
