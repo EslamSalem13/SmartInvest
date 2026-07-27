@@ -19,9 +19,8 @@
       <header class="sheet-head">
         <h1>{{ plan()!.planName }}</h1>
         <div class="meta">
-          <span>السنة المالية: {{ plan()!.financialYearName }}</span>
-          <span>الحالة: {{ plan()!.planStatus }}</span>
-          <span>تاريخ الاقتراح: {{ plan()!.suggestionDate | date: 'yyyy/MM/dd' }}</span>
+          <span>الفترة: {{ plan()!.startDate | date: 'yyyy/MM/dd' }} — {{ plan()!.endDate | date: 'yyyy/MM/dd' }}</span>
+          <span>الحالة: {{ statusLabel(plan()!.planStatus) }}</span>
           @if (plan()!.approvalDate) {
             <span>تاريخ الاعتماد: {{ plan()!.approvalDate | date: 'yyyy/MM/dd' }}</span>
           }
@@ -30,28 +29,24 @@
 
       <table>
         <thead>
-          <tr><th>#</th><th>المشروع الرئيسي</th><th>المشروع الفرعي</th><th>الكود</th><th>تمويل بنكي</th><th>تمويل ذاتي</th><th>الإجمالي</th></tr>
+          <tr><th>#</th><th>المشروع الفرعي</th><th>المستوى</th><th>المكوّن العيني</th><th>الإجمالي</th></tr>
         </thead>
         <tbody>
-          @for (p of plan()!.suggestedProjects; track p.subProjectId; let i = $index) {
+          @for (p of plan()!.projects; track $index; let i = $index) {
             <tr>
               <td>{{ i + 1 }}</td>
-              <td>{{ p.mainProjectName }}</td>
               <td>{{ p.subProjectName }}</td>
-              <td>{{ p.subProjectCode ?? '—' }}</td>
-              <td class="tnum">{{ money(p.bankFunding) }}</td>
-              <td class="tnum">{{ money(p.selfFunding) }}</td>
+              <td>{{ p.projectLevel }}</td>
+              <td>{{ p.componentType }}</td>
               <td class="tnum">{{ money(p.totalCost) }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="7" class="empty">لا توجد مشروعات في هذه الخطة.</td></tr>
+            <tr><td colspan="5" class="empty">لا توجد مشروعات في هذه الخطة.</td></tr>
           }
         </tbody>
         <tfoot>
           <tr>
             <td colspan="4">الإجمالي</td>
-            <td class="tnum">{{ money(totalBank()) }}</td>
-            <td class="tnum">{{ money(totalSelf()) }}</td>
             <td class="tnum">{{ money(totalCost()) }}</td>
           </tr>
         </tfoot>

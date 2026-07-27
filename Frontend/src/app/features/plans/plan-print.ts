@@ -18,14 +18,8 @@ export class PlanPrint {
   protected readonly error = signal<string | null>(null);
   protected readonly plan = signal<PlanDetail | null>(null);
 
-  protected readonly totalBank = computed(
-    () => this.plan()?.suggestedProjects.reduce((a, p) => a + p.bankFunding, 0) ?? 0,
-  );
-  protected readonly totalSelf = computed(
-    () => this.plan()?.suggestedProjects.reduce((a, p) => a + p.selfFunding, 0) ?? 0,
-  );
   protected readonly totalCost = computed(
-    () => this.plan()?.suggestedProjects.reduce((a, p) => a + p.totalCost, 0) ?? 0,
+    () => this.plan()?.projects?.reduce((a, p) => a + p.totalCost, 0) ?? 0,
   );
 
   constructor() {
@@ -44,6 +38,10 @@ export class PlanPrint {
 
   protected money(value: number): string {
     return (value ?? 0).toLocaleString('en-US');
+  }
+
+  protected statusLabel(status: string): string {
+    return status === 'Approved' ? 'معتمدة' : 'مقترحة';
   }
 
   protected print(): void {

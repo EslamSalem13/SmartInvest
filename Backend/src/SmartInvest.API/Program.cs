@@ -100,7 +100,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 
-//app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
+app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {

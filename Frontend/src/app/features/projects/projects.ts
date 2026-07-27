@@ -376,13 +376,21 @@ export class Projects {
     this.printing.set(true);
     this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
       next: (result) => {
-        this.plansService.create({ planName: `الخطة المقترحة - ${year.name}`, financialYearId: yearId }).subscribe({
-          next: (plan) => this.addAllSuggested(plan.id, result.items.map((s) => s.id)),
-          error: () => {
-            this.printing.set(false);
-            alert('تعذّر إنشاء الخطة');
-          },
-        });
+        this.plansService
+          .create({
+            planName: `الخطة المقترحة - ${year.name}`,
+            startDate: year.startDate,
+            endDate: year.endDate,
+            planStatus: 'Suggested',
+            financialYearId: yearId,
+          })
+          .subscribe({
+            next: (plan) => this.addAllSuggested(plan.planId, result.items.map((s) => s.id)),
+            error: () => {
+              this.printing.set(false);
+              alert('تعذّر إنشاء الخطة');
+            },
+          });
       },
       error: () => {
         this.printing.set(false);
@@ -397,7 +405,7 @@ export class Projects {
       this.router.navigate(['/app/plans', planId]);
       return;
     }
-    const calls = subProjectIds.map((id) => this.plansService.addSuggestedProject(planId, id));
+    const calls = subProjectIds.map((id) => this.plansService.addExistingProject(planId, id));
     forkJoin(calls).subscribe({
       next: () => {
         this.printing.set(false);
@@ -434,13 +442,21 @@ export class Projects {
     this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
       next: (result) => {
         const approvedIds = result.items.filter((s) => !!s.code).map((s) => s.id);
-        this.plansService.create({ planName: `الخطة المعتمدة - ${year.name}`, financialYearId: yearId }).subscribe({
-          next: (plan) => this.addAllThenApprove(plan.id, approvedIds, date),
-          error: () => {
-            this.printing.set(false);
-            alert('تعذّر إنشاء الخطة');
-          },
-        });
+        this.plansService
+          .create({
+            planName: `الخطة المعتمدة - ${year.name}`,
+            startDate: year.startDate,
+            endDate: year.endDate,
+            planStatus: 'Suggested',
+            financialYearId: yearId,
+          })
+          .subscribe({
+            next: (plan) => this.addAllThenApprove(plan.planId, approvedIds, date),
+            error: () => {
+              this.printing.set(false);
+              alert('تعذّر إنشاء الخطة');
+            },
+          });
       },
       error: () => {
         this.printing.set(false);
@@ -471,7 +487,7 @@ export class Projects {
       afterAdd(false);
       return;
     }
-    const calls = subProjectIds.map((id) => this.plansService.addSuggestedProject(planId, id));
+    const calls = subProjectIds.map((id) => this.plansService.addExistingProject(planId, id));
     forkJoin(calls).subscribe({ next: () => afterAdd(false), error: () => afterAdd(true) });
   }
 }

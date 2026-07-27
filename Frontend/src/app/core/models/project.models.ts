@@ -196,36 +196,68 @@ export interface SubProjectFinancialYear {
 }
 
 export interface Plan {
-  id: number;
   planName: string;
+  startDate: string;
+  endDate: string;
   planStatus: string;
-  suggestionDate: string;
   approvalDate: string | null;
-  financialYearId: number;
-  financialYearName: string;
 }
 
-export interface PlanSuggestedProject {
-  subProjectId: number;
+export interface PlanProjectItem {
   subProjectName: string;
-  subProjectCode: string | null;
-  mainProjectName: string;
-  bankFunding: number;
-  selfFunding: number;
+  mainProjectId: number;
+  projectLevel: string;
+  componentType: string;
+  accountingUnit: string;
   totalCost: number;
+  projectNature: string;
+  greenInvestmentLink?: string | null;
+  projectDescription?: string | null;
+  projectGoal?: string | null;
+  socialImpact?: string | null;
+  economicImpact?: string | null;
+  environmentalImpact?: string | null;
+  markazId: number;
+  priorityId: number;
+  executiveAgencyId?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  statusId: number;
 }
 
 export interface PlanDetail extends Plan {
-  suggestedProjects: PlanSuggestedProject[];
+  projects: PlanProjectItem[] | null;
+}
+
+export interface ProjectInfo {
+  subProjectId: number;
+  subProjectName: string;
+  projectLevel: string;
+  totalCost: number;
+  executiveAgencyName: string | null;
 }
 
 export interface CreatePlan {
   planName: string;
+  startDate: string;
+  endDate: string;
+  planStatus: string;
+  approvalDate?: string | null;
   financialYearId: number;
 }
 
-export interface UpdatePlan {
+export type UpdatePlan = CreatePlan;
+
+export interface CreatedPlan {
+  planId: number;
   planName: string;
+  planStatus: number;
+  startDate: string;
+  endDate: string;
+  isClosed: boolean;
+  suggestionDate: string;
+  approvalDate: string | null;
+  financialYearId: number;
 }
 
 export interface ApprovePlan {
