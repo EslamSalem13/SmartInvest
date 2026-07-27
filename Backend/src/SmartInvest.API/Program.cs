@@ -20,14 +20,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
     #region Repositories
     builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
     builder.Services.AddScoped<IPlanRepo, PlanRepo>();
+    builder.Services.AddScoped<IProgramRepo, ProgramRepo>();
     #endregion
 
     #region Services
     builder.Services.AddScoped<IPlanService, PlanService>();
+    builder.Services.AddScoped<IProgramService, ProgramService>();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-    #endregion
-
-
+#endregion
 
 
 // ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 
-app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
+//app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {

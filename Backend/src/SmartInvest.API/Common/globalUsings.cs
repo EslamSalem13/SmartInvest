@@ -14,3 +14,7 @@ global using SmartInvest.Application.Interfaces;
 global using SmartInvest.Application.Services;
 global using SmartInvest.Domain.Interfaces;
 global using SmartInvest.Infrastructure.Repositories;
+global using AutoMapper;
+global using SmartInvest.Application.DTOs.Plan;
+global using SmartInvest.Domain.Entities;
+global using SmartInvest.Domain.Enums;
