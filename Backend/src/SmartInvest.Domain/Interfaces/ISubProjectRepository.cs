@@ -9,4 +9,6 @@ public interface ISubProjectRepository : IGenericRepository<SubProject>
     Task<(IReadOnlyList<SubProject> Items, int TotalCount)> SearchAsync(int? mainProjectId, int? mainProgramId, int? subProgramId, int? markazId, int? priorityId, int? statusId, string? searchTerm, int page, int pageSize, CancellationToken cancellationToken = default);
 
     Task<bool> CodeExistsAsync(string code, int? excludeId = null, CancellationToken cancellationToken = default);
+
+    Task<bool> NameExistsAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default);
 }

@@ -112,7 +112,7 @@
     <div class="state"><span class="spinner"></span> جاري تحميل المشروعات…</div>
   } @else if (error()) {
     <div class="state error">{{ error() }} <button class="si-btn" (click)="load()">إعادة المحاولة</button></div>
-  } @else if (filteredRows().length === 0) {
+  } @else if (filteredGroups().length === 0) {
     <div class="state">لا توجد مشاريع مطابقة.</div>
   } @else {
     <div class="card">
@@ -129,65 +129,101 @@
             </tr>
           </thead>
           <tbody>
-            @for (r of pagedRows(); track r.main.id) {
-              <!-- ترويسة البرنامج -->
-              @if (r.showHeader) {
-                <tr class="group">
-                  <td colspan="13">📁 {{ r.programLabel }} <span class="cnt">{{ r.groupCount }} مشروع رئيسي</span></td>
-                </tr>
-              }
-              <!-- صف المشروع الرئيسي -->
-              <tr class="main-row">
-                <td><span class="code">{{ r.main.code }}</span></td>
-                <td class="mname">{{ r.main.name }}</td>
-                <td colspan="2">{{ r.main.executingAgency }}</td>
-                <td colspan="5" class="note">({{ r.subs.length }} مشروع فرعي)</td>
-                <td class="tnum">{{ money(r.main.totalBankFunding) }}</td>
-                <td class="tnum">{{ money(r.main.totalSelfFunding) }}</td>
-                <td></td>
-                <td>
-                  <div class="acts">
-                    <button class="act" title="مشروع فرعي" (click)="openAddSubFor(r.main)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg></button>
-                    <button class="act" title="تعديل" (click)="openEditMain(r.main)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
-                    @if (isManager()) {
-                      <button class="act danger" title="حذف" (click)="deleteMain(r.main)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
-                    }
-                  </div>
+            @for (group of pagedGroups(); track group.key) {
+              <!-- ترويسة البرنامج (قابلة للطي) -->
+              <tr class="group program-row" tabindex="0" role="button"
+                  [attr.aria-expanded]="isProgramExpanded(group.key)"
+                  (click)="toggleProgram(group.key)"
+                  (keydown.enter)="toggleProgram(group.key)"
+                  (keydown.space)="$event.preventDefault(); toggleProgram(group.key)">
+                <td colspan="13">
+                  <svg class="chevron" [class.open]="isProgramExpanded(group.key)" viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
+                  📁 برنامج {{ group.label }}
+                  <span class="cnt">{{ mainCountLabel(group.mains.length) }}</span>
                 </td>
               </tr>
-              <!-- صفوف الفرعي -->
-              @for (s of r.subs; track s.id) {
-                <tr class="sub-row">
-                  <td></td><td></td>
-                  <td>{{ r.main.subProgramName }}</td>
-                  <td>{{ agencyOf(s.mainProjectId) }}</td>
-                  <td>
-                    @if (s.code) { <span class="tnum">{{ s.code }}</span> } @else { <span class="wait">بانتظار الاعتماد</span> }
-                  </td>
-                  <td class="sname">{{ s.name }}</td>
-                  <td>{{ s.projectLevel }}</td>
-                  <td>{{ s.markazName }}</td>
-                  <td>{{ s.componentType }}</td>
-                  <td class="tnum">{{ money(s.bankFunding) }}</td>
-                  <td class="tnum">{{ money(s.selfFunding) }}</td>
-                  <td>
-                    @if (s.code) { <span class="pill ok">معتمد</span> } @else { <span class="pill warn">بانتظار الاعتماد</span> }
-                  </td>
-                  <td>
-                    <div class="acts">
-                      <a class="act" title="تفاصيل" [routerLink]="['/app/projects', s.id]"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg></a>
-                      <button class="act" title="تعديل" (click)="openEditSub(s)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
-                      @if (isManager()) {
-                        <button class="act danger" title="حذف" (click)="deleteSub(s)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
-                      }
-                    </div>
-                  </td>
-                </tr>
+
+              @if (isProgramExpanded(group.key)) {
+                @for (row of group.mains; track row.main.id) {
+                  <!-- صف المشروع الرئيسي (قابل للطي) -->
+                  <tr class="main-row" tabindex="0" role="button"
+                      [attr.aria-expanded]="isProjectExpanded(row.main.id)"
+                      (click)="toggleProject(row.main.id)"
+                      (keydown.enter)="toggleProject(row.main.id)"
+                      (keydown.space)="$event.preventDefault(); toggleProject(row.main.id)">
+                    <td>
+                      <svg class="chevron sm" [class.open]="isProjectExpanded(row.main.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
+                      <span class="code">{{ row.main.code }}</span>
+                    </td>
+                    <td class="mname">{{ row.main.name }}</td>
+                    <td colspan="2">{{ row.main.executingAgency }}</td>
+                    <td colspan="5" class="note">({{ row.subs.length }} مشروع فرعي)</td>
+                    <td class="tnum">{{ money(row.main.totalBankFunding) }}</td>
+                    <td class="tnum">{{ money(row.main.totalSelfFunding) }}</td>
+                    <td></td>
+                    <td>
+                      <div class="acts">
+                        <button class="act" title="مشروع فرعي" (click)="openAddSubFor(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg></button>
+                        <button class="act" title="تعديل" (click)="openEditMain(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                        @if (isManager()) {
+                          <button class="act danger" title="حذف" (click)="deleteMain(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- صفوف الفرعي (تظهر فقط لو المشروع الرئيسي مفتوح) -->
+                  @if (isProjectExpanded(row.main.id)) {
+                    @if (row.subs.length === 0) {
+                      <tr class="sub-row"><td></td><td colspan="12" class="empty-subs">لا توجد مشاريع فرعية تحت هذا المشروع.</td></tr>
+                    }
+                    @for (s of row.subs; track s.id) {
+                      <tr class="sub-row">
+                        <td></td><td></td>
+                        <td>{{ row.main.subProgramName }}</td>
+                        <td>{{ agencyOf(s.mainProjectId) }}</td>
+                        <td>
+                          @if (s.code) { <span class="tnum">{{ s.code }}</span> } @else { <span class="wait">بانتظار الاعتماد</span> }
+                        </td>
+                        <td class="sname">{{ s.name }}</td>
+                        <td>{{ s.projectLevel }}</td>
+                        <td>{{ s.markazName }}</td>
+                        <td>{{ s.componentType }}</td>
+                        <td class="tnum">{{ money(s.bankFunding) }}</td>
+                        <td class="tnum">{{ money(s.selfFunding) }}</td>
+                        <td>
+                          @if (s.isApproved) {
+                            <span class="pill ok">معتمد</span>
+                          } @else if (s.statusName === 'متعثر') {
+                            <span class="pill stalled">متعثر</span>
+                          } @else {
+                            <span class="pill warn">بانتظار الاعتماد</span>
+                          }
+                        </td>
+                        <td>
+                          <div class="acts">
+                            @if (isManager() && !s.isApproved) {
+                              <button class="act approve" title="اعتماد المشروع الفرعي" (click)="openApprovalModal(s, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
+                            }
+                            @if (isManager() && s.isApproved) {
+                              <button class="act danger" title="إلغاء اعتماد المشروع الفرعي" (click)="openCancelApprovalModal(s, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+                            }
+                            <a class="act" title="تفاصيل" [routerLink]="['/app/projects', s.id]" (click)="$event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg></a>
+                            <button class="act" title="تعديل" (click)="openEditSub(s); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                            @if (isManager()) {
+                              <button class="act danger" title="حذف" (click)="deleteSub(s); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  }
+                }
               }
             }
             <!-- الإجمالي -->
             <tr class="foot">
-              <td colspan="9">الإجمالي الكلي للمشروعات المعروضة</td>
+              <td colspan="9">الإجمالي الكلي للبرامج المعروضة</td>
               <td class="tnum">{{ money(shownBank()) }} ج.م</td>
               <td class="tnum">{{ money(shownSelf()) }} ج.م</td>
               <td colspan="2"></td>
@@ -196,7 +232,7 @@
         </table>
       </div>
       <div class="tblfoot">
-        <span class="muted">عرض {{ rangeStart() }}–{{ rangeEnd() }} من أصل {{ filteredRows().length }} مشروع رئيسي</span>
+        <span class="muted">عرض {{ rangeStart() }}–{{ rangeEnd() }} من أصل {{ filteredGroups().length }} برنامج</span>
         <div class="pager">
           <button (click)="goToPage(page() - 1)" [disabled]="page() === 1">‹</button>
           @for (p of [].constructor(totalPages()); track $index) {
@@ -211,4 +247,82 @@
   <!-- Modals -->
   <app-main-project-form [open]="showMainForm()" [edit]="mainEdit()" (close)="closeModals()" (saved)="onSaved()" />
   <app-sub-project-form [open]="showSubForm()" [edit]="subEdit()" [locked]="subLocked()" [mains]="mains()" (close)="closeModals()" (saved)="onSaved()" />
+
+  <!-- اعتماد مشروع فرعي -->
+  @if (showApprovalModal()) {
+    <div class="si-overlay" (click)="closeApprovalModal()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>اعتماد المشروع الفرعي</h3><p>أدخل الكود النهائي لاعتماد المشروع</p></div>
+          <button class="si-x" (click)="closeApprovalModal()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (approvalError()) { <div class="si-err">{{ approvalError() }}</div> }
+          <div class="si-grid" style="grid-template-columns:1fr">
+            <div class="si-fld">
+              <label>اسم المشروع الفرعي</label>
+              <input [value]="selectedSubProject()?.name" disabled />
+            </div>
+            @if (selectedSubProject()?.code) {
+              <div class="si-fld">
+                <label>الكود الحالي</label>
+                <input [value]="selectedSubProject()?.code" disabled />
+              </div>
+            }
+            <div class="si-fld">
+              <label>كود المشروع الفرعي <span class="req">*</span></label>
+              <input [ngModel]="approvalCode()" (ngModelChange)="approvalCode.set($event)" placeholder="SP-2627-XXX-A" (keyup.enter)="submitApproval()" />
+            </div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="approvalSaving()" (click)="submitApproval()">
+            @if (approvalSaving()) { جاري الاعتماد… } @else {
+              <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg> اعتماد المشروع
+            }
+          </button>
+          <button class="si-btn" (click)="closeApprovalModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- إلغاء اعتماد مشروع فرعي -->
+  @if (showCancelApprovalModal()) {
+    <div class="si-overlay" (click)="closeCancelApprovalModal()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>إلغاء اعتماد المشروع الفرعي</h3><p>سيتحوّل المشروع إلى حالة «متعثر»</p></div>
+          <button class="si-x" (click)="closeCancelApprovalModal()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (cancellationError()) { <div class="si-err">{{ cancellationError() }}</div> }
+          <div class="si-grid" style="grid-template-columns:1fr">
+            <div class="si-fld">
+              <label>اسم المشروع الفرعي</label>
+              <input [value]="selectedSubProjectForCancellation()?.name" disabled />
+            </div>
+            @if (selectedSubProjectForCancellation()?.code) {
+              <div class="si-fld">
+                <label>كود المشروع الفرعي</label>
+                <input [value]="selectedSubProjectForCancellation()?.code" disabled />
+              </div>
+            }
+            <div class="si-fld">
+              <label>سبب إلغاء الاعتماد <span class="req">*</span></label>
+              <textarea [ngModel]="cancellationReason()" (ngModelChange)="cancellationReason.set($event)" maxlength="1000" placeholder="اكتب سبب إلغاء اعتماد المشروع الفرعي..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn danger" [disabled]="cancellationSaving()" (click)="submitCancelApproval()">
+            @if (cancellationSaving()) { جاري الإلغاء… } @else {
+              <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6 6 18" /></svg> إلغاء الاعتماد
+            }
+          </button>
+          <button class="si-btn" (click)="closeCancelApprovalModal()">رجوع</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

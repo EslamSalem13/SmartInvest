@@ -8,11 +8,12 @@ public class SubProjectConfiguration : IEntityTypeConfiguration<SubProject>
 {
     public void Configure(EntityTypeBuilder<SubProject> builder)
     {
-        // كود المشروع الفرعي: فريد فقط على المشاريع اللي ليها كود (المعتمدة)،
-        // والمقترحين (NULL) مش داخلين في قيد الـ uniqueness
-        builder.HasIndex(x => x.SubProjectCode)
-               .IsUnique()
-               .HasFilter("[SubProjectCode] IS NOT NULL");
+        // كود المشروع الفرعي: مسموح تكراره — فهرس عادي (غير فريد) للبحث فقط
+        builder.HasIndex(x => x.SubProjectCode);
+
+        // اسم المشروع الفرعي: فريد على مستوى قاعدة البيانات
+        builder.HasIndex(x => x.SubProjectName)
+               .IsUnique();
 
         // منع الـ cascade delete اللي ممكن يمسح بيانات التخطيط بالغلط (مطلب في الـ Master Prompt)
         builder.HasOne(x => x.MainProject)

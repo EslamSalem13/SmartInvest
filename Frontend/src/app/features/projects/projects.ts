@@ -16,12 +16,15 @@ import {
 import { MainProjectForm } from './main-project-form';
 import { SubProjectForm, LockedParent } from './sub-project-form';
 
-interface MainRow {
+interface MainWithSubs {
   main: MainProjectListItem;
   subs: SubProjectListItem[];
-  programLabel: string;
-  showHeader: boolean;
-  groupCount: number;
+}
+
+interface ProgramGroup {
+  key: string;
+  label: string;
+  mains: MainWithSubs[];
 }
 
 @Component({
@@ -76,15 +79,15 @@ export class Projects {
 
   // ===== مؤشرات =====
   protected readonly kpiTotal = computed(() => this.subs().length);
-  protected readonly kpiApproved = computed(() => this.subs().filter((s) => !!s.code).length);
-  protected readonly kpiPending = computed(() => this.subs().filter((s) => !s.code).length);
+  protected readonly kpiApproved = computed(() => this.subs().filter((s) => s.isApproved).length);
+  protected readonly kpiPending = computed(() => this.subs().filter((s) => !s.isApproved).length);
   protected readonly kpiBank = computed(() => this.subs().reduce((a, s) => a + s.bankFunding, 0));
   protected readonly kpiSelf = computed(() => this.subs().reduce((a, s) => a + s.selfFunding, 0));
 
   // ===== الفلترة والتجميع =====
   private matchesSubFilters(s: SubProjectListItem): boolean {
-    if (this.approvalFilter() === 'approved' && !s.code) return false;
-    if (this.approvalFilter() === 'pending' && s.code) return false;
+    if (this.approvalFilter() === 'approved' && !s.isApproved) return false;
+    if (this.approvalFilter() === 'pending' && s.isApproved) return false;
     if (this.fLevel() && s.projectLevel !== this.fLevel()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
@@ -100,7 +103,8 @@ export class Projects {
     return true;
   }
 
-  protected readonly filteredRows = computed<MainRow[]>(() => {
+  // ===== التجميع: برنامج ← مشروع رئيسي ← فرعيات =====
+  protected readonly filteredGroups = computed<ProgramGroup[]>(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const subsByMain = new Map<number, SubProjectListItem[]>();
     for (const s of this.subs()) {
@@ -109,20 +113,18 @@ export class Projects {
       subsByMain.set(s.mainProjectId, arr);
     }
 
-    // رتّب حسب البرنامج ثم الاسم
     const mains = [...this.mains()].sort((a, b) => {
       const la = `${a.mainProgramName} ${a.subProgramName}`;
       const lb = `${b.mainProgramName} ${b.subProgramName}`;
       return la.localeCompare(lb, 'ar') || a.name.localeCompare(b.name, 'ar');
     });
 
-    const rows: Omit<MainRow, 'showHeader' | 'groupCount'>[] = [];
+    const groupMap = new Map<string, ProgramGroup>();
     for (const m of mains) {
       if (!this.matchesMainFilters(m)) continue;
 
       let mySubs = (subsByMain.get(m.id) ?? []).filter((s) => this.matchesSubFilters(s));
 
-      // بحث نصّي: على الرئيسي أو أحد الفرعيات
       if (term) {
         const mainHit =
           m.name.toLowerCase().includes(term) || (m.code ?? '').toLowerCase().includes(term);
@@ -133,45 +135,76 @@ export class Projects {
         if (!mainHit) mySubs = subHits;
       }
 
-      rows.push({ main: m, subs: mySubs, programLabel: `${m.mainProgramName} ← ${m.subProgramName}` });
+      const key = `${m.mainProgramName} ← ${m.subProgramName}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, { key, label: key, mains: [] });
+      }
+      groupMap.get(key)!.mains.push({ main: m, subs: mySubs });
     }
 
-    // عدّ المشاريع الرئيسية داخل كل برنامج
-    const groupCount = new Map<string, number>();
-    for (const r of rows) {
-      groupCount.set(r.programLabel, (groupCount.get(r.programLabel) ?? 0) + 1);
-    }
-    return rows.map((r) => ({ ...r, showHeader: false, groupCount: groupCount.get(r.programLabel) ?? 0 }));
+    return [...groupMap.values()];
   });
 
-  // ===== pagination على المشاريع الرئيسية =====
+  // ===== الطي والفتح (accordion) — حالة مستقلة لكل مستوى =====
+  protected readonly expandedPrograms = signal<Set<string | number>>(new Set());
+  protected readonly expandedProjects = signal<Set<number>>(new Set());
+
+  protected toggleProgram(key: string | number): void {
+    const next = new Set(this.expandedPrograms());
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    this.expandedPrograms.set(next);
+  }
+
+  protected isProgramExpanded(key: string | number): boolean {
+    return this.expandedPrograms().has(key);
+  }
+
+  protected toggleProject(projectId: number): void {
+    const next = new Set(this.expandedProjects());
+    if (next.has(projectId)) {
+      next.delete(projectId);
+    } else {
+      next.add(projectId);
+    }
+    this.expandedProjects.set(next);
+  }
+
+  protected isProjectExpanded(projectId: number): boolean {
+    return this.expandedProjects().has(projectId);
+  }
+
+  // ===== pagination على البرامج =====
   protected readonly page = signal(1);
-  protected readonly pageSize = 5;
+  protected readonly pageSize = 4;
   protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredRows().length / this.pageSize)),
+    Math.max(1, Math.ceil(this.filteredGroups().length / this.pageSize)),
   );
-  protected readonly pagedRows = computed<MainRow[]>(() => {
+  protected readonly pagedGroups = computed<ProgramGroup[]>(() => {
     const start = (this.page() - 1) * this.pageSize;
-    const slice = this.filteredRows().slice(start, start + this.pageSize);
-    let prev = '';
-    return slice.map((r) => {
-      const showHeader = r.programLabel !== prev;
-      prev = r.programLabel;
-      return { ...r, showHeader };
-    });
+    return this.filteredGroups().slice(start, start + this.pageSize);
   });
   protected readonly rangeStart = computed(() =>
-    this.filteredRows().length === 0 ? 0 : (this.page() - 1) * this.pageSize + 1,
+    this.filteredGroups().length === 0 ? 0 : (this.page() - 1) * this.pageSize + 1,
   );
   protected readonly rangeEnd = computed(() =>
-    Math.min(this.page() * this.pageSize, this.filteredRows().length),
+    Math.min(this.page() * this.pageSize, this.filteredGroups().length),
   );
-  // إجماليات المعروض
+  // إجماليات المعروض (لكل البرامج في الصفحة الحالية)
   protected readonly shownBank = computed(() =>
-    this.pagedRows().reduce((a, r) => a + r.subs.reduce((x, s) => x + s.bankFunding, 0), 0),
+    this.pagedGroups().reduce(
+      (a, g) => a + g.mains.reduce((x, m) => x + m.subs.reduce((y, s) => y + s.bankFunding, 0), 0),
+      0,
+    ),
   );
   protected readonly shownSelf = computed(() =>
-    this.pagedRows().reduce((a, r) => a + r.subs.reduce((x, s) => x + s.selfFunding, 0), 0),
+    this.pagedGroups().reduce(
+      (a, g) => a + g.mains.reduce((x, m) => x + m.subs.reduce((y, s) => y + s.selfFunding, 0), 0),
+      0,
+    ),
   );
 
   protected goToPage(p: number): void {
@@ -234,6 +267,14 @@ export class Projects {
     return (value ?? 0).toLocaleString('en-US');
   }
 
+  // صيغة عربية صحيحة لعدد المشاريع الرئيسية (مفرد/مثنى/جمع)
+  protected mainCountLabel(n: number): string {
+    if (n === 1) return 'مشروع رئيسي واحد';
+    if (n === 2) return 'مشروعان رئيسيان';
+    if (n >= 3 && n <= 10) return `${n} مشاريع رئيسية`;
+    return `${n} مشروعًا رئيسيًا`;
+  }
+
   // ===== modals actions =====
   protected toggleAddMenu(): void { this.addMenuOpen.set(!this.addMenuOpen()); }
   protected openAddMain(): void { this.addMenuOpen.set(false); this.mainEdit.set(null); this.showMainForm.set(true); }
@@ -260,6 +301,128 @@ export class Projects {
     this.projectsService.deleteSubProject(s.id).subscribe({
       next: () => this.load(),
       error: (err) => alert(err?.error?.message ?? 'تعذّر حذف المشروع الفرعي'),
+    });
+  }
+
+  // ===== اعتماد المشروع الفرعي =====
+  protected readonly showApprovalModal = signal(false);
+  protected readonly selectedSubProject = signal<SubProjectListItem | null>(null);
+  protected readonly approvalCode = signal('');
+  protected readonly approvalSaving = signal(false);
+  protected readonly approvalError = signal<string | null>(null);
+
+  protected openApprovalModal(subProject: SubProjectListItem, event: Event): void {
+    event.stopPropagation();
+    this.selectedSubProject.set(subProject);
+    this.approvalCode.set('');
+    this.approvalError.set(null);
+    this.showApprovalModal.set(true);
+  }
+
+  protected closeApprovalModal(): void {
+    this.showApprovalModal.set(false);
+    this.selectedSubProject.set(null);
+  }
+
+  protected submitApproval(): void {
+    if (this.approvalSaving()) return;
+    this.approvalError.set(null);
+
+    const sub = this.selectedSubProject();
+    if (!sub) return;
+
+    const code = this.approvalCode().trim();
+    if (!code) {
+      this.approvalError.set('برجاء إدخال كود المشروع الفرعي للاعتماد');
+      return;
+    }
+
+    this.approvalSaving.set(true);
+    this.projectsService.approveSubProject(sub.id, code).subscribe({
+      next: (approved) => {
+        this.approvalSaving.set(false);
+        // حدّث الصف فورًا بدون إعادة تحميل الصفحة (isApproved مصدر الحقيقة)
+        this.subs.update((list) =>
+          list.map((s) =>
+            s.id === approved.id
+              ? {
+                  ...s,
+                  code: approved.code,
+                  statusName: approved.statusName,
+                  statusId: approved.statusId,
+                  isApproved: approved.isApproved,
+                  approvalCancellationReason: approved.approvalCancellationReason,
+                }
+              : s,
+          ),
+        );
+        this.showApprovalModal.set(false);
+        this.selectedSubProject.set(null);
+      },
+      error: (err) => {
+        this.approvalSaving.set(false);
+        this.approvalError.set(err?.error?.message ?? 'تعذّر اعتماد المشروع الفرعي');
+      },
+    });
+  }
+
+  // ===== إلغاء اعتماد المشروع الفرعي =====
+  protected readonly showCancelApprovalModal = signal(false);
+  protected readonly selectedSubProjectForCancellation = signal<SubProjectListItem | null>(null);
+  protected readonly cancellationReason = signal('');
+  protected readonly cancellationSaving = signal(false);
+  protected readonly cancellationError = signal<string | null>(null);
+
+  protected openCancelApprovalModal(subProject: SubProjectListItem, event: Event): void {
+    event.stopPropagation();
+    this.selectedSubProjectForCancellation.set(subProject);
+    this.cancellationReason.set('');
+    this.cancellationError.set(null);
+    this.showCancelApprovalModal.set(true);
+  }
+
+  protected closeCancelApprovalModal(): void {
+    this.showCancelApprovalModal.set(false);
+    this.selectedSubProjectForCancellation.set(null);
+  }
+
+  protected submitCancelApproval(): void {
+    if (this.cancellationSaving()) return;
+    this.cancellationError.set(null);
+
+    const sub = this.selectedSubProjectForCancellation();
+    if (!sub) return;
+
+    const reason = this.cancellationReason().trim();
+    if (!reason) {
+      this.cancellationError.set('برجاء إدخال سبب إلغاء الاعتماد');
+      return;
+    }
+
+    this.cancellationSaving.set(true);
+    this.projectsService.cancelSubProjectApproval(sub.id, reason).subscribe({
+      next: (updated) => {
+        this.cancellationSaving.set(false);
+        this.subs.update((list) =>
+          list.map((s) =>
+            s.id === updated.id
+              ? {
+                  ...s,
+                  isApproved: updated.isApproved,
+                  statusName: updated.statusName,
+                  statusId: updated.statusId,
+                  approvalCancellationReason: updated.approvalCancellationReason,
+                }
+              : s,
+          ),
+        );
+        this.showCancelApprovalModal.set(false);
+        this.selectedSubProjectForCancellation.set(null);
+      },
+      error: (err) => {
+        this.cancellationSaving.set(false);
+        this.cancellationError.set(err?.error?.message ?? 'تعذّر إلغاء اعتماد المشروع الفرعي');
+      },
     });
   }
 }

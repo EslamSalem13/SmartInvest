@@ -24,7 +24,7 @@ public class MainProjectService : IMainProjectService
 
     public async Task<IReadOnlyList<MainProjectListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var mainProjects = await _mainProjectRepository.GetAllAsync(cancellationToken);
+        var mainProjects = await _mainProjectRepository.GetAllWithDetailsAsync(cancellationToken);
         return _mapper.Map<List<MainProjectListItemDto>>(mainProjects);
     }
 
