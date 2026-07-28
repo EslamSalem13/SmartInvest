@@ -76,6 +76,14 @@ export class ProjectsService {
     return this.http.put<SubProjectListItem>(`${this.base}/subprojects/${id}`, dto);
   }
 
+  approveSubProject(id: number, code: string): Observable<SubProjectDetail> {
+    return this.http.put<SubProjectDetail>(`${this.base}/subprojects/${id}/approve`, { code });
+  }
+
+  cancelSubProjectApproval(id: number, reason: string): Observable<SubProjectDetail> {
+    return this.http.patch<SubProjectDetail>(`${this.base}/subprojects/${id}/cancel-approval`, { reason });
+  }
+
   deleteSubProject(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/subprojects/${id}`);
   }

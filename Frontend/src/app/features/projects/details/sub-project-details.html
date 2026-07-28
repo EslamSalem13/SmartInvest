@@ -22,6 +22,11 @@
           <span class="code-chip">الكود الرئيسي: {{ project()!.mainProjectName }}</span>
           @if (project()!.code) {
             <span class="code-chip">الكود الفرعي: {{ project()!.code }}</span>
+          }
+          @if (project()!.isApproved) {
+            <span class="st-pill ok">معتمد</span>
+          } @else if (project()!.statusName === 'متعثر') {
+            <span class="st-pill stalled">متعثر</span>
           } @else {
             <span class="wait">بانتظار الاعتماد</span>
           }
@@ -65,6 +70,14 @@
             <div class="frow total"><span>إجمالي التكلفة التقديرية</span><b>{{ money(project()!.totalCost) }} ج.م</b></div>
             <div class="frow last"><span>الأولوية</span><b>{{ project()!.priorityName }}</b></div>
           </div>
+
+          @if (!project()!.isApproved && project()!.approvalCancellationReason) {
+            <div class="card pad reason-card">
+              <div class="sec-title reason">⚠️ سبب إلغاء الاعتماد</div>
+              <div class="reason-status">الحالة: <b>متعثر</b></div>
+              <p class="desc">{{ project()!.approvalCancellationReason }}</p>
+            </div>
+          }
         </div>
       </div>
     }

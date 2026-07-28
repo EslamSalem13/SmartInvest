@@ -63,12 +63,48 @@ public class SubProjectsController : ControllerBase
         var result = await _subProjectService.UpdateAsync(id, dto, cancellationToken);
         return Ok(result);
     }
-
     [HttpPut("{id:int}/executive-agency")]
     [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<ActionResult<SubProjectDetailDto>> AssignExecutiveAgency(int id, AssignExecutiveAgencyDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<SubProjectDetailDto>> AssignExecutiveAgency(
+        int id,
+        AssignExecutiveAgencyDto dto,
+        CancellationToken cancellationToken)
     {
-        var result = await _subProjectService.AssignExecutiveAgencyAsync(id, dto.ExecutiveAgencyId, cancellationToken);
+        var result = await _subProjectService.AssignExecutiveAgencyAsync(
+            id,
+            dto.ExecutiveAgencyId,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPut("{id:int}/approve")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<SubProjectDetailDto>> Approve(
+        int id,
+        ApproveSubProjectDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await _subProjectService.ApproveAsync(
+            id,
+            dto,
+            cancellationToken);
+
+        return Ok(result);
+    }
+
+    [HttpPatch("{id:int}/cancel-approval")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<SubProjectDetailDto>> CancelApproval(
+        int id,
+        CancelSubProjectApprovalDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await _subProjectService.CancelApprovalAsync(
+            id,
+            dto,
+            cancellationToken);
+
         return Ok(result);
     }
 

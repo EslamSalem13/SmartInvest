@@ -12,8 +12,8 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260725001951_initial")]
-    partial class initial
+    [Migration("20260728121535_AddFinancialYearBudget")]
+    partial class AddFinancialYearBudget
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -312,6 +312,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FinancialYearId"));
 
+                    b.Property<decimal?>("Budget")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
@@ -482,7 +485,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("PlanId", "SubProjectId")
                         .IsUnique();
 
-                    b.ToTable("PlanProject");
+                    b.ToTable("PlanProjects");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignment", b =>
@@ -745,6 +748,16 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ApprovalCancellationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ApprovalCancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("BankFunding")
                         .HasColumnType("decimal(18,2)");
 
@@ -763,6 +776,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<string>("GreenInvestmentLink")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
 
                     b.Property<double?>("Latitude")
                         .HasColumnType("float");
@@ -808,7 +824,8 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<string>("SubProjectName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("SubProjectId");
 
@@ -822,9 +839,10 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.HasIndex("SubProjectCode")
-                        .IsUnique()
-                        .HasFilter("[SubProjectCode] IS NOT NULL");
+                    b.HasIndex("SubProjectCode");
+
+                    b.HasIndex("SubProjectName")
+                        .IsUnique();
 
                     b.ToTable("SubProjects");
                 });

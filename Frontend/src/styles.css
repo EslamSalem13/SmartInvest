@@ -89,6 +89,7 @@ button { font-family: inherit; cursor: pointer; }
 .si-btn:hover { transform: translateY(-1px); }
 .si-btn.primary { background: var(--green-700); border-color: var(--green-700); color: #fff; }
 .si-btn.gold { background: var(--gold); border-color: var(--gold); color: #2A2107; }
+.si-btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 
 /* ===== modal مشترك ===== */
 .si-overlay {

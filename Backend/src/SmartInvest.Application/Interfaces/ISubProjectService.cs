@@ -13,6 +13,10 @@ public interface ISubProjectService
 
     Task<SubProjectDetailDto> UpdateAsync(int id, UpdateSubProjectDto dto, CancellationToken cancellationToken = default);
 
+    Task<SubProjectDetailDto> ApproveAsync(int id, ApproveSubProjectDto dto, CancellationToken cancellationToken = default);
+
+    Task<SubProjectDetailDto> CancelApprovalAsync(int id, CancelSubProjectApprovalDto dto, CancellationToken cancellationToken = default);
+
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
     Task<SubProjectDetailDto> AssignExecutiveAgencyAsync(int id, int executiveAgencyId, CancellationToken cancellationToken = default);

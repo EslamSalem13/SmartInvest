@@ -11,6 +11,15 @@ public class MainProjectRepository : GenericRepository<MainProject>, IMainProjec
     {
     }
 
+    public async Task<IReadOnlyList<MainProject>> GetAllWithDetailsAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.SubProgram).ThenInclude(sp => sp.MainProgram)
+            .Include(x => x.SubProjects)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<MainProject?> GetWithSubProjectsAsync(int id, CancellationToken cancellationToken = default)
     {
         return await DbSet

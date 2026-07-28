@@ -50,6 +50,10 @@ export interface SubProjectListItem {
   priorityName: string;
   statusId: number;
   statusName: string;
+  isApproved: boolean;
+  approvalCancellationReason: string | null;
+  approvedAt: string | null;
+  approvalCancelledAt: string | null;
   bankFunding: number;
   selfFunding: number;
   totalCost: number;
@@ -81,6 +85,10 @@ export interface SubProjectDetail {
   priorityName: string;
   statusId: number;
   statusName: string;
+  isApproved: boolean;
+  approvalCancellationReason: string | null;
+  approvedAt: string | null;
+  approvalCancelledAt: string | null;
   bankFunding: number;
   selfFunding: number;
   totalCost: number;

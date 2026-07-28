@@ -71,3 +71,15 @@ tr.current td { background: var(--ok-bg); }
 .act svg { width: 15px; height: 15px; }
 .act.danger { color: var(--bad); border-color: #F3C6CC; }
 .act.danger:hover { background: var(--bad-bg); }
+
+/* حالة الاعتماد في الهيدر */
+.st-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+.st-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st-pill.ok { background: var(--ok-bg); color: #0f7a41; }
+.st-pill.stalled { background: #FBE3D3; color: #B4441A; }
+
+/* بطاقة سبب إلغاء الاعتماد */
+.reason-card { margin-top: 14px; border-color: #F0C9B4; background: #FDF3EC; }
+.sec-title.reason { color: #B4441A; }
+.reason-status { font-size: 13px; margin-bottom: 8px; }
+.reason-status b { color: #B4441A; }

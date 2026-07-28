@@ -7,6 +7,7 @@
 
         public int MainProjectId { get; set; }
         public virtual MainProject MainProject { get; set; }
+        [MaxLength(250)]
         public string SubProjectName { get; set; } = string.Empty;
         public string ProjectLevel { get; set; } = string.Empty;
         public string ComponentType { get; set; } = string.Empty;
@@ -39,8 +40,15 @@
         [MaxLength(50)]
         public string? SubProjectCode { get; set; }
 
+        // بيانات الاعتماد
+        public bool IsApproved { get; set; }
+        [MaxLength(1000)]
+        public string? ApprovalCancellationReason { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public DateTime? ApprovalCancelledAt { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
-        public decimal BankFunding { get; set; }  
+        public decimal BankFunding { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal SelfFunding { get; set; } 

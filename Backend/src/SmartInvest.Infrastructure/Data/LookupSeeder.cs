@@ -13,6 +13,7 @@ public static class LookupSeeder
     public static async Task SeedAsync(AppDbContext context)
     {
         await SeedGeographyAsync(context);
+        await SeedProgramsAsync(context);
         await SeedPrioritiesAsync(context);
         await SeedStatusesAsync(context);
     }
@@ -53,7 +54,39 @@ public static class LookupSeeder
         await context.SaveChangesAsync();
     }
 
+    private static async Task SeedProgramsAsync(AppDbContext context)
+    {
+        if (await context.Set<MainProgram>().AnyAsync())
+        {
+            return;
+        }
 
+        var mainPrograms = new[]
+        {
+            new MainProgram { ProgramName = "الإدارة المحلية والدعم الفني" },
+            new MainProgram { ProgramName = "التنمية الحضارية والريفية" },
+            new MainProgram { ProgramName = "النقل والطرق والمواصلات" },
+            new MainProgram { ProgramName = "تحسين البيئة" },
+            new MainProgram { ProgramName = "تدعيم الخدمات المحلية والمجتمع" },
+        };
+        context.AddRange(mainPrograms);
+        await context.SaveChangesAsync();
+
+        MainProgram Prog(string name) => mainPrograms.First(p => p.ProgramName == name);
+
+        var subPrograms = new[]
+        {
+            new SubProgram { SubProgramName = "إدارة الأزمات والكوارث", ProgramId = Prog("الإدارة المحلية والدعم الفني").ProgramId },
+            new SubProgram { SubProgramName = "دعم الوحدات المحلية", ProgramId = Prog("الإدارة المحلية والدعم الفني").ProgramId },
+            new SubProgram { SubProgramName = "التنمية الحضارية", ProgramId = Prog("التنمية الحضارية والريفية").ProgramId },
+            new SubProgram { SubProgramName = "الطرق المحلية", ProgramId = Prog("النقل والطرق والمواصلات").ProgramId },
+            new SubProgram { SubProgramName = "إنارة الطرق والشوارع", ProgramId = Prog("النقل والطرق والمواصلات").ProgramId },
+            new SubProgram { SubProgramName = "إدارة المخلفات الصلبة", ProgramId = Prog("تحسين البيئة").ProgramId },
+            new SubProgram { SubProgramName = "تدعيم الخدمات المحلية والمجتمعية", ProgramId = Prog("تدعيم الخدمات المحلية والمجتمع").ProgramId },
+        };
+        context.AddRange(subPrograms);
+        await context.SaveChangesAsync();
+    }
 
     private static async Task SeedPrioritiesAsync(AppDbContext context)
     {
@@ -71,16 +104,22 @@ public static class LookupSeeder
 
     private static async Task SeedStatusesAsync(AppDbContext context)
     {
-        if (await context.Set<ProjectStatus>().AnyAsync())
-        {
-            return;
-        }
+        // القائمة القياسية للحالات — تُضاف أي حالة ناقصة فقط (idempotent بالاسم)
+        var canonical = new[] { "جديد", "قيد التنفيذ", "متوقف", "منتهي", "متعثر" };
 
-        context.AddRange(
-            new ProjectStatus { StatusName = "جديد" },
-            new ProjectStatus { StatusName = "قيد التنفيذ" },
-            new ProjectStatus { StatusName = "متوقف" },
-            new ProjectStatus { StatusName = "منتهي" });
-        await context.SaveChangesAsync();
+        var existing = await context.Set<ProjectStatus>()
+            .Select(s => s.StatusName)
+            .ToListAsync();
+
+        var missing = canonical
+            .Where(name => !existing.Contains(name))
+            .Select(name => new ProjectStatus { StatusName = name })
+            .ToList();
+
+        if (missing.Count > 0)
+        {
+            context.AddRange(missing);
+            await context.SaveChangesAsync();
+        }
     }
 }

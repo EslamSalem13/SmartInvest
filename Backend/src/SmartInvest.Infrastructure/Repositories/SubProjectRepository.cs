@@ -103,4 +103,13 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             x.SubProjectCode == code && (excludeId == null || x.SubProjectId != excludeId),
             cancellationToken);
     }
+
+    public async Task<bool> NameExistsAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+        // المقارنة تعتمد على collation قاعدة البيانات (SQL Server افتراضيًا case-insensitive)
+        return await DbSet.AnyAsync(x =>
+            x.SubProjectName == trimmed && (excludeId == null || x.SubProjectId != excludeId),
+            cancellationToken);
+    }
 }
