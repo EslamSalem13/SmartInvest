@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SmartInvest.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class initial : Migration
+    public partial class IRebuild_EF_Core_migrations_from_current_model : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -437,7 +437,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     SubProjectId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MainProjectId = table.Column<int>(type: "int", nullable: false),
-                    SubProjectName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SubProjectName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
                     ProjectLevel = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ComponentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     AccountingUnit = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -454,6 +454,10 @@ namespace SmartInvest.Infrastructure.Migrations
                     Longitude = table.Column<double>(type: "float", nullable: true),
                     StatusId = table.Column<int>(type: "int", nullable: false),
                     SubProjectCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    ApprovalCancellationReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovalCancelledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     BankFunding = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     SelfFunding = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ExecutiveAgencyId = table.Column<int>(type: "int", nullable: true)
@@ -494,7 +498,7 @@ namespace SmartInvest.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PlanProject",
+                name: "PlanProjects",
                 columns: table => new
                 {
                     PlanProjectId = table.Column<int>(type: "int", nullable: false)
@@ -504,15 +508,15 @@ namespace SmartInvest.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PlanProject", x => x.PlanProjectId);
+                    table.PrimaryKey("PK_PlanProjects", x => x.PlanProjectId);
                     table.ForeignKey(
-                        name: "FK_PlanProject_Plans_PlanId",
+                        name: "FK_PlanProjects_Plans_PlanId",
                         column: x => x.PlanId,
                         principalTable: "Plans",
                         principalColumn: "PlanId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_PlanProject_SubProjects_SubProjectId",
+                        name: "FK_PlanProjects_SubProjects_SubProjectId",
                         column: x => x.SubProjectId,
                         principalTable: "SubProjects",
                         principalColumn: "SubProjectId",
@@ -763,14 +767,14 @@ namespace SmartInvest.Infrastructure.Migrations
                 column: "GovernorateId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlanProject_PlanId_SubProjectId",
-                table: "PlanProject",
+                name: "IX_PlanProjects_PlanId_SubProjectId",
+                table: "PlanProjects",
                 columns: new[] { "PlanId", "SubProjectId" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_PlanProject_SubProjectId",
-                table: "PlanProject",
+                name: "IX_PlanProjects_SubProjectId",
+                table: "PlanProjects",
                 column: "SubProjectId");
 
             migrationBuilder.CreateIndex(
@@ -867,9 +871,13 @@ namespace SmartInvest.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_SubProjects_SubProjectCode",
                 table: "SubProjects",
-                column: "SubProjectCode",
-                unique: true,
-                filter: "[SubProjectCode] IS NOT NULL");
+                column: "SubProjectCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SubProjects_SubProjectName",
+                table: "SubProjects",
+                column: "SubProjectName",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Village_MarkazId",
@@ -899,7 +907,7 @@ namespace SmartInvest.Infrastructure.Migrations
                 name: "AuditLogs");
 
             migrationBuilder.DropTable(
-                name: "PlanProject");
+                name: "PlanProjects");
 
             migrationBuilder.DropTable(
                 name: "ProjectAssignmentChangeRequests");
