@@ -35,6 +35,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'plans',
+        loadComponent: () =>
+          import('./features/plans/plan-list').then((m) => m.PlanList),
+      },
+      {
         path: 'plans/:id',
         loadComponent: () =>
           import('./features/plans/plan-print').then((m) => m.PlanPrint),
