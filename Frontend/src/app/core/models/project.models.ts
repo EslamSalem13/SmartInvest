@@ -24,7 +24,8 @@ export interface VillageLookup extends Lookup {
 
 export interface MainProjectListItem {
   id: number;
-  code: string;
+  code: string | null;
+  isApproved: boolean;
   name: string;
   executingAgency: string;
   subProgramId: number;
@@ -96,7 +97,8 @@ export interface SubProjectDetail {
 
 export interface MainProjectDetail {
   id: number;
-  code: string;
+  code: string | null;
+  isApproved: boolean;
   name: string;
   executingAgency: string;
   subProgramId: number;
@@ -106,14 +108,14 @@ export interface MainProjectDetail {
 }
 
 export interface CreateMainProject {
-  code: string;
+  code: string | null;
   name: string;
   executingAgency: string;
   subProgramId: number;
 }
 
 export interface UpdateMainProject {
-  code: string;
+  code: string | null;
   name: string;
   executingAgency: string;
   subProgramId: number;

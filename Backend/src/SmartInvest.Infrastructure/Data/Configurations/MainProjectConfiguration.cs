@@ -14,6 +14,9 @@ namespace SmartInvest.Infrastructure.Data.Configurations
             builder.HasIndex(x => x.MainProjectCode)
            .IsUnique()
            .HasFilter("[MainProjectCode] IS NOT NULL");
+
+            builder.Property(x => x.IsApproved)
+           .HasDefaultValue(true);
         }
     }
 }

@@ -4,8 +4,9 @@
     {
         [Key]
         public int MainProjectId { get; set; }
-        [Required, MaxLength(50)]
-        public string MainProjectCode { get; set; } = string.Empty; 
+        [MaxLength(50)]
+        public string? MainProjectCode { get; set; }
+        public bool IsApproved { get; set; }
         public string MainProjectName { get; set; } = string.Empty;
         public string ExecutingAgency { get; set; } = string.Empty;
         [ForeignKey("SubProgram")]

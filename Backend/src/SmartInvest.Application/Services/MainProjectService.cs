@@ -47,13 +47,17 @@ public class MainProjectService : IMainProjectService
             throw new NotFoundException("البرنامج الفرعي المحدد غير موجود");
         }
 
-        var codeExists = await _mainProjectRepository.CodeExistsAsync(dto.Code, null, cancellationToken);
+        var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
+
+        var codeExists = await _mainProjectRepository.CodeExistsAsync(code, null, cancellationToken);
         if (codeExists)
         {
-            throw new BusinessRuleException($"كود المشروع الرئيسي «{dto.Code}» مستخدم بالفعل");
+            throw new BusinessRuleException($"كود المشروع الرئيسي «{code}» مستخدم بالفعل");
         }
 
         var mainProject = _mapper.Map<MainProject>(dto);
+        mainProject.MainProjectCode = code;
+        mainProject.IsApproved = code != null;
 
         await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -76,13 +80,16 @@ public class MainProjectService : IMainProjectService
             throw new NotFoundException("البرنامج الفرعي المحدد غير موجود");
         }
 
-        var codeExists = await _mainProjectRepository.CodeExistsAsync(dto.Code, id, cancellationToken);
+        var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
+
+        var codeExists = await _mainProjectRepository.CodeExistsAsync(code, id, cancellationToken);
         if (codeExists)
         {
-            throw new BusinessRuleException($"كود المشروع الرئيسي «{dto.Code}» مستخدم بالفعل");
+            throw new BusinessRuleException($"كود المشروع الرئيسي «{code}» مستخدم بالفعل");
         }
 
-        mainProject.MainProjectCode = dto.Code;
+        mainProject.MainProjectCode = code;
+        mainProject.IsApproved = code != null;
         mainProject.MainProjectName = dto.Name;
         mainProject.ExecutingAgency = dto.ExecutingAgency;
         mainProject.SubProgramId = dto.SubProgramId;

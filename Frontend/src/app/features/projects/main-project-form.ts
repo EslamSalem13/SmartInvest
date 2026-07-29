@@ -15,7 +15,7 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
           <div class="si-modal-head">
             <div class="grow">
               <h3>{{ edit() ? 'تعديل مشروع رئيسي' : 'إضافة مشروع رئيسي' }}</h3>
-              <p>{{ edit() ? 'الكود ثابت ولا يمكن تغييره بعد الإنشاء' : 'يُنشأ المشروع الرئيسي أولًا ثم تُضاف تحته المشاريع الفرعية' }}</p>
+              <p>{{ edit() ? 'إدخال الكود يعتمد المشروع تلقائيًا، وإزالته يعيده لبانتظار الاعتماد' : 'يُنشأ المشروع الرئيسي أولًا ثم تُضاف تحته المشاريع الفرعية' }}</p>
             </div>
             <button class="si-x" (click)="close.emit()" aria-label="إغلاق">×</button>
           </div>
@@ -51,9 +51,9 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
                 </select>
               </div>
               <div class="si-fld full">
-                <label>كود المشروع الرئيسي @if (!edit()) { <span class="req">*</span> }</label>
-                <input [ngModel]="code()" (ngModelChange)="code.set($event)" [disabled]="!!edit()" placeholder="P-2627-XXX" />
-                <div class="hint">{{ edit() ? 'الكود لا يمكن تعديله بعد الإنشاء.' : 'يُحدَّد فور الإنشاء ويجب أن يكون فريدًا.' }}</div>
+                <label>كود المشروع الرئيسي (اختياري)</label>
+                <input [ngModel]="code()" (ngModelChange)="code.set($event)" placeholder="P-2627-XXX" />
+                <div class="hint">إدخال كود يعتمد المشروع تلقائيًا فور الحفظ؛ تركه فارغًا يبقيه بانتظار الاعتماد. يجب أن يكون الكود فريدًا.</div>
               </div>
             </div>
           </div>
@@ -142,7 +142,7 @@ export class MainProjectForm {
       const sp = this.subPrograms().find((s) => s.id === e.subProgramId);
       this.programId.set(sp?.mainProgramId ?? null);
       this.subProgramId.set(e.subProgramId);
-      this.code.set(e.code);
+      this.code.set(e.code ?? '');
       this.name.set(e.name);
       this.executingAgency.set(e.executingAgency ?? '');
     } else {
@@ -166,14 +166,10 @@ export class MainProjectForm {
       this.error.set('برجاء اختيار جهة التنفيذ');
       return;
     }
-    if (!this.edit() && !this.code().trim()) {
-      this.error.set('برجاء إدخال كود المشروع الرئيسي');
-      return;
-    }
 
     this.saving.set(true);
     const dto = {
-      code: this.code().trim(),
+      code: this.code().trim() || null,
       name: this.name().trim(),
       executingAgency: this.executingAgency(),
       subProgramId: this.subProgramId()!,

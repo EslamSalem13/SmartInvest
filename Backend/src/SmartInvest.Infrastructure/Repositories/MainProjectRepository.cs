@@ -29,8 +29,13 @@ public class MainProjectRepository : GenericRepository<MainProject>, IMainProjec
             .FirstOrDefaultAsync(x => x.MainProjectId == id, cancellationToken);
     }
 
-    public async Task<bool> CodeExistsAsync(string code, int? excludeId = null, CancellationToken cancellationToken = default)
+    public async Task<bool> CodeExistsAsync(string? code, int? excludeId = null, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
         return await DbSet.AnyAsync(x =>
             x.MainProjectCode == code && (excludeId == null || x.MainProjectId != excludeId),
             cancellationToken);

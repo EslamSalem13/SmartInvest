@@ -3,7 +3,8 @@ namespace SmartInvest.Application.DTOs;
 public class MainProjectListItemDto
 {
     public int Id { get; set; }
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
+    public bool IsApproved { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ExecutingAgency { get; set; } = string.Empty;
     public int SubProgramId { get; set; }
@@ -17,7 +18,8 @@ public class MainProjectListItemDto
 public class MainProjectDetailDto
 {
     public int Id { get; set; }
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
+    public bool IsApproved { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ExecutingAgency { get; set; } = string.Empty;
     public int SubProgramId { get; set; }
@@ -28,7 +30,7 @@ public class MainProjectDetailDto
 
 public class CreateMainProjectDto
 {
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ExecutingAgency { get; set; } = string.Empty;
     public int SubProgramId { get; set; }
@@ -36,7 +38,7 @@ public class CreateMainProjectDto
 
 public class UpdateMainProjectDto
 {
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ExecutingAgency { get; set; } = string.Empty;
     public int SubProgramId { get; set; }

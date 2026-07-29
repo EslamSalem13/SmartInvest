@@ -123,7 +123,7 @@ export class Projects {
     }
 
     const mains = [...this.mains()].sort(
-      (a, b) => a.code.localeCompare(b.code, 'ar') || a.name.localeCompare(b.name, 'ar'),
+      (a, b) => (a.code ?? '').localeCompare(b.code ?? '', 'ar') || a.name.localeCompare(b.name, 'ar'),
     );
 
     const rows: MainWithSubs[] = [];

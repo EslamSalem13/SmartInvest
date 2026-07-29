@@ -8,7 +8,6 @@ public class CreateMainProjectDtoValidator : AbstractValidator<CreateMainProject
     public CreateMainProjectDtoValidator()
     {
         RuleFor(x => x.Code)
-            .NotEmpty().WithMessage("كود المشروع الرئيسي مطلوب")
             .MaximumLength(50);
 
         RuleFor(x => x.Name)

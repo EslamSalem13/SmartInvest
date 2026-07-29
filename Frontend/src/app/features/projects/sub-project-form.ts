@@ -14,7 +14,7 @@ import {
 
 export interface LockedParent {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
 }
 
@@ -40,7 +40,7 @@ export interface LockedParent {
             @if (locked()) {
               <div class="si-locked">
                 <div class="lh">
-                  <div><b>{{ locked()!.name }}</b><div class="lc">الكود: {{ locked()!.code }}</div></div>
+                  <div><b>{{ locked()!.name }}</b><div class="lc">الكود: {{ locked()!.code ?? 'بانتظار الاعتماد' }}</div></div>
                   <span class="lb">🔒 المشروع الرئيسي التابع له</span>
                 </div>
               </div>

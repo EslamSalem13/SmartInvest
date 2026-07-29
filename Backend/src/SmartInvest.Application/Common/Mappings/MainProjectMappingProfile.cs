@@ -12,6 +12,9 @@ public class MainProjectMappingProfile : Profile
                 dest => dest.Code,
                 opt => opt.MapFrom(src => src.MainProjectCode))
             .ForMember(
+                dest => dest.IsApproved,
+                opt => opt.MapFrom(src => src.IsApproved))
+            .ForMember(
                 dest => dest.Name,
                 opt => opt.MapFrom(src => src.MainProjectName))
             .ForMember(
@@ -42,6 +45,9 @@ public class MainProjectMappingProfile : Profile
             .ForMember(
                 dest => dest.Code,
                 opt => opt.MapFrom(src => src.MainProjectCode))
+            .ForMember(
+                dest => dest.IsApproved,
+                opt => opt.MapFrom(src => src.IsApproved))
             .ForMember(
                 dest => dest.Name,
                 opt => opt.MapFrom(src => src.MainProjectName))
