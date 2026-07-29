@@ -36,13 +36,6 @@ export class MainLayout {
 
   protected readonly initial = computed(() => this.user()?.fullName?.trim()?.charAt(0) ?? '؟');
 
-  protected readonly today = new Date().toLocaleDateString('ar-EG', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
   private readonly allNav: NavItem[] = [
     { label: 'لوحة التحكم', route: '/app/dashboard', icon: 'M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-4H4v4ZM14 4v5h6V4h-6Z', managerOnly: true },
     { label: 'المشروعات', route: '/app/projects', icon: 'M3 7h18M3 12h18M3 17h18', managerOnly: false },
