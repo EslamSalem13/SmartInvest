@@ -84,10 +84,6 @@ export class PlanList {
     });
   }
 
-  protected money(value: number): string {
-    return (value ?? 0).toLocaleString('en-US');
-  }
-
   protected statusLabel(status: string): string {
     return status === 'Approved' ? 'معتمدة' : 'مقترحة';
   }
