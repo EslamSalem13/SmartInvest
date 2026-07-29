@@ -204,11 +204,15 @@ export interface SubProjectFinancialYear {
 }
 
 export interface Plan {
+  planId: number;
   planName: string;
   startDate: string;
   endDate: string;
   planStatus: string;
   approvalDate: string | null;
+  financialYearId: number;
+  financialYearName: string;
+  suggestionDate: string;
 }
 
 export interface PlanProjectItem {
