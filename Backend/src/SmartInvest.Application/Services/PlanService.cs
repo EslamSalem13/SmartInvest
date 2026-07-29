@@ -1,4 +1,5 @@
 using SmartInvest.Application.Common.Exceptions;
+using SmartInvest.Domain.Common;
 
 namespace SmartInvest.Application.Services;
 
@@ -6,11 +7,13 @@ public class PlanService : IPlanService
 {
     private readonly IUnitOfWork unitOfWork;
     private readonly IPlanRepo planRepo;
+    private readonly ICurrentUserService currentUser;
 
-    public PlanService(IUnitOfWork unitOfWork, IPlanRepo planRepo)
+    public PlanService(IUnitOfWork unitOfWork, IPlanRepo planRepo, ICurrentUserService currentUser)
     {
         this.unitOfWork = unitOfWork;
         this.planRepo = planRepo;
+        this.currentUser = currentUser;
     }
     // Plans with filter
     public List<Plan>? GetPlansByNameAndStatus(PlanStatus? planStatus, string? planName)
@@ -27,6 +30,20 @@ public class PlanService : IPlanService
     }
     public async Task AddPlan(Plan plan)
     {
+        if (plan.PlanStatus == PlanStatus.Approved && currentUser.Role != Roles.PlanningManager)
+        {
+            throw new ForbiddenAccessException("اعتماد الخطة يتطلب صلاحية مدير التخطيط");
+        }
+
+        if (plan.PlanStatus == PlanStatus.Suggested)
+        {
+            var existing = await planRepo.FindAsync(p => p.FinancialYearId == plan.FinancialYearId && p.PlanStatus == PlanStatus.Suggested);
+            if (existing.Any())
+            {
+                throw new BusinessRuleException("توجد بالفعل خطة مقترحة لهذه السنة المالية");
+            }
+        }
+
         await planRepo.AddAsync(plan);
         await unitOfWork.SaveChangesAsync();
     }

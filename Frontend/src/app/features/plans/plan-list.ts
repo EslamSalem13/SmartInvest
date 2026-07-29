@@ -32,9 +32,6 @@ export class PlanList {
   );
   protected readonly generating = signal(false);
 
-  protected readonly showApprovedDateForm = signal(false);
-  protected readonly approvedDate = signal('');
-
   // ===== قائمة الخطط =====
   protected readonly plans = signal<Plan[]>([]);
   protected readonly plansLoading = signal(true);
@@ -43,7 +40,9 @@ export class PlanList {
 
   protected readonly filteredPlans = computed(() => {
     const filter = this.statusFilter();
+    const yearId = this.selectedYearId();
     return [...this.plans()]
+      .filter((p) => yearId == null || p.financialYearId === yearId)
       .filter((p) => {
         if (filter === 'approved') return p.planStatus === 'Approved';
         if (filter === 'pending') return p.planStatus !== 'Approved';
@@ -51,6 +50,18 @@ export class PlanList {
       })
       .sort((a, b) => b.suggestionDate.localeCompare(a.suggestionDate));
   });
+
+  // ===== توليد خطة جديدة (مقترحة أو معتمدة) =====
+  protected readonly hasSuggestedForSelectedYear = computed(() => {
+    const yearId = this.selectedYearId();
+    return this.plans().some((p) => p.financialYearId === yearId && p.planStatus === 'Suggested');
+  });
+
+  protected readonly showAddPlanForm = signal(false);
+  protected readonly newPlanType = signal<'Suggested' | 'Approved'>('Suggested');
+  protected readonly newPlanApprovalDate = signal('');
+  protected readonly addPlanError = signal<string | null>(null);
+  protected readonly maxApprovalDate = computed(() => this.toLocalIsoDate(new Date()));
 
   constructor() {
     this.loadFinancialYears();
@@ -93,29 +104,77 @@ export class PlanList {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  // ===== إنشاء خطة مقترحة جديدة =====
-  protected generateSuggested(): void {
+  protected openAddPlan(): void {
+    if (!this.selectedYearId() || this.generating()) return;
+    this.addPlanError.set(null);
+    this.newPlanType.set(
+      this.hasSuggestedForSelectedYear() && this.isManager() ? 'Approved' : 'Suggested',
+    );
+    this.newPlanApprovalDate.set(this.maxApprovalDate());
+    this.showAddPlanForm.set(true);
+  }
+
+  protected closeAddPlan(): void {
+    this.showAddPlanForm.set(false);
+  }
+
+  protected confirmAddPlan(): void {
+    if (this.generating()) return;
+    this.addPlanError.set(null);
+
     const yearId = this.selectedYearId();
-    if (!yearId || this.generating()) return;
+    if (!yearId) return;
+
+    const type = this.newPlanType();
+
+    if (type === 'Suggested' && this.hasSuggestedForSelectedYear()) {
+      this.addPlanError.set('توجد بالفعل خطة مقترحة لهذه السنة المالية.');
+      return;
+    }
+
+    let approvalDate: string | null = null;
+    if (type === 'Approved') {
+      approvalDate = this.newPlanApprovalDate();
+      if (!approvalDate) {
+        this.addPlanError.set('برجاء إدخال تاريخ الاعتماد.');
+        return;
+      }
+      if (approvalDate > this.maxApprovalDate()) {
+        this.addPlanError.set('لا يمكن أن يكون تاريخ الاعتماد في المستقبل.');
+        return;
+      }
+    }
+
+    this.showAddPlanForm.set(false);
+    this.createPlan(yearId, type, approvalDate);
+  }
+
+  private createPlan(yearId: number, type: 'Suggested' | 'Approved', approvalDate: string | null): void {
     const year = this.financialYears().find((y) => y.id === yearId);
     if (!year) return;
 
     this.generating.set(true);
     this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
       next: (result) => {
+        const subProjectIds =
+          type === 'Approved'
+            ? result.items.filter((s) => s.isApproved).map((s) => s.id)
+            : result.items.map((s) => s.id);
+
         this.plansService
           .create({
-            planName: `الخطة المقترحة - ${year.name}`,
+            planName: type === 'Approved' ? `الخطة المعتمدة - ${year.name}` : `الخطة المقترحة - ${year.name}`,
             startDate: year.startDate,
             endDate: year.endDate,
-            planStatus: 'Suggested',
+            planStatus: type,
+            approvalDate,
             financialYearId: yearId,
           })
           .subscribe({
-            next: (plan) => this.addAllThenGo(plan.planId, result.items.map((s) => s.id)),
-            error: () => {
+            next: (plan) => this.addAllThenGo(plan.planId, subProjectIds),
+            error: (err) => {
               this.generating.set(false);
-              alert('تعذّر إنشاء الخطة');
+              alert(err?.error?.message ?? 'تعذّر إنشاء الخطة');
             },
           });
       },
@@ -144,77 +203,5 @@ export class PlanList {
         this.router.navigate(['/app/plans', planId]);
       },
     });
-  }
-
-  // ===== إنشاء خطة معتمدة جديدة =====
-  protected openApprovedGenerate(): void {
-    if (!this.selectedYearId()) return;
-    this.approvedDate.set(this.toLocalIsoDate(new Date()));
-    this.showApprovedDateForm.set(true);
-  }
-
-  protected closeApprovedGenerate(): void {
-    this.showApprovedDateForm.set(false);
-  }
-
-  protected confirmApprovedGenerate(): void {
-    const yearId = this.selectedYearId();
-    const date = this.approvedDate();
-    if (!yearId || !date || this.generating()) return;
-    const year = this.financialYears().find((y) => y.id === yearId);
-    if (!year) return;
-
-    this.showApprovedDateForm.set(false);
-    this.generating.set(true);
-    this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
-      next: (result) => {
-        const approvedIds = result.items.filter((s) => s.isApproved).map((s) => s.id);
-        this.plansService
-          .create({
-            planName: `الخطة المعتمدة - ${year.name}`,
-            startDate: year.startDate,
-            endDate: year.endDate,
-            planStatus: 'Suggested',
-            financialYearId: yearId,
-          })
-          .subscribe({
-            next: (plan) => this.addAllThenApprove(plan.planId, approvedIds, date),
-            error: () => {
-              this.generating.set(false);
-              alert('تعذّر إنشاء الخطة');
-            },
-          });
-      },
-      error: () => {
-        this.generating.set(false);
-        alert('تعذّر تحميل مشروعات السنة المالية');
-      },
-    });
-  }
-
-  private addAllThenApprove(planId: number, subProjectIds: number[], approvalDate: string): void {
-    const afterAdd = (addFailed: boolean) => {
-      if (addFailed) {
-        alert('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
-      }
-      this.plansService.approve(planId, { approvalDate }).subscribe({
-        next: () => {
-          this.generating.set(false);
-          this.router.navigate(['/app/plans', planId]);
-        },
-        error: () => {
-          this.generating.set(false);
-          alert('تعذّر اعتماد الخطة، ستُطبع كخطة غير معتمدة');
-          this.router.navigate(['/app/plans', planId]);
-        },
-      });
-    };
-
-    if (subProjectIds.length === 0) {
-      afterAdd(false);
-      return;
-    }
-    const calls = subProjectIds.map((id) => this.plansService.addExistingProject(planId, id));
-    forkJoin(calls).subscribe({ next: () => afterAdd(false), error: () => afterAdd(true) });
   }
 }
