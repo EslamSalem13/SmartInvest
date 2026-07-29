@@ -1,12 +1,11 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
-import { PlansService } from '../../core/services/plans.service';
 import {
   EXECUTING_AGENCIES,
   FinancialYear,
@@ -41,8 +40,6 @@ export class Projects {
   private readonly lookups = inject(LookupsService);
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
-  private readonly plansService = inject(PlansService);
-  private readonly router = inject(Router);
 
   protected readonly isManager = this.auth.isManager;
   protected readonly agencies = EXECUTING_AGENCIES;
@@ -58,15 +55,11 @@ export class Projects {
   protected readonly sortedYears = computed(() =>
     [...this.financialYears()].sort((a, b) => b.startDate.localeCompare(a.startDate)),
   );
-  protected readonly printing = signal(false);
 
   protected readonly showAddYearForm = signal(false);
   protected readonly newYearBudget = signal<number | null>(null);
   protected readonly addYearError = signal<string | null>(null);
   protected readonly savingYear = signal(false);
-
-  protected readonly showApprovedDateForm = signal(false);
-  protected readonly approvedDate = signal('');
 
   // ابحث + فلاتر
   protected readonly searchTerm = signal('');
@@ -407,59 +400,6 @@ export class Projects {
       });
   }
 
-  // ===== طباعة الخطة المقترحة =====
-  protected printSuggested(): void {
-    const yearId = this.selectedYearId();
-    if (!yearId || this.printing()) return;
-    const year = this.financialYears().find((y) => y.id === yearId);
-    if (!year) return;
-
-    this.printing.set(true);
-    this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
-      next: (result) => {
-        this.plansService
-          .create({
-            planName: `الخطة المقترحة - ${year.name}`,
-            startDate: year.startDate,
-            endDate: year.endDate,
-            planStatus: 'Suggested',
-            financialYearId: yearId,
-          })
-          .subscribe({
-            next: (plan) => this.addAllSuggested(plan.planId, result.items.map((s) => s.id)),
-            error: () => {
-              this.printing.set(false);
-              alert('تعذّر إنشاء الخطة');
-            },
-          });
-      },
-      error: () => {
-        this.printing.set(false);
-        alert('تعذّر تحميل مشروعات السنة المالية');
-      },
-    });
-  }
-
-  private addAllSuggested(planId: number, subProjectIds: number[]): void {
-    if (subProjectIds.length === 0) {
-      this.printing.set(false);
-      this.router.navigate(['/app/plans', planId]);
-      return;
-    }
-    const calls = subProjectIds.map((id) => this.plansService.addExistingProject(planId, id));
-    forkJoin(calls).subscribe({
-      next: () => {
-        this.printing.set(false);
-        this.router.navigate(['/app/plans', planId]);
-      },
-      error: () => {
-        this.printing.set(false);
-        alert('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
-        this.router.navigate(['/app/plans', planId]);
-      },
-    });
-  }
-
   // ===== اعتماد المشروع الفرعي =====
   protected readonly showApprovalModal = signal(false);
   protected readonly selectedSubProject = signal<SubProjectListItem | null>(null);
@@ -520,78 +460,6 @@ export class Projects {
         this.approvalError.set(err?.error?.message ?? 'تعذّر اعتماد المشروع الفرعي');
       },
     });
-  }
-
-  // ===== طباعة الخطة المعتمدة =====
-  protected openApprovedPrint(): void {
-    if (!this.selectedYearId()) return;
-    this.approvedDate.set(this.toLocalIsoDate(new Date()));
-    this.showApprovedDateForm.set(true);
-  }
-
-  protected closeApprovedPrint(): void {
-    this.showApprovedDateForm.set(false);
-  }
-
-  protected confirmApprovedPrint(): void {
-    const yearId = this.selectedYearId();
-    const date = this.approvedDate();
-    if (!yearId || !date || this.printing()) return;
-    const year = this.financialYears().find((y) => y.id === yearId);
-    if (!year) return;
-
-    this.showApprovedDateForm.set(false);
-    this.printing.set(true);
-    this.projectsService.searchSubProjects({ financialYearId: yearId, page: 1, pageSize: 5000 }).subscribe({
-      next: (result) => {
-        const approvedIds = result.items.filter((s) => s.isApproved).map((s) => s.id);
-        this.plansService
-          .create({
-            planName: `الخطة المعتمدة - ${year.name}`,
-            startDate: year.startDate,
-            endDate: year.endDate,
-            planStatus: 'Suggested',
-            financialYearId: yearId,
-          })
-          .subscribe({
-            next: (plan) => this.addAllThenApprove(plan.planId, approvedIds, date),
-            error: () => {
-              this.printing.set(false);
-              alert('تعذّر إنشاء الخطة');
-            },
-          });
-      },
-      error: () => {
-        this.printing.set(false);
-        alert('تعذّر تحميل مشروعات السنة المالية');
-      },
-    });
-  }
-
-  private addAllThenApprove(planId: number, subProjectIds: number[], approvalDate: string): void {
-    const afterAdd = (addFailed: boolean) => {
-      if (addFailed) {
-        alert('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
-      }
-      this.plansService.approve(planId, { approvalDate }).subscribe({
-        next: () => {
-          this.printing.set(false);
-          this.router.navigate(['/app/plans', planId]);
-        },
-        error: () => {
-          this.printing.set(false);
-          alert('تعذّر اعتماد الخطة، ستُطبع كخطة غير معتمدة');
-          this.router.navigate(['/app/plans', planId]);
-        },
-      });
-    };
-
-    if (subProjectIds.length === 0) {
-      afterAdd(false);
-      return;
-    }
-    const calls = subProjectIds.map((id) => this.plansService.addExistingProject(planId, id));
-    forkJoin(calls).subscribe({ next: () => afterAdd(false), error: () => afterAdd(true) });
   }
 
   // ===== إلغاء اعتماد المشروع الفرعي =====
