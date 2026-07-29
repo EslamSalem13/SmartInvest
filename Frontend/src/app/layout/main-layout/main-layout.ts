@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { Roles } from '../../core/models/auth.models';
@@ -9,6 +9,8 @@ interface NavItem {
   icon: string;
   managerOnly: boolean;
 }
+
+const SIDEBAR_COLLAPSED_KEY = 'smartinvest_sidebar_collapsed';
 
 @Component({
   selector: 'app-main-layout',
@@ -35,6 +37,14 @@ export class MainLayout {
   });
 
   protected readonly initial = computed(() => this.user()?.fullName?.trim()?.charAt(0) ?? '؟');
+
+  protected readonly sidebarCollapsed = signal(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true');
+
+  protected toggleSidebar(): void {
+    const next = !this.sidebarCollapsed();
+    this.sidebarCollapsed.set(next);
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+  }
 
   private readonly allNav: NavItem[] = [
     { label: 'لوحة التحكم', route: '/app/dashboard', icon: 'M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-4H4v4ZM14 4v5h6V4h-6Z', managerOnly: true },

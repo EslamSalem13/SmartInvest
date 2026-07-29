@@ -17,7 +17,9 @@
 }
 
 .side {
-  flex: 0 0 264px;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 264px;
   width: 264px;
   align-self: stretch;
   background: linear-gradient(180deg, #0F4A34, #072A1E);
@@ -29,6 +31,38 @@
   position: sticky;
   top: 0;
   height: 100dvh;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: flex-basis .25s ease, width .25s ease, padding .25s ease, opacity .2s ease;
+}
+.side.collapsed {
+  flex-basis: 0;
+  width: 0;
+  padding-inline: 0;
+  opacity: 0;
+}
+
+.side-toggle {
+  position: fixed;
+  top: 24px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: inset-inline-end .25s ease, transform .15s ease;
+}
+.side-toggle:hover { transform: scale(1.08); }
+.side-toggle svg { width: 15px; height: 15px; transition: transform .25s ease; }
+.side-toggle.collapsed svg { transform: rotate(180deg); }
+@media (max-width: 900px) {
+  .side-toggle { display: none; }
 }
 
 .logo { display: flex; align-items: center; gap: 12px; padding: 4px 6px 16px; }
