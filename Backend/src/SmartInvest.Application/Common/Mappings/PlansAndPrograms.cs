@@ -10,6 +10,7 @@ namespace SmartInvest.Application.Common.Mappings
 
             CreateMap<Plan, PlanInfoDto>()
             .ForMember(des => des.Projects, opt => opt.MapFrom(src => src.PlanProjects!.Select(p=>p.SubProject)))
+            .ForMember(d => d.FinancialYearName, o => o.MapFrom(s => s.FinancialYear!.Name))
             .ReverseMap();
 
             CreateMap<Plan, AddAndEditPlanInfoDto>()

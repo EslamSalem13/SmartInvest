@@ -50,11 +50,11 @@
           </div>
           <h3>{{ plan.planName }}</h3>
           <div class="plan-card-dates">
-            <span>{{ plan.startDate }} — {{ plan.endDate }}</span>
+            <span>{{ plan.startDate | date: 'yyyy/MM/dd' }} — {{ plan.endDate | date: 'yyyy/MM/dd' }}</span>
           </div>
           <div class="plan-card-foot">
-            <span>تاريخ الاقتراح: {{ plan.suggestionDate | slice:0:10 }}</span>
-            @if (plan.approvalDate) { <span>تاريخ الاعتماد: {{ plan.approvalDate | slice:0:10 }}</span> }
+            <span>تاريخ الاقتراح: {{ plan.suggestionDate | date: 'yyyy/MM/dd' }}</span>
+            @if (plan.approvalDate) { <span>تاريخ الاعتماد: {{ plan.approvalDate | date: 'yyyy/MM/dd' }}</span> }
           </div>
         </a>
       }

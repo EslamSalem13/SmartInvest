@@ -11,6 +11,7 @@
                 return Context.Plans
                     .Include(p => p.PlanProjects!)
                     .ThenInclude(pp => pp.SubProject!)
+                    .Include(p => p.FinancialYear)
                     .FirstOrDefault(p => p.PlanId == planId);
             }
         // currently active Plan
@@ -21,6 +22,7 @@
                 .OrderByDescending(p => p.StartDate)
                 .Include(p => p.PlanProjects!)
                   .ThenInclude(pp => pp.SubProject!)
+                .Include(p => p.FinancialYear)
                 .FirstOrDefault();
         }
 
@@ -28,9 +30,8 @@
             public List<Plan>? GetPlanByStatusAndName(PlanStatus? Status, string? PlanName)
             {
                  var  Query = Context.Plans
-                    .Include(p => p.PlanProjects)
                     .Include(p => p.FinancialYear)
-                    .AsQueryable(); 
+                    .AsQueryable();
            
                 if(Status != null && !string.IsNullOrEmpty(PlanName))
                 {

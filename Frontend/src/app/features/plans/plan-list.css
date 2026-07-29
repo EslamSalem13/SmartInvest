@@ -54,7 +54,7 @@ select.mini { border: 1px solid var(--line-strong); background: var(--surface); 
 
 .plan-card-head .fy {
   font-size: 0.85rem;
-  color: var(--muted, #666);
+  color: var(--muted);
 }
 
 .plan-card h3 {
@@ -68,5 +68,5 @@ select.mini { border: 1px solid var(--line-strong); background: var(--surface); 
   flex-direction: column;
   gap: 4px;
   font-size: 0.85rem;
-  color: var(--muted, #666);
+  color: var(--muted);
 }

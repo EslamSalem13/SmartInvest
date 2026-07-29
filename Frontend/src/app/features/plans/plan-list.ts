@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { SlicePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -11,7 +11,7 @@ import { FinancialYear, Plan } from '../../core/models/project.models';
 
 @Component({
   selector: 'app-plan-list',
-  imports: [FormsModule, RouterLink, SlicePipe],
+  imports: [FormsModule, RouterLink, DatePipe],
   templateUrl: './plan-list.html',
   styleUrl: './plan-list.css',
 })
@@ -66,6 +66,7 @@ export class PlanList {
           this.selectedYearId.set(sorted[0].id);
         }
       },
+      error: () => {},
     });
   }
 
@@ -128,7 +129,6 @@ export class PlanList {
   private addAllThenGo(planId: number, subProjectIds: number[]): void {
     if (subProjectIds.length === 0) {
       this.generating.set(false);
-      this.loadPlans();
       this.router.navigate(['/app/plans', planId]);
       return;
     }
@@ -136,12 +136,10 @@ export class PlanList {
     forkJoin(calls).subscribe({
       next: () => {
         this.generating.set(false);
-        this.loadPlans();
         this.router.navigate(['/app/plans', planId]);
       },
       error: () => {
         this.generating.set(false);
-        this.loadPlans();
         alert('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
         this.router.navigate(['/app/plans', planId]);
       },
@@ -202,12 +200,10 @@ export class PlanList {
       this.plansService.approve(planId, { approvalDate }).subscribe({
         next: () => {
           this.generating.set(false);
-          this.loadPlans();
           this.router.navigate(['/app/plans', planId]);
         },
         error: () => {
           this.generating.set(false);
-          this.loadPlans();
           alert('تعذّر اعتماد الخطة، ستُطبع كخطة غير معتمدة');
           this.router.navigate(['/app/plans', planId]);
         },

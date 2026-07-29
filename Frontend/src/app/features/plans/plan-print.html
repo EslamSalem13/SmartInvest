@@ -5,9 +5,9 @@
     <div class="state error">{{ error() ?? 'الخطة غير موجودة' }}</div>
   } @else {
     <div class="toolbar no-print">
-      <a class="si-btn" routerLink="/app/projects">
+      <a class="si-btn" routerLink="/app/plans">
         <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 6l6 6-6 6" /></svg>
-        رجوع للمشروعات
+        رجوع للخطط
       </a>
       <button class="si-btn primary" (click)="print()">
         <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
