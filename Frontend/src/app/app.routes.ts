@@ -1,10 +1,11 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core/guards/auth.guard';
+import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
 import { Roles } from './core/models/auth.models';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [guestGuard],
     loadComponent: () => import('./features/home/home').then((m) => m.Home),
   },
   { path: 'login', redirectTo: '', pathMatch: 'full' },
