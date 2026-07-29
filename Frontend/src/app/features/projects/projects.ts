@@ -23,12 +23,6 @@ interface MainWithSubs {
   subs: SubProjectListItem[];
 }
 
-interface ProgramGroup {
-  key: string;
-  label: string;
-  mains: MainWithSubs[];
-}
-
 @Component({
   selector: 'app-projects',
   imports: [FormsModule, RouterLink, MainProjectForm, SubProjectForm],
@@ -118,8 +112,8 @@ export class Projects {
     return true;
   }
 
-  // ===== التجميع: برنامج ← مشروع رئيسي ← فرعيات =====
-  protected readonly filteredGroups = computed<ProgramGroup[]>(() => {
+  // ===== الفلترة: مشروع رئيسي ← فرعيات =====
+  protected readonly filteredMains = computed<MainWithSubs[]>(() => {
     const term = this.searchTerm().trim().toLowerCase();
     const subsByMain = new Map<number, SubProjectListItem[]>();
     for (const s of this.subs()) {
@@ -128,13 +122,11 @@ export class Projects {
       subsByMain.set(s.mainProjectId, arr);
     }
 
-    const mains = [...this.mains()].sort((a, b) => {
-      const la = `${a.mainProgramName} ${a.subProgramName}`;
-      const lb = `${b.mainProgramName} ${b.subProgramName}`;
-      return la.localeCompare(lb, 'ar') || a.name.localeCompare(b.name, 'ar');
-    });
+    const mains = [...this.mains()].sort(
+      (a, b) => a.code.localeCompare(b.code, 'ar') || a.name.localeCompare(b.name, 'ar'),
+    );
 
-    const groupMap = new Map<string, ProgramGroup>();
+    const rows: MainWithSubs[] = [];
     for (const m of mains) {
       if (!this.matchesMainFilters(m)) continue;
 
@@ -150,33 +142,14 @@ export class Projects {
         if (!mainHit) mySubs = subHits;
       }
 
-      const key = `${m.mainProgramName} ← ${m.subProgramName}`;
-      if (!groupMap.has(key)) {
-        groupMap.set(key, { key, label: key, mains: [] });
-      }
-      groupMap.get(key)!.mains.push({ main: m, subs: mySubs });
+      rows.push({ main: m, subs: mySubs });
     }
 
-    return [...groupMap.values()];
+    return rows;
   });
 
-  // ===== الطي والفتح (accordion) — حالة مستقلة لكل مستوى =====
-  protected readonly expandedPrograms = signal<Set<string | number>>(new Set());
+  // ===== الطي والفتح (accordion) للمشروع الرئيسي =====
   protected readonly expandedProjects = signal<Set<number>>(new Set());
-
-  protected toggleProgram(key: string | number): void {
-    const next = new Set(this.expandedPrograms());
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-    this.expandedPrograms.set(next);
-  }
-
-  protected isProgramExpanded(key: string | number): boolean {
-    return this.expandedPrograms().has(key);
-  }
 
   protected toggleProject(projectId: number): void {
     const next = new Set(this.expandedProjects());
@@ -192,34 +165,28 @@ export class Projects {
     return this.expandedProjects().has(projectId);
   }
 
-  // ===== pagination على البرامج =====
+  // ===== pagination على المشاريع الرئيسية =====
   protected readonly page = signal(1);
-  protected readonly pageSize = 4;
+  protected readonly pageSize = 10;
   protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredGroups().length / this.pageSize)),
+    Math.max(1, Math.ceil(this.filteredMains().length / this.pageSize)),
   );
-  protected readonly pagedGroups = computed<ProgramGroup[]>(() => {
+  protected readonly pagedMains = computed<MainWithSubs[]>(() => {
     const start = (this.page() - 1) * this.pageSize;
-    return this.filteredGroups().slice(start, start + this.pageSize);
+    return this.filteredMains().slice(start, start + this.pageSize);
   });
   protected readonly rangeStart = computed(() =>
-    this.filteredGroups().length === 0 ? 0 : (this.page() - 1) * this.pageSize + 1,
+    this.filteredMains().length === 0 ? 0 : (this.page() - 1) * this.pageSize + 1,
   );
   protected readonly rangeEnd = computed(() =>
-    Math.min(this.page() * this.pageSize, this.filteredGroups().length),
+    Math.min(this.page() * this.pageSize, this.filteredMains().length),
   );
-  // إجماليات المعروض (لكل البرامج في الصفحة الحالية)
+  // إجماليات المعروض (لكل المشاريع الرئيسية في الصفحة الحالية)
   protected readonly shownBank = computed(() =>
-    this.pagedGroups().reduce(
-      (a, g) => a + g.mains.reduce((x, m) => x + m.subs.reduce((y, s) => y + s.bankFunding, 0), 0),
-      0,
-    ),
+    this.pagedMains().reduce((a, m) => a + m.subs.reduce((y, s) => y + s.bankFunding, 0), 0),
   );
   protected readonly shownSelf = computed(() =>
-    this.pagedGroups().reduce(
-      (a, g) => a + g.mains.reduce((x, m) => x + m.subs.reduce((y, s) => y + s.selfFunding, 0), 0),
-      0,
-    ),
+    this.pagedMains().reduce((a, m) => a + m.subs.reduce((y, s) => y + s.selfFunding, 0), 0),
   );
 
   protected goToPage(p: number): void {
@@ -307,12 +274,13 @@ export class Projects {
     return (value ?? 0).toLocaleString('en-US');
   }
 
-  // صيغة عربية صحيحة لعدد المشاريع الرئيسية (مفرد/مثنى/جمع)
-  protected mainCountLabel(n: number): string {
-    if (n === 1) return 'مشروع رئيسي واحد';
-    if (n === 2) return 'مشروعان رئيسيان';
-    if (n >= 3 && n <= 10) return `${n} مشاريع رئيسية`;
-    return `${n} مشروعًا رئيسيًا`;
+  // صيغة عربية صحيحة لعدد المشاريع الفرعية (مفرد/مثنى/جمع)
+  protected subCountLabel(n: number): string {
+    if (n === 0) return 'لا مشاريع فرعية';
+    if (n === 1) return 'مشروع فرعي واحد';
+    if (n === 2) return 'مشروعان فرعيان';
+    if (n >= 3 && n <= 10) return `${n} مشاريع فرعية`;
+    return `${n} مشروعًا فرعيًا`;
   }
 
   // ===== modals actions =====
