@@ -23,9 +23,16 @@ export class MainLayout {
   protected readonly user = this.auth.user;
   protected readonly isManager = this.auth.isManager;
 
-  protected readonly roleLabel = computed(() =>
-    this.auth.role() === Roles.PlanningManager ? 'مدير التخطيط' : 'موظف تخطيط',
-  );
+  protected readonly roleLabel = computed(() => {
+    switch (this.auth.role()) {
+      case Roles.SuperAdmin:
+        return 'سوبر أدمن';
+      case Roles.PlanningManager:
+        return 'مدير التخطيط';
+      default:
+        return 'موظف تخطيط';
+    }
+  });
 
   protected readonly initial = computed(() => this.user()?.fullName?.trim()?.charAt(0) ?? '؟');
 

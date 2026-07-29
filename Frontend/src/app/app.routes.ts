@@ -17,7 +17,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'projects', pathMatch: 'full' },
       {
         path: 'dashboard',
-        canActivate: [roleGuard([Roles.PlanningManager])],
+        canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
@@ -40,7 +40,7 @@ export const routes: Routes = [
       },
       {
         path: 'users',
-        canActivate: [roleGuard([Roles.PlanningManager])],
+        canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/users/users').then((m) => m.Users),
       },
