@@ -29,6 +29,7 @@
             {
                  var  Query = Context.Plans
                     .Include(p => p.PlanProjects)
+                    .Include(p => p.FinancialYear)
                     .AsQueryable(); 
            
                 if(Status != null && !string.IsNullOrEmpty(PlanName))

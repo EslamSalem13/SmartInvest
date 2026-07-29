@@ -18,6 +18,7 @@ namespace SmartInvest.Application.Common.Mappings
             CreateMap<SubProject, AddNewProjectDto >()
            .ReverseMap();
             CreateMap<Plan, PlanWithoutProjectsDto>()
+           .ForMember(d => d.FinancialYearName, o => o.MapFrom(s => s.FinancialYear!.Name))
            .ReverseMap();
 
              CreateMap<SubProject, ProjectInfoDto>()
