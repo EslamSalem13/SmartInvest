@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
+import { AuthService } from '../../core/services/auth.service';
 import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
 
 @Component({
@@ -62,6 +63,9 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
             <button class="si-btn primary" [disabled]="saving()" (click)="submit()">
               @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { {{ edit() ? 'حفظ التعديلات' : 'إضافة المشروع الرئيسي' }} }
             </button>
+            @if (edit() && isManager()) {
+              <button class="si-btn danger" type="button" [disabled]="saving()" (click)="onDelete()">حذف المشروع</button>
+            }
             <button class="si-btn" (click)="close.emit()">إلغاء</button>
           </div>
         </div>
@@ -73,11 +77,15 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
 export class MainProjectForm {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
+  private readonly auth = inject(AuthService);
+
+  protected readonly isManager = this.auth.isManager;
 
   readonly open = input(false);
   readonly edit = input<MainProjectListItem | null>(null);
   readonly close = output<void>();
   readonly saved = output<void>();
+  readonly delete = output<void>();
 
   protected readonly programs = signal<Lookup[]>([]);
   protected readonly subPrograms = signal<SubProgramLookup[]>([]);
@@ -108,6 +116,10 @@ export class MainProjectForm {
         this.wasOpen = false;
       }
     });
+  }
+
+  protected onDelete(): void {
+    this.delete.emit();
   }
 
   protected onProgramChange(value: number | null): void {

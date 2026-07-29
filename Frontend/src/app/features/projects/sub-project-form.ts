@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { AuthService } from '../../core/services/auth.service';
 import {
   FinancialYear,
   Lookup,
@@ -28,7 +29,7 @@ export interface LockedParent {
           <div class="si-modal-head">
             <div class="grow">
               <h3>{{ edit() ? 'تعديل مشروع فرعي' : 'إضافة مشروع فرعي' }}</h3>
-              <p>{{ edit() ? 'الكود يُخصّص عند الاعتماد ولا يُعدّل من هنا' : 'يُضاف كمشروع مقترح بدون كود حتى اعتماد المدير' }}</p>
+              <p>{{ edit() ? 'إدخال الكود يعتمد المشروع تلقائيًا، وإزالته يعيده لمقترح' : 'يُنشأ المشروع كمقترح ما لم يُدخَل كود' }}</p>
             </div>
             <button class="si-x" (click)="close.emit()" aria-label="إغلاق">×</button>
           </div>
@@ -56,16 +57,16 @@ export interface LockedParent {
               </div>
             }
 
-            <div class="si-note">
-              <span>ℹ️</span>
-              يُضاف المشروع الفرعي كـ «مقترح» بدون كود، ويحصل على كوده عند اعتماد مدير التخطيط.
-            </div>
-
             <div class="si-step"><span class="n">2</span><h4>بيانات المشروع الفرعي</h4></div>
             <div class="si-grid">
               <div class="si-fld full">
                 <label>اسم المشروع الفرعي <span class="req">*</span></label>
                 <input [ngModel]="name()" (ngModelChange)="name.set($event)" placeholder="مثال: رصف طريق المحطة" />
+              </div>
+              <div class="si-fld full">
+                <label>كود المشروع الفرعي (اختياري)</label>
+                <input [ngModel]="code()" (ngModelChange)="code.set($event)" placeholder="SP-2627-XXX-A" />
+                <div class="hint">إدخال كود يعتمد المشروع تلقائيًا فور الحفظ؛ تركه فارغًا يبقيه مقترحًا.</div>
               </div>
               <div class="si-fld">
                 <label>المستوى <span class="req">*</span></label>
@@ -134,6 +135,9 @@ export interface LockedParent {
             <button class="si-btn primary" [disabled]="saving()" (click)="submit()">
               @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { {{ edit() ? 'حفظ التعديلات' : 'إضافة المشروع الفرعي' }} }
             </button>
+            @if (edit() && isManager()) {
+              <button class="si-btn danger" type="button" [disabled]="saving()" (click)="onDelete()">حذف المشروع</button>
+            }
             <button class="si-btn" (click)="close.emit()">إلغاء</button>
           </div>
         </div>
@@ -146,6 +150,9 @@ export class SubProjectForm {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly auth = inject(AuthService);
+
+  protected readonly isManager = this.auth.isManager;
 
   readonly open = input(false);
   readonly edit = input<SubProjectListItem | null>(null);
@@ -154,6 +161,7 @@ export class SubProjectForm {
   readonly defaultYearId = input<number | null>(null);
   readonly close = output<void>();
   readonly saved = output<void>();
+  readonly delete = output<void>();
 
   protected readonly priorities = signal<Lookup[]>([]);
   protected readonly statuses = signal<Lookup[]>([]);
@@ -164,6 +172,7 @@ export class SubProjectForm {
   private originalYearIds = new Set<number>();
 
   protected readonly mainProjectId = signal<number | null>(null);
+  protected readonly code = signal('');
   protected readonly name = signal('');
   protected readonly projectLevel = signal('');
   protected readonly componentType = signal('');
@@ -245,6 +254,7 @@ export class SubProjectForm {
       this.projectsService.getSubProject(e.id).subscribe({
         next: (d) => {
           this.mainProjectId.set(d.mainProjectId);
+          this.code.set(d.code ?? '');
           this.name.set(d.name);
           this.projectLevel.set(d.projectLevel);
           this.componentType.set(d.componentType);
@@ -275,6 +285,7 @@ export class SubProjectForm {
 
   private resetForm(): void {
     this.mainProjectId.set(null);
+    this.code.set('');
     this.name.set('');
     this.projectLevel.set('');
     this.componentType.set('');
@@ -286,6 +297,10 @@ export class SubProjectForm {
     this.description.set('');
     this.checkedYearIds.set(new Set());
     this.originalYearIds = new Set<number>();
+  }
+
+  protected onDelete(): void {
+    this.delete.emit();
   }
 
   protected toggleYear(id: number): void {
@@ -312,6 +327,7 @@ export class SubProjectForm {
     if (!this.edit() && this.mainProjectId() == null) { this.error.set('برجاء اختيار المشروع الرئيسي'); return; }
 
     const base = {
+      code: this.code().trim() || null,
       name: this.name().trim(),
       projectLevel: this.projectLevel(),
       componentType: this.componentType().trim(),

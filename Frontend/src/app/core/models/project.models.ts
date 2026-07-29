@@ -137,6 +137,7 @@ export const EXECUTING_AGENCIES = [
 
 export interface CreateSubProject {
   mainProjectId: number;
+  code?: string | null;
   name: string;
   projectLevel: string;
   componentType: string;

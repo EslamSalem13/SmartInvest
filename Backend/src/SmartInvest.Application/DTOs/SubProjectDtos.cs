@@ -5,11 +5,6 @@ public class ApproveSubProjectDto
     public string Code { get; set; } = string.Empty;
 }
 
-public class CancelSubProjectApprovalDto
-{
-    public string Reason { get; set; } = string.Empty;
-}
-
 public class SubProjectListItemDto
 {
     public int Id { get; set; }
@@ -100,6 +95,7 @@ public class SubProjectDetailDto
 public class CreateSubProjectDto
 {
     public int MainProjectId { get; set; }
+    public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ProjectLevel { get; set; } = string.Empty;
     public string ComponentType { get; set; } = string.Empty;
@@ -122,6 +118,7 @@ public class CreateSubProjectDto
 
 public class UpdateSubProjectDto
 {
+    public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ProjectLevel { get; set; } = string.Empty;
     public string ComponentType { get; set; } = string.Empty;

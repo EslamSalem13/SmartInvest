@@ -7,6 +7,9 @@ public class UpdateSubProjectDtoValidator : AbstractValidator<UpdateSubProjectDt
 {
     public UpdateSubProjectDtoValidator()
     {
+        RuleFor(x => x.Code)
+            .MaximumLength(50);
+
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("اسم المشروع الفرعي مطلوب")
             .MaximumLength(250);

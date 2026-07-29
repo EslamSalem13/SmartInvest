@@ -93,21 +93,6 @@ public class SubProjectsController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPatch("{id:int}/cancel-approval")]
-    [Authorize(Roles = Roles.PlanningManager)]
-    public async Task<ActionResult<SubProjectDetailDto>> CancelApproval(
-        int id,
-        CancelSubProjectApprovalDto dto,
-        CancellationToken cancellationToken)
-    {
-        var result = await _subProjectService.CancelApprovalAsync(
-            id,
-            dto,
-            cancellationToken);
-
-        return Ok(result);
-    }
-
     [HttpDelete("{id:int}")]
     [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)

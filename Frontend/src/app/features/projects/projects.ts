@@ -181,13 +181,6 @@ export class Projects {
   protected readonly rangeEnd = computed(() =>
     Math.min(this.page() * this.pageSize, this.filteredMains().length),
   );
-  // إجماليات المعروض (لكل المشاريع الرئيسية في الصفحة الحالية)
-  protected readonly shownBank = computed(() =>
-    this.pagedMains().reduce((a, m) => a + m.subs.reduce((y, s) => y + s.bankFunding, 0), 0),
-  );
-  protected readonly shownSelf = computed(() =>
-    this.pagedMains().reduce((a, m) => a + m.subs.reduce((y, s) => y + s.selfFunding, 0), 0),
-  );
 
   protected goToPage(p: number): void {
     if (p >= 1 && p <= this.totalPages()) this.page.set(p);
@@ -274,15 +267,6 @@ export class Projects {
     return (value ?? 0).toLocaleString('en-US');
   }
 
-  // صيغة عربية صحيحة لعدد المشاريع الفرعية (مفرد/مثنى/جمع)
-  protected subCountLabel(n: number): string {
-    if (n === 0) return 'لا مشاريع فرعية';
-    if (n === 1) return 'مشروع فرعي واحد';
-    if (n === 2) return 'مشروعان فرعيان';
-    if (n >= 3 && n <= 10) return `${n} مشاريع فرعية`;
-    return `${n} مشروعًا فرعيًا`;
-  }
-
   // ===== modals actions =====
   protected toggleAddMenu(): void { this.addMenuOpen.set(!this.addMenuOpen()); }
   protected openAddMain(): void { this.addMenuOpen.set(false); this.mainEdit.set(null); this.showMainForm.set(true); }
@@ -300,14 +284,14 @@ export class Projects {
   protected deleteMain(m: MainProjectListItem): void {
     if (!confirm(`تأكيد حذف المشروع الرئيسي «${m.name}»؟`)) return;
     this.projectsService.deleteMainProject(m.id).subscribe({
-      next: () => this.load(),
+      next: () => { this.closeModals(); this.load(); },
       error: (err) => alert(err?.error?.message ?? 'تعذّر حذف المشروع'),
     });
   }
   protected deleteSub(s: SubProjectListItem): void {
     if (!confirm(`تأكيد حذف المشروع الفرعي «${s.name}»؟`)) return;
     this.projectsService.deleteSubProject(s.id).subscribe({
-      next: () => this.load(),
+      next: () => { this.closeModals(); this.load(); },
       error: (err) => alert(err?.error?.message ?? 'تعذّر حذف المشروع الفرعي'),
     });
   }
@@ -368,16 +352,24 @@ export class Projects {
       });
   }
 
-  // ===== اعتماد المشروع الفرعي =====
+  // ===== اعتماد المشروع (رئيسي أو فرعي) =====
   protected readonly showApprovalModal = signal(false);
-  protected readonly selectedSubProject = signal<SubProjectListItem | null>(null);
+  protected readonly approvalTarget = signal<{ kind: 'main' | 'sub'; id: number; name: string } | null>(null);
   protected readonly approvalCode = signal('');
   protected readonly approvalSaving = signal(false);
   protected readonly approvalError = signal<string | null>(null);
 
-  protected openApprovalModal(subProject: SubProjectListItem, event: Event): void {
+  protected openMainApprovalModal(m: MainProjectListItem, event: Event): void {
     event.stopPropagation();
-    this.selectedSubProject.set(subProject);
+    this.approvalTarget.set({ kind: 'main', id: m.id, name: m.name });
+    this.approvalCode.set('');
+    this.approvalError.set(null);
+    this.showApprovalModal.set(true);
+  }
+
+  protected openSubApprovalModal(s: SubProjectListItem, event: Event): void {
+    event.stopPropagation();
+    this.approvalTarget.set({ kind: 'sub', id: s.id, name: s.name });
     this.approvalCode.set('');
     this.approvalError.set(null);
     this.showApprovalModal.set(true);
@@ -385,108 +377,61 @@ export class Projects {
 
   protected closeApprovalModal(): void {
     this.showApprovalModal.set(false);
-    this.selectedSubProject.set(null);
+    this.approvalTarget.set(null);
   }
 
   protected submitApproval(): void {
     if (this.approvalSaving()) return;
     this.approvalError.set(null);
 
-    const sub = this.selectedSubProject();
-    if (!sub) return;
+    const target = this.approvalTarget();
+    if (!target) return;
 
     const code = this.approvalCode().trim();
     if (!code) {
-      this.approvalError.set('برجاء إدخال كود المشروع الفرعي للاعتماد');
+      this.approvalError.set('برجاء إدخال كود المشروع للاعتماد');
       return;
     }
 
     this.approvalSaving.set(true);
-    this.projectsService.approveSubProject(sub.id, code).subscribe({
-      next: (approved) => {
-        this.approvalSaving.set(false);
-        // حدّث الصف فورًا بدون إعادة تحميل الصفحة (isApproved مصدر الحقيقة)
-        this.subs.update((list) =>
-          list.map((s) =>
-            s.id === approved.id
-              ? {
-                  ...s,
-                  code: approved.code,
-                  statusName: approved.statusName,
-                  statusId: approved.statusId,
-                  isApproved: approved.isApproved,
-                  approvalCancellationReason: approved.approvalCancellationReason,
-                }
-              : s,
-          ),
-        );
-        this.showApprovalModal.set(false);
-        this.selectedSubProject.set(null);
-      },
-      error: (err) => {
-        this.approvalSaving.set(false);
-        this.approvalError.set(err?.error?.message ?? 'تعذّر اعتماد المشروع الفرعي');
-      },
-    });
-  }
 
-  // ===== إلغاء اعتماد المشروع الفرعي =====
-  protected readonly showCancelApprovalModal = signal(false);
-  protected readonly selectedSubProjectForCancellation = signal<SubProjectListItem | null>(null);
-  protected readonly cancellationReason = signal('');
-  protected readonly cancellationSaving = signal(false);
-  protected readonly cancellationError = signal<string | null>(null);
-
-  protected openCancelApprovalModal(subProject: SubProjectListItem, event: Event): void {
-    event.stopPropagation();
-    this.selectedSubProjectForCancellation.set(subProject);
-    this.cancellationReason.set('');
-    this.cancellationError.set(null);
-    this.showCancelApprovalModal.set(true);
-  }
-
-  protected closeCancelApprovalModal(): void {
-    this.showCancelApprovalModal.set(false);
-    this.selectedSubProjectForCancellation.set(null);
-  }
-
-  protected submitCancelApproval(): void {
-    if (this.cancellationSaving()) return;
-    this.cancellationError.set(null);
-
-    const sub = this.selectedSubProjectForCancellation();
-    if (!sub) return;
-
-    const reason = this.cancellationReason().trim();
-    if (!reason) {
-      this.cancellationError.set('برجاء إدخال سبب إلغاء الاعتماد');
+    if (target.kind === 'sub') {
+      this.projectsService.approveSubProject(target.id, code).subscribe({
+        next: () => this.onApprovalSaved(),
+        error: (err) => this.onApprovalError(err, 'تعذّر اعتماد المشروع الفرعي'),
+      });
       return;
     }
 
-    this.cancellationSaving.set(true);
-    this.projectsService.cancelSubProjectApproval(sub.id, reason).subscribe({
-      next: (updated) => {
-        this.cancellationSaving.set(false);
-        this.subs.update((list) =>
-          list.map((s) =>
-            s.id === updated.id
-              ? {
-                  ...s,
-                  isApproved: updated.isApproved,
-                  statusName: updated.statusName,
-                  statusId: updated.statusId,
-                  approvalCancellationReason: updated.approvalCancellationReason,
-                }
-              : s,
-          ),
-        );
-        this.showCancelApprovalModal.set(false);
-        this.selectedSubProjectForCancellation.set(null);
-      },
-      error: (err) => {
-        this.cancellationSaving.set(false);
-        this.cancellationError.set(err?.error?.message ?? 'تعذّر إلغاء اعتماد المشروع الفرعي');
-      },
-    });
+    const m = this.mains().find((x) => x.id === target.id);
+    if (!m) {
+      this.approvalSaving.set(false);
+      this.approvalError.set('تعذّر إيجاد بيانات المشروع الرئيسي');
+      return;
+    }
+
+    this.projectsService
+      .updateMainProject(target.id, {
+        code,
+        name: m.name,
+        executingAgency: m.executingAgency,
+        subProgramId: m.subProgramId,
+      })
+      .subscribe({
+        next: () => this.onApprovalSaved(),
+        error: (err) => this.onApprovalError(err, 'تعذّر اعتماد المشروع الرئيسي'),
+      });
+  }
+
+  private onApprovalSaved(): void {
+    this.approvalSaving.set(false);
+    this.showApprovalModal.set(false);
+    this.approvalTarget.set(null);
+    this.load();
+  }
+
+  private onApprovalError(err: unknown, fallback: string): void {
+    this.approvalSaving.set(false);
+    this.approvalError.set((err as { error?: { message?: string } })?.error?.message ?? fallback);
   }
 }

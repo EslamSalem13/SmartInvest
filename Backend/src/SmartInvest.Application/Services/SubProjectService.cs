@@ -79,8 +79,12 @@ public class SubProjectService : ISubProjectService
             throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل");
         }
 
+        var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
+
         var subProject = _mapper.Map<SubProject>(dto);
         subProject.SubProjectName = name;
+        subProject.SubProjectCode = code;
+        subProject.IsApproved = code != null;
 
         await _subProjectRepository.AddAsync(subProject, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -105,7 +109,11 @@ public class SubProjectService : ISubProjectService
             throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل");
         }
 
+        var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
+
         subProject.SubProjectName = name;
+        subProject.SubProjectCode = code;
+        subProject.IsApproved = code != null;
         subProject.ProjectLevel = dto.ProjectLevel;
         subProject.ComponentType = dto.ComponentType;
         subProject.AccountingUnit = dto.AccountingUnit;
@@ -163,38 +171,6 @@ public class SubProjectService : ISubProjectService
 
         var approved = await _subProjectRepository.GetWithDetailsAsync(id, cancellationToken);
         return _mapper.Map<SubProjectDetailDto>(approved);
-    }
-
-    public async Task<SubProjectDetailDto> CancelApprovalAsync(int id, CancelSubProjectApprovalDto dto, CancellationToken cancellationToken = default)
-    {
-        var subProject = await _subProjectRepository.GetByIdAsync(id, cancellationToken);
-        if (subProject == null)
-        {
-            throw new NotFoundException($"المشروع الفرعي رقم {id} غير موجود");
-        }
-
-        if (!subProject.IsApproved)
-        {
-            throw new BusinessRuleException("المشروع الفرعي غير معتمد بالفعل");
-        }
-
-        var reason = (dto.Reason ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(reason))
-        {
-            throw new BusinessRuleException("يجب إدخال سبب إلغاء الاعتماد");
-        }
-
-        subProject.IsApproved = false;
-        subProject.ApprovalCancellationReason = reason;
-        subProject.ApprovalCancelledAt = DateTime.UtcNow;
-        // نحتفظ بالكود لأغراض التتبّع التاريخي
-        subProject.StatusId = await ResolveStatusIdByNameAsync("متعثر", cancellationToken);
-
-        _subProjectRepository.Update(subProject);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var cancelled = await _subProjectRepository.GetWithDetailsAsync(id, cancellationToken);
-        return _mapper.Map<SubProjectDetailDto>(cancelled);
     }
 
     private async Task<int> ResolveStatusIdByNameAsync(string statusName, CancellationToken cancellationToken)
