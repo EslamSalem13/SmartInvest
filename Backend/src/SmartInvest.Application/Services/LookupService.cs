@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+using AutoMapper;
+using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Domain.Entities;
@@ -15,6 +16,10 @@ public class LookupService : ILookupService
     private readonly IGenericRepository<Governorate> _governorateRepository;
     private readonly IGenericRepository<Markaz> _markazRepository;
     private readonly IGenericRepository<Village> _villageRepository;
+    private readonly IGenericRepository<MainProject> _mainProjectRepository;
+    private readonly IGenericRepository<SubProject> _subProjectRepository;
+    private readonly IGenericRepository<ProjectFollowUp> _followUpRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public LookupService(
@@ -25,6 +30,10 @@ public class LookupService : ILookupService
         IGenericRepository<Governorate> governorateRepository,
         IGenericRepository<Markaz> markazRepository,
         IGenericRepository<Village> villageRepository,
+        IGenericRepository<MainProject> mainProjectRepository,
+        IGenericRepository<SubProject> subProjectRepository,
+        IGenericRepository<ProjectFollowUp> followUpRepository,
+        IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _priorityRepository = priorityRepository;
@@ -34,6 +43,10 @@ public class LookupService : ILookupService
         _governorateRepository = governorateRepository;
         _markazRepository = markazRepository;
         _villageRepository = villageRepository;
+        _mainProjectRepository = mainProjectRepository;
+        _subProjectRepository = subProjectRepository;
+        _followUpRepository = followUpRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
@@ -107,5 +120,256 @@ public class LookupService : ILookupService
         }
 
         return _mapper.Map<List<VillageLookupDto>>(villages);
+    }
+
+    public async Task<LookupDto> CreatePriorityAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new ProjectPriority { Priority = dto.Name.Trim() };
+        await _priorityRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdatePriorityAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _priorityRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الأولوية رقم {id} غير موجودة");
+        entity.Priority = dto.Name.Trim();
+        _priorityRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeletePriorityAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _priorityRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الأولوية رقم {id} غير موجودة");
+
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.PriorityId == id, cancellationToken);
+        if (linkedSubProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف الأولوية لوجود مشروعات فرعية تستخدمها");
+        }
+
+        _priorityRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<LookupDto> CreateStatusAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new ProjectStatus { StatusName = dto.Name.Trim() };
+        await _statusRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateStatusAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _statusRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الحالة رقم {id} غير موجودة");
+        entity.StatusName = dto.Name.Trim();
+        _statusRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteStatusAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _statusRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الحالة رقم {id} غير موجودة");
+
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.StatusId == id, cancellationToken);
+        var linkedFollowUps = await _followUpRepository.FindAsync(x => x.StatusId == id, cancellationToken);
+        if (linkedSubProjects.Count > 0 || linkedFollowUps.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف الحالة لوجود مشروعات فرعية أو متابعات تستخدمها");
+        }
+
+        _statusRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<LookupDto> CreateMainProgramAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new MainProgram { ProgramName = dto.Name.Trim() };
+        await _mainProgramRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateMainProgramAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _mainProgramRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"البرنامج الرئيسي رقم {id} غير موجود");
+        entity.ProgramName = dto.Name.Trim();
+        _mainProgramRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteMainProgramAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _mainProgramRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"البرنامج الرئيسي رقم {id} غير موجود");
+
+        var linkedSubPrograms = await _subProgramRepository.FindAsync(x => x.ProgramId == id, cancellationToken);
+        if (linkedSubPrograms.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف البرنامج الرئيسي لوجود برامج فرعية تابعة له");
+        }
+
+        _mainProgramRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<SubProgramLookupDto> CreateSubProgramAsync(CreateSubProgramDto dto, CancellationToken cancellationToken = default)
+    {
+        var mainProgram = await _mainProgramRepository.GetByIdAsync(dto.MainProgramId, cancellationToken)
+            ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
+
+        var entity = new SubProgram { SubProgramName = dto.Name.Trim(), ProgramId = mainProgram.ProgramId };
+        await _subProgramRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<SubProgramLookupDto>(entity);
+    }
+
+    public async Task<SubProgramLookupDto> UpdateSubProgramAsync(int id, UpdateSubProgramDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _subProgramRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"البرنامج الفرعي رقم {id} غير موجود");
+
+        var mainProgram = await _mainProgramRepository.GetByIdAsync(dto.MainProgramId, cancellationToken)
+            ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
+
+        entity.SubProgramName = dto.Name.Trim();
+        entity.ProgramId = mainProgram.ProgramId;
+        _subProgramRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<SubProgramLookupDto>(entity);
+    }
+
+    public async Task DeleteSubProgramAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _subProgramRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"البرنامج الفرعي رقم {id} غير موجود");
+
+        var linkedMainProjects = await _mainProjectRepository.FindAsync(x => x.SubProgramId == id, cancellationToken);
+        if (linkedMainProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف البرنامج الفرعي لوجود مشروعات رئيسية تابعة له");
+        }
+
+        _subProgramRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<LookupDto> CreateGovernorateAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new Governorate { GovernorateName = dto.Name.Trim() };
+        await _governorateRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateGovernorateAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _governorateRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المحافظة رقم {id} غير موجودة");
+        entity.GovernorateName = dto.Name.Trim();
+        _governorateRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteGovernorateAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _governorateRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المحافظة رقم {id} غير موجودة");
+
+        var linkedMarkaz = await _markazRepository.FindAsync(x => x.GovernorateId == id, cancellationToken);
+        if (linkedMarkaz.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف المحافظة لوجود مراكز تابعة لها");
+        }
+
+        _governorateRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<MarkazLookupDto> CreateMarkazAsync(CreateMarkazDto dto, CancellationToken cancellationToken = default)
+    {
+        var governorate = await _governorateRepository.GetByIdAsync(dto.GovernorateId, cancellationToken)
+            ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
+
+        var entity = new Markaz { MarkazName = dto.Name.Trim(), GovernorateId = governorate.GovernorateId };
+        await _markazRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<MarkazLookupDto>(entity);
+    }
+
+    public async Task<MarkazLookupDto> UpdateMarkazAsync(int id, UpdateMarkazDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _markazRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المركز رقم {id} غير موجود");
+
+        var governorate = await _governorateRepository.GetByIdAsync(dto.GovernorateId, cancellationToken)
+            ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
+
+        entity.MarkazName = dto.Name.Trim();
+        entity.GovernorateId = governorate.GovernorateId;
+        _markazRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<MarkazLookupDto>(entity);
+    }
+
+    public async Task DeleteMarkazAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _markazRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المركز رقم {id} غير موجود");
+
+        var linkedVillages = await _villageRepository.FindAsync(x => x.MarkazId == id, cancellationToken);
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.MarkazId == id, cancellationToken);
+        if (linkedVillages.Count > 0 || linkedSubProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف المركز لوجود قرى أو مشروعات فرعية تابعة له");
+        }
+
+        _markazRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<VillageLookupDto> CreateVillageAsync(CreateVillageDto dto, CancellationToken cancellationToken = default)
+    {
+        var markaz = await _markazRepository.GetByIdAsync(dto.MarkazId, cancellationToken)
+            ?? throw new NotFoundException("المركز المحدد غير موجود");
+
+        var entity = new Village { VillageName = dto.Name.Trim(), MarkazId = markaz.MarkazId };
+        await _villageRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<VillageLookupDto>(entity);
+    }
+
+    public async Task<VillageLookupDto> UpdateVillageAsync(int id, UpdateVillageDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _villageRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"القرية رقم {id} غير موجودة");
+
+        var markaz = await _markazRepository.GetByIdAsync(dto.MarkazId, cancellationToken)
+            ?? throw new NotFoundException("المركز المحدد غير موجود");
+
+        entity.VillageName = dto.Name.Trim();
+        entity.MarkazId = markaz.MarkazId;
+        _villageRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<VillageLookupDto>(entity);
+    }
+
+    public async Task DeleteVillageAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _villageRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"القرية رقم {id} غير موجودة");
+
+        _villageRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
