@@ -411,6 +411,12 @@ public class LookupService : ILookupService
         var entity = await _componentTypeRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"المكوّن العيني رقم {id} غير موجود");
 
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.ComponentTypeId == id, cancellationToken);
+        if (linkedSubProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف المكوّن العيني لوجود مشروعات فرعية تستخدمه");
+        }
+
         _componentTypeRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -444,6 +450,12 @@ public class LookupService : ILookupService
         var entity = await _projectLevelRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"مستوى المشروع رقم {id} غير موجود");
 
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.ProjectLevelId == id, cancellationToken);
+        if (linkedSubProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف مستوى المشروع لوجود مشروعات فرعية تستخدمه");
+        }
+
         _projectLevelRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -476,6 +488,12 @@ public class LookupService : ILookupService
     {
         var entity = await _accountingUnitRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"الوحدة الحسابية رقم {id} غير موجودة");
+
+        var linkedSubProjects = await _subProjectRepository.FindAsync(x => x.AccountingUnitId == id, cancellationToken);
+        if (linkedSubProjects.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف الوحدة الحسابية لوجود مشروعات فرعية تستخدمها");
+        }
 
         _accountingUnitRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

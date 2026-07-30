@@ -17,8 +17,8 @@ public class CreateSubProjectDtoValidator : AbstractValidator<CreateSubProjectDt
             .NotEmpty().WithMessage("اسم المشروع الفرعي مطلوب")
             .MaximumLength(250);
 
-        RuleFor(x => x.ProjectLevel)
-            .NotEmpty().WithMessage("المستوى مطلوب");
+        RuleFor(x => x.ProjectLevelId)
+            .GreaterThan(0).WithMessage("المستوى مطلوب");
 
         RuleFor(x => x.MarkazId)
             .GreaterThan(0).WithMessage("يجب اختيار المركز");

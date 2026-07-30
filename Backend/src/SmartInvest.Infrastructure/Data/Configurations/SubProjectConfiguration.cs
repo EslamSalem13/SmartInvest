@@ -39,5 +39,20 @@ public class SubProjectConfiguration : IEntityTypeConfiguration<SubProject>
                .WithMany()
                .HasForeignKey(x => x.ExecutiveAgencyId)
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.ProjectLevel)
+               .WithMany()
+               .HasForeignKey(x => x.ProjectLevelId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.ComponentType)
+               .WithMany()
+               .HasForeignKey(x => x.ComponentTypeId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.AccountingUnit)
+               .WithMany()
+               .HasForeignKey(x => x.AccountingUnitId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -15,8 +15,10 @@ public class SubProjectListItemDto
     public string MainProjectCode { get; set; } = string.Empty;
     public string MainProjectName { get; set; } = string.Empty;
 
-    public string ProjectLevel { get; set; } = string.Empty;
-    public string ComponentType { get; set; } = string.Empty;
+    public int ProjectLevelId { get; set; }
+    public string ProjectLevelName { get; set; } = string.Empty;
+    public int ComponentTypeId { get; set; }
+    public string ComponentTypeName { get; set; } = string.Empty;
 
     public int MarkazId { get; set; }
     public string MarkazName { get; set; } = string.Empty;
@@ -50,9 +52,12 @@ public class SubProjectDetailDto
     public int MainProjectId { get; set; }
     public string MainProjectName { get; set; } = string.Empty;
 
-    public string ProjectLevel { get; set; } = string.Empty;
-    public string ComponentType { get; set; } = string.Empty;
-    public string AccountingUnit { get; set; } = string.Empty;
+    public int ProjectLevelId { get; set; }
+    public string ProjectLevelName { get; set; } = string.Empty;
+    public int ComponentTypeId { get; set; }
+    public string ComponentTypeName { get; set; } = string.Empty;
+    public int AccountingUnitId { get; set; }
+    public string AccountingUnitName { get; set; } = string.Empty;
     public string ProjectNature { get; set; } = string.Empty;
 
     public string? Description { get; set; }
@@ -98,9 +103,9 @@ public class CreateSubProjectDto
     public int MainProjectId { get; set; }
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string ProjectLevel { get; set; } = string.Empty;
-    public string ComponentType { get; set; } = string.Empty;
-    public string AccountingUnit { get; set; } = string.Empty;
+    public int ProjectLevelId { get; set; }
+    public int ComponentTypeId { get; set; }
+    public int AccountingUnitId { get; set; }
     public string ProjectNature { get; set; } = string.Empty;
     public int MarkazId { get; set; }
     public int PriorityId { get; set; }
@@ -121,9 +126,9 @@ public class UpdateSubProjectDto
 {
     public string? Code { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string ProjectLevel { get; set; } = string.Empty;
-    public string ComponentType { get; set; } = string.Empty;
-    public string AccountingUnit { get; set; } = string.Empty;
+    public int ProjectLevelId { get; set; }
+    public int ComponentTypeId { get; set; }
+    public int AccountingUnitId { get; set; }
     public string ProjectNature { get; set; } = string.Empty;
     public int MarkazId { get; set; }
     public int PriorityId { get; set; }

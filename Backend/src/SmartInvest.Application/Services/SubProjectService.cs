@@ -17,6 +17,9 @@ public class SubProjectService : ISubProjectService
     private readonly IGenericRepository<ProjectStatus> _statusRepository;
     private readonly IGenericRepository<ExecutiveAgency> _agencyRepository;
     private readonly IGenericRepository<ProjectAssignment> _assignmentRepository;
+    private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
+    private readonly IGenericRepository<ComponentType> _componentTypeRepository;
+    private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -28,6 +31,9 @@ public class SubProjectService : ISubProjectService
         IGenericRepository<ProjectStatus> statusRepository,
         IGenericRepository<ExecutiveAgency> agencyRepository,
         IGenericRepository<ProjectAssignment> assignmentRepository,
+        IGenericRepository<ProjectLevel> projectLevelRepository,
+        IGenericRepository<ComponentType> componentTypeRepository,
+        IGenericRepository<AccountingUnit> accountingUnitRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -38,6 +44,9 @@ public class SubProjectService : ISubProjectService
         _statusRepository = statusRepository;
         _agencyRepository = agencyRepository;
         _assignmentRepository = assignmentRepository;
+        _projectLevelRepository = projectLevelRepository;
+        _componentTypeRepository = componentTypeRepository;
+        _accountingUnitRepository = accountingUnitRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -71,7 +80,7 @@ public class SubProjectService : ISubProjectService
 
     public async Task<SubProjectDetailDto> CreateAsync(CreateSubProjectDto dto, CancellationToken cancellationToken = default)
     {
-        await ValidateReferencesAsync(dto.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, cancellationToken);
+        await ValidateReferencesAsync(dto.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, dto.ProjectLevelId, dto.ComponentTypeId, dto.AccountingUnitId, cancellationToken);
 
         var name = (dto.Name ?? string.Empty).Trim();
         if (await _subProjectRepository.NameExistsAsync(name, null, cancellationToken))
@@ -101,7 +110,7 @@ public class SubProjectService : ISubProjectService
             throw new NotFoundException($"المشروع الفرعي رقم {id} غير موجود");
         }
 
-        await ValidateReferencesAsync(subProject.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, cancellationToken);
+        await ValidateReferencesAsync(subProject.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, dto.ProjectLevelId, dto.ComponentTypeId, dto.AccountingUnitId, cancellationToken);
 
         var name = (dto.Name ?? string.Empty).Trim();
         if (await _subProjectRepository.NameExistsAsync(name, id, cancellationToken))
@@ -114,9 +123,9 @@ public class SubProjectService : ISubProjectService
         subProject.SubProjectName = name;
         subProject.SubProjectCode = code;
         subProject.IsApproved = code != null;
-        subProject.ProjectLevel = dto.ProjectLevel;
-        subProject.ComponentType = dto.ComponentType;
-        subProject.AccountingUnit = dto.AccountingUnit;
+        subProject.ProjectLevelId = dto.ProjectLevelId;
+        subProject.ComponentTypeId = dto.ComponentTypeId;
+        subProject.AccountingUnitId = dto.AccountingUnitId;
         subProject.ProjectNature = dto.ProjectNature;
         subProject.MarkazId = dto.MarkazId;
         subProject.PriorityId = dto.PriorityId;
@@ -196,7 +205,7 @@ public class SubProjectService : ISubProjectService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task ValidateReferencesAsync(int mainProjectId, int markazId, int priorityId, int statusId, CancellationToken cancellationToken)
+    private async Task ValidateReferencesAsync(int mainProjectId, int markazId, int priorityId, int statusId, int projectLevelId, int componentTypeId, int accountingUnitId, CancellationToken cancellationToken)
     {
         var mainProject = await _mainProjectRepository.GetByIdAsync(mainProjectId, cancellationToken);
         if (mainProject == null)
@@ -220,6 +229,24 @@ public class SubProjectService : ISubProjectService
         if (status == null)
         {
             throw new NotFoundException("حالة المشروع المحددة غير موجودة");
+        }
+
+        var projectLevel = await _projectLevelRepository.GetByIdAsync(projectLevelId, cancellationToken);
+        if (projectLevel == null)
+        {
+            throw new NotFoundException("مستوى المشروع المحدد غير موجود");
+        }
+
+        var componentType = await _componentTypeRepository.GetByIdAsync(componentTypeId, cancellationToken);
+        if (componentType == null)
+        {
+            throw new NotFoundException("المكوّن العيني المحدد غير موجود");
+        }
+
+        var accountingUnit = await _accountingUnitRepository.GetByIdAsync(accountingUnitId, cancellationToken);
+        if (accountingUnit == null)
+        {
+            throw new NotFoundException("الوحدة الحسابية المحددة غير موجودة");
         }
     }
 
