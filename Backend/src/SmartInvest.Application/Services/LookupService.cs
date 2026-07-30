@@ -19,6 +19,9 @@ public class LookupService : ILookupService
     private readonly IGenericRepository<MainProject> _mainProjectRepository;
     private readonly IGenericRepository<SubProject> _subProjectRepository;
     private readonly IGenericRepository<ProjectFollowUp> _followUpRepository;
+    private readonly IGenericRepository<ComponentType> _componentTypeRepository;
+    private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
+    private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -33,6 +36,9 @@ public class LookupService : ILookupService
         IGenericRepository<MainProject> mainProjectRepository,
         IGenericRepository<SubProject> subProjectRepository,
         IGenericRepository<ProjectFollowUp> followUpRepository,
+        IGenericRepository<ComponentType> componentTypeRepository,
+        IGenericRepository<ProjectLevel> projectLevelRepository,
+        IGenericRepository<AccountingUnit> accountingUnitRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -46,6 +52,9 @@ public class LookupService : ILookupService
         _mainProjectRepository = mainProjectRepository;
         _subProjectRepository = subProjectRepository;
         _followUpRepository = followUpRepository;
+        _componentTypeRepository = componentTypeRepository;
+        _projectLevelRepository = projectLevelRepository;
+        _accountingUnitRepository = accountingUnitRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -370,6 +379,105 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException($"القرية رقم {id} غير موجودة");
 
         _villageRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<LookupDto>> GetComponentTypesAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await _componentTypeRepository.GetAllAsync(cancellationToken);
+        return _mapper.Map<List<LookupDto>>(items);
+    }
+
+    public async Task<LookupDto> CreateComponentTypeAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new ComponentType { Name = dto.Name.Trim() };
+        await _componentTypeRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateComponentTypeAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _componentTypeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المكوّن العيني رقم {id} غير موجود");
+        entity.Name = dto.Name.Trim();
+        _componentTypeRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteComponentTypeAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _componentTypeRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"المكوّن العيني رقم {id} غير موجود");
+
+        _componentTypeRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<LookupDto>> GetProjectLevelsAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await _projectLevelRepository.GetAllAsync(cancellationToken);
+        return _mapper.Map<List<LookupDto>>(items);
+    }
+
+    public async Task<LookupDto> CreateProjectLevelAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new ProjectLevel { Name = dto.Name.Trim() };
+        await _projectLevelRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateProjectLevelAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _projectLevelRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"مستوى المشروع رقم {id} غير موجود");
+        entity.Name = dto.Name.Trim();
+        _projectLevelRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteProjectLevelAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _projectLevelRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"مستوى المشروع رقم {id} غير موجود");
+
+        _projectLevelRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<LookupDto>> GetAccountingUnitsAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await _accountingUnitRepository.GetAllAsync(cancellationToken);
+        return _mapper.Map<List<LookupDto>>(items);
+    }
+
+    public async Task<LookupDto> CreateAccountingUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = new AccountingUnit { Name = dto.Name.Trim() };
+        await _accountingUnitRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateAccountingUnitAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _accountingUnitRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الوحدة الحسابية رقم {id} غير موجودة");
+        entity.Name = dto.Name.Trim();
+        _accountingUnitRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteAccountingUnitAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _accountingUnitRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الوحدة الحسابية رقم {id} غير موجودة");
+
+        _accountingUnitRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

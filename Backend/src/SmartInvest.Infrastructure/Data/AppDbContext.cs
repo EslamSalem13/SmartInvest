@@ -23,7 +23,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SubProgram> SubPrograms { get; set; }
     public DbSet<FinancialYear> FinancialYears { get; set; }
 
-    // end 
+    public DbSet<ComponentType> ComponentTypes => Set<ComponentType>();
+    public DbSet<ProjectLevel> ProjectLevels => Set<ProjectLevel>();
+    public DbSet<AccountingUnit> AccountingUnits => Set<AccountingUnit>();
+
+    // end
 
 
     protected override void OnModelCreating(ModelBuilder builder)

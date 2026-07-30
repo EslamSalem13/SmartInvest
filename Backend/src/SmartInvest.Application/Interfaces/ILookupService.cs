@@ -45,4 +45,19 @@ public interface ILookupService
     Task<VillageLookupDto> CreateVillageAsync(CreateVillageDto dto, CancellationToken cancellationToken = default);
     Task<VillageLookupDto> UpdateVillageAsync(int id, UpdateVillageDto dto, CancellationToken cancellationToken = default);
     Task DeleteVillageAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LookupDto>> GetComponentTypesAsync(CancellationToken cancellationToken = default);
+    Task<LookupDto> CreateComponentTypeAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task<LookupDto> UpdateComponentTypeAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task DeleteComponentTypeAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LookupDto>> GetProjectLevelsAsync(CancellationToken cancellationToken = default);
+    Task<LookupDto> CreateProjectLevelAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task<LookupDto> UpdateProjectLevelAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task DeleteProjectLevelAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LookupDto>> GetAccountingUnitsAsync(CancellationToken cancellationToken = default);
+    Task<LookupDto> CreateAccountingUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task<LookupDto> UpdateAccountingUnitAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task DeleteAccountingUnitAsync(int id, CancellationToken cancellationToken = default);
 }

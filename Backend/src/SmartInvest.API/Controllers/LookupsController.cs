@@ -234,4 +234,97 @@ public class LookupsController : ControllerBase
         await _lookupService.DeleteVillageAsync(id, cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("component-types")]
+    public async Task<ActionResult<IReadOnlyList<LookupDto>>> GetComponentTypes(CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.GetComponentTypesAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("component-types")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> CreateComponentType(CreateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.CreateComponentTypeAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("component-types/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> UpdateComponentType(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.UpdateComponentTypeAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("component-types/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> DeleteComponentType(int id, CancellationToken cancellationToken)
+    {
+        await _lookupService.DeleteComponentTypeAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("project-levels")]
+    public async Task<ActionResult<IReadOnlyList<LookupDto>>> GetProjectLevels(CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.GetProjectLevelsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("project-levels")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> CreateProjectLevel(CreateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.CreateProjectLevelAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("project-levels/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> UpdateProjectLevel(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.UpdateProjectLevelAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("project-levels/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> DeleteProjectLevel(int id, CancellationToken cancellationToken)
+    {
+        await _lookupService.DeleteProjectLevelAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("accounting-units")]
+    public async Task<ActionResult<IReadOnlyList<LookupDto>>> GetAccountingUnits(CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.GetAccountingUnitsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("accounting-units")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> CreateAccountingUnit(CreateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.CreateAccountingUnitAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("accounting-units/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> UpdateAccountingUnit(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.UpdateAccountingUnitAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("accounting-units/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> DeleteAccountingUnit(int id, CancellationToken cancellationToken)
+    {
+        await _lookupService.DeleteAccountingUnitAsync(id, cancellationToken);
+        return NoContent();
+    }
 }
