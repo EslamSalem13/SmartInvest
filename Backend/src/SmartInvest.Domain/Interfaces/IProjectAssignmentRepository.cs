@@ -7,4 +7,6 @@ public interface IProjectAssignmentRepository : IGenericRepository<ProjectAssign
     Task<ProjectAssignment?> GetWithDetailsAsync(int id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProjectAssignment>> GetBySubProjectAsync(int subProjectId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProjectAssignment>> GetByContractorAsync(int contractorId, CancellationToken cancellationToken = default);
 }

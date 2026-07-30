@@ -23,6 +23,14 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             .FirstOrDefaultAsync(x => x.SubProjectId == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<SubProject>> GetByExecutiveAgencyAsync(int executiveAgencyId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.MainProject)
+            .Where(x => x.ExecutiveAgencyId == executiveAgencyId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(IReadOnlyList<SubProject> Items, int TotalCount)> SearchAsync(
         int? mainProjectId,
         int? mainProgramId,
@@ -42,6 +50,7 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             .Include(x => x.Priority)
             .Include(x => x.Status)
             .Include(x => x.ExecutiveAgency)
+            .Include(x => x.ProjectAssignments).ThenInclude(a => a.Contractor)
             .AsQueryable();
 
         if (mainProjectId.HasValue)

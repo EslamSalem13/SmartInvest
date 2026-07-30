@@ -29,6 +29,7 @@ public class SubProjectListItemDto
 
     public int? ExecutiveAgencyId { get; set; }
     public string? ExecutiveAgencyName { get; set; }
+    public string? ContractorName { get; set; }
 
     public bool IsApproved { get; set; }
     public string? ApprovalCancellationReason { get; set; }

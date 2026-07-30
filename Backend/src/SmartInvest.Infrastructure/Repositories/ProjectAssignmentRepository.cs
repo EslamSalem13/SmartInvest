@@ -30,4 +30,13 @@ public class ProjectAssignmentRepository : GenericRepository<ProjectAssignment>,
             .OrderByDescending(x => x.AssignmentDate)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ProjectAssignment>> GetByContractorAsync(int contractorId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.SubProject).ThenInclude(s => s.MainProject)
+            .Where(x => x.ContractorId == contractorId)
+            .OrderByDescending(x => x.AssignmentDate)
+            .ToListAsync(cancellationToken);
+    }
 }

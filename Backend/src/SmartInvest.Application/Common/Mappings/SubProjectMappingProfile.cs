@@ -50,7 +50,13 @@ public class SubProjectMappingProfile : Profile
                 opt => opt.MapFrom(src => src.ExecutiveAgencyId))
             .ForMember(
                 dest => dest.ExecutiveAgencyName,
-                opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null));
+                opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null))
+            .ForMember(
+                dest => dest.ContractorName,
+                opt => opt.MapFrom(src =>
+                    src.ProjectAssignments != null && src.ProjectAssignments.Any()
+                        ? src.ProjectAssignments.OrderByDescending(a => a.AssignmentDate).First().Contractor.ContractorName
+                        : null));
 
         CreateMap<SubProject, SubProjectDetailDto>()
             .ForMember(
