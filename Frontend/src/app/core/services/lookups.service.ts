@@ -145,4 +145,52 @@ export class LookupsService {
   deleteVillage(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/villages/${id}`);
   }
+
+  getComponentTypes(): Observable<Lookup[]> {
+    return this.http.get<Lookup[]>(`${this.base}/component-types`);
+  }
+
+  createComponentType(dto: CreateNamedLookup): Observable<Lookup> {
+    return this.http.post<Lookup>(`${this.base}/component-types`, dto);
+  }
+
+  updateComponentType(id: number, dto: UpdateNamedLookup): Observable<Lookup> {
+    return this.http.put<Lookup>(`${this.base}/component-types/${id}`, dto);
+  }
+
+  deleteComponentType(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/component-types/${id}`);
+  }
+
+  getProjectLevels(): Observable<Lookup[]> {
+    return this.http.get<Lookup[]>(`${this.base}/project-levels`);
+  }
+
+  createProjectLevel(dto: CreateNamedLookup): Observable<Lookup> {
+    return this.http.post<Lookup>(`${this.base}/project-levels`, dto);
+  }
+
+  updateProjectLevel(id: number, dto: UpdateNamedLookup): Observable<Lookup> {
+    return this.http.put<Lookup>(`${this.base}/project-levels/${id}`, dto);
+  }
+
+  deleteProjectLevel(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/project-levels/${id}`);
+  }
+
+  getAccountingUnits(): Observable<Lookup[]> {
+    return this.http.get<Lookup[]>(`${this.base}/accounting-units`);
+  }
+
+  createAccountingUnit(dto: CreateNamedLookup): Observable<Lookup> {
+    return this.http.post<Lookup>(`${this.base}/accounting-units`, dto);
+  }
+
+  updateAccountingUnit(id: number, dto: UpdateNamedLookup): Observable<Lookup> {
+    return this.http.put<Lookup>(`${this.base}/accounting-units/${id}`, dto);
+  }
+
+  deleteAccountingUnit(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/accounting-units/${id}`);
+  }
 }

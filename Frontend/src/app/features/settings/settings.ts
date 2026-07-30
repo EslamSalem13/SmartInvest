@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { LookupsService } from '../../core/services/lookups.service';
+import { ContractTypesService } from '../../core/services/contract-types.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Lookup, MarkazLookup, SubProgramLookup, VillageLookup } from '../../core/models/project.models';
 import { SettingsLookupItem, SettingsLookupParentOption, SettingsLookupSaveEvent, SettingsLookupTable } from './settings-lookup-table';
 
-type TabKey = 'mainProgram' | 'subProgram' | 'governorate' | 'markaz' | 'village' | 'priority' | 'status';
+type TabKey = 'mainProgram' | 'subProgram' | 'governorate' | 'markaz' | 'village' | 'priority' | 'status' | 'componentType' | 'projectLevel' | 'accountingUnit' | 'contractType';
 
 interface TabDef {
   key: TabKey;
@@ -22,6 +23,7 @@ interface TabDef {
 })
 export class Settings {
   private readonly lookups = inject(LookupsService);
+  private readonly contractTypes = inject(ContractTypesService);
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
@@ -34,6 +36,10 @@ export class Settings {
     { key: 'village', label: 'القرى', addLabel: 'إضافة قرية', hasParent: true, parentLabel: 'المركز' },
     { key: 'priority', label: 'الأولويات', addLabel: 'إضافة أولوية', hasParent: false, parentLabel: '' },
     { key: 'status', label: 'حالات المشروع', addLabel: 'إضافة حالة', hasParent: false, parentLabel: '' },
+    { key: 'componentType', label: 'المكوّن العيني', addLabel: 'إضافة مكوّن عيني', hasParent: false, parentLabel: '' },
+    { key: 'projectLevel', label: 'مستوى المشروع', addLabel: 'إضافة مستوى', hasParent: false, parentLabel: '' },
+    { key: 'accountingUnit', label: 'الوحدة الحسابية', addLabel: 'إضافة وحدة حسابية', hasParent: false, parentLabel: '' },
+    { key: 'contractType', label: 'أنواع العقود', addLabel: 'إضافة نوع عقد', hasParent: false, parentLabel: '' },
   ];
 
   protected readonly activeTab = signal<TabKey>('mainProgram');
@@ -48,6 +54,10 @@ export class Settings {
   private readonly villages = signal<VillageLookup[]>([]);
   private readonly priorities = signal<Lookup[]>([]);
   private readonly statuses = signal<Lookup[]>([]);
+  private readonly componentTypes = signal<Lookup[]>([]);
+  private readonly projectLevels = signal<Lookup[]>([]);
+  private readonly accountingUnits = signal<Lookup[]>([]);
+  private readonly contractTypeList = signal<Lookup[]>([]);
 
   protected readonly activeTabDef = computed(() => this.tabs.find((t) => t.key === this.activeTab())!);
 
@@ -95,6 +105,14 @@ export class Settings {
         return this.priorities().map((p) => ({ id: p.id, name: p.name }));
       case 'status':
         return this.statuses().map((s) => ({ id: s.id, name: s.name }));
+      case 'componentType':
+        return this.componentTypes().map((c) => ({ id: c.id, name: c.name }));
+      case 'projectLevel':
+        return this.projectLevels().map((p) => ({ id: p.id, name: p.name }));
+      case 'accountingUnit':
+        return this.accountingUnits().map((a) => ({ id: a.id, name: a.name }));
+      case 'contractType':
+        return this.contractTypeList().map((c) => ({ id: c.id, name: c.name }));
       default:
         return [];
     }
@@ -119,6 +137,10 @@ export class Settings {
       this.toPromise(this.lookups.getVillages(), this.villages),
       this.toPromise(this.lookups.getPriorities(), this.priorities),
       this.toPromise(this.lookups.getStatuses(), this.statuses),
+      this.toPromise(this.lookups.getComponentTypes(), this.componentTypes),
+      this.toPromise(this.lookups.getProjectLevels(), this.projectLevels),
+      this.toPromise(this.lookups.getAccountingUnits(), this.accountingUnits),
+      this.toPromise(this.contractTypes.getAll(), this.contractTypeList),
     ])
       .then(() => this.loading.set(false))
       .catch(() => {
@@ -180,6 +202,22 @@ export class Settings {
         return event.id
           ? this.lookups.updateStatus(event.id, { name })
           : this.lookups.createStatus({ name });
+      case 'componentType':
+        return event.id
+          ? this.lookups.updateComponentType(event.id, { name })
+          : this.lookups.createComponentType({ name });
+      case 'projectLevel':
+        return event.id
+          ? this.lookups.updateProjectLevel(event.id, { name })
+          : this.lookups.createProjectLevel({ name });
+      case 'accountingUnit':
+        return event.id
+          ? this.lookups.updateAccountingUnit(event.id, { name })
+          : this.lookups.createAccountingUnit({ name });
+      case 'contractType':
+        return event.id
+          ? this.contractTypes.update(event.id, { name })
+          : this.contractTypes.create({ name });
       default:
         return null;
     }
@@ -203,6 +241,10 @@ export class Settings {
       case 'village': return this.lookups.deleteVillage(id);
       case 'priority': return this.lookups.deletePriority(id);
       case 'status': return this.lookups.deleteStatus(id);
+      case 'componentType': return this.lookups.deleteComponentType(id);
+      case 'projectLevel': return this.lookups.deleteProjectLevel(id);
+      case 'accountingUnit': return this.lookups.deleteAccountingUnit(id);
+      case 'contractType': return this.contractTypes.delete(id);
     }
   }
 }
