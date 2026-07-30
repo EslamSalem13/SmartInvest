@@ -73,19 +73,6 @@ export class Projects {
   protected readonly markazList = signal<MarkazLookup[]>([]);
   protected readonly priorities = signal<Lookup[]>([]);
 
-  // كاش جهة التنفيذ لكل مشروع رئيسي (لعرضها في صفوف الفرعي)
-  private readonly agencyByMain = computed(() => {
-    const map = new Map<number, string>();
-    for (const m of this.mains()) {
-      map.set(m.id, m.executingAgency);
-    }
-    return map;
-  });
-
-  agencyOf(mainId: number): string {
-    return this.agencyByMain().get(mainId) ?? '';
-  }
-
   // ===== مؤشرات =====
   protected readonly kpiTotal = computed(() => this.subs().length);
   protected readonly kpiApproved = computed(() => this.subs().filter((s) => s.isApproved).length);

@@ -123,7 +123,7 @@
         <table>
           <thead>
             <tr>
-              <th>كود المشروع</th><th>اسم المشروع</th><th>البرنامج</th><th>جهة التنفيذ</th>
+              <th>كود المشروع</th><th>اسم المشروع</th><th>البرنامج</th><th>المقاول</th>
               <th>المركز</th><th>إجراءات</th>
             </tr>
           </thead>
@@ -141,7 +141,7 @@
                 </td>
                 <td class="mname">{{ row.main.name }}</td>
                 <td>{{ row.main.subProgramName }}</td>
-                <td>{{ row.main.executingAgency }}</td>
+                <td></td>
                 <td></td>
                 <td>
                   <div class="acts">
@@ -166,7 +166,7 @@
                     </td>
                     <td class="sname">{{ s.name }}</td>
                     <td>{{ row.main.subProgramName }}</td>
-                    <td>{{ agencyOf(s.mainProjectId) }}</td>
+                    <td>{{ s.contractorName ?? 'غير مسند' }}</td>
                     <td>{{ s.markazName }}</td>
                     <td>
                       <div class="acts">
