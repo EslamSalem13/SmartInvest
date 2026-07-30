@@ -53,10 +53,7 @@ public class SubProjectMappingProfile : Profile
                 opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null))
             .ForMember(
                 dest => dest.ContractorName,
-                opt => opt.MapFrom(src =>
-                    src.ProjectAssignments != null && src.ProjectAssignments.Any()
-                        ? src.ProjectAssignments.OrderByDescending(a => a.AssignmentDate).First().Contractor.ContractorName
-                        : null));
+                opt => opt.MapFrom(src => GetLatestContractorName(src)));
 
         CreateMap<SubProject, SubProjectDetailDto>()
             .ForMember(
@@ -135,5 +132,19 @@ public class SubProjectMappingProfile : Profile
             .ForMember(
                 dest => dest.ProjectGoal,
                 opt => opt.MapFrom(src => src.Goal));
+    }
+
+    private static string? GetLatestContractorName(SubProject subProject)
+    {
+        if (subProject.ProjectAssignments == null || !subProject.ProjectAssignments.Any())
+        {
+            return null;
+        }
+
+        var latestAssignment = subProject.ProjectAssignments
+            .OrderByDescending(a => a.AssignmentDate)
+            .First();
+
+        return latestAssignment.Contractor?.ContractorName;
     }
 }
