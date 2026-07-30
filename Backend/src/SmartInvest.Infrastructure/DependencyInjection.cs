@@ -53,6 +53,8 @@ public static class DependencyInjection
         services.AddScoped<IContractTypeService, ContractTypeService>();
         services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IMeasurementRepository, MeasurementRepository>();
+        services.AddScoped<IMeasurementService, MeasurementService>();
 
         return services;
     }
