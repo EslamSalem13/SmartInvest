@@ -1769,6 +1769,8 @@ always been blank)."
 - Create: `Backend/src/SmartInvest.Domain/Entities/SubProjectMeasurementValue.cs`
 - Create: `Backend/src/SmartInvest.Application/DTOs/MeasurementDtos.cs`
 - Create: `Backend/src/SmartInvest.Application/Common/Mappings/MeasurementMappingProfile.cs`
+- Create: `Backend/src/SmartInvest.Domain/Interfaces/IMeasurementRepository.cs`
+- Create: `Backend/src/SmartInvest.Infrastructure/Repositories/MeasurementRepository.cs`
 - Create: `Backend/src/SmartInvest.Application/Interfaces/IMeasurementService.cs`
 - Create: `Backend/src/SmartInvest.Application/Services/MeasurementService.cs`
 - Create: `Backend/src/SmartInvest.API/Controllers/MeasurementsController.cs`
@@ -1780,6 +1782,8 @@ always been blank)."
 **Interfaces:**
 - Consumes: nothing beyond `SubProgram`/`SubProject` already existing.
 - Produces: `MeasurementDto { Id, Name, Unit, SubProgramIds: int[], SubProgramNames: string[] }`; `POST/PUT/DELETE api/measurements`; `GET api/measurements/applicable?subProgramId=X` (measurements linked to one sub-program, for the frontend sub-project form); `GET/PUT api/subprojects/{subProjectId}/measurement-values`. Task 8 (frontend measurements page) and Task 9 (sub-project form Step 4) consume these directly.
+
+**Architecture note:** `MeasurementService` needs `.Include()`-chained queries (`Measurement` with its linked `SubProgram`s eager-loaded) that `IGenericRepository<T>`'s plain `GetByIdAsync`/`FindAsync` can't express. Every other service in this codebase (`SubProjectService`, `ContractorService`, `LookupService`, etc.) stays Onion-architecture-clean by never touching EF Core or `AppDbContext` directly from the `Application` layer — `SmartInvest.Application` has no project reference to `SmartInvest.Infrastructure` or `Microsoft.EntityFrameworkCore` at all, and adding one would be circular (`Infrastructure` already references `Application`). The fix, matching the exact pattern already used by `ISubProjectRepository.GetWithDetailsAsync`/`IProjectAssignmentRepository.GetByContractorAsync`: a dedicated `IMeasurementRepository` (Domain interface) implemented by `MeasurementRepository` (Infrastructure, extends `GenericRepository<Measurement>`) exposing the specific eager-loaded queries `MeasurementService` needs. `MeasurementService` only ever talks to `IMeasurementRepository`/`IGenericRepository<T>`, never `AppDbContext`.
 
 - [ ] **Step 1: Create the 3 entities**
 
@@ -1924,7 +1928,65 @@ public class MeasurementMappingProfile : Profile
 }
 ```
 
-- [ ] **Step 4: Create `IMeasurementService`**
+- [ ] **Step 4: Create `IMeasurementRepository` and `MeasurementRepository`**
+
+`Backend/src/SmartInvest.Domain/Interfaces/IMeasurementRepository.cs`:
+```csharp
+using SmartInvest.Domain.Entities;
+
+namespace SmartInvest.Domain.Interfaces;
+
+public interface IMeasurementRepository : IGenericRepository<Measurement>
+{
+    Task<IReadOnlyList<Measurement>> GetAllWithSubProgramsAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Measurement>> GetApplicableForSubProgramAsync(int subProgramId, CancellationToken cancellationToken = default);
+
+    Task<Measurement?> GetByIdWithSubProgramsAsync(int id, CancellationToken cancellationToken = default);
+}
+```
+
+`Backend/src/SmartInvest.Infrastructure/Repositories/MeasurementRepository.cs`:
+```csharp
+using Microsoft.EntityFrameworkCore;
+using SmartInvest.Domain.Entities;
+using SmartInvest.Domain.Interfaces;
+using SmartInvest.Infrastructure.Data;
+
+namespace SmartInvest.Infrastructure.Repositories;
+
+public class MeasurementRepository : GenericRepository<Measurement>, IMeasurementRepository
+{
+    public MeasurementRepository(AppDbContext context) : base(context)
+    {
+    }
+
+    public async Task<IReadOnlyList<Measurement>> GetAllWithSubProgramsAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Measurement>> GetApplicableForSubProgramAsync(int subProgramId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .Where(x => x.MeasurementSubPrograms.Any(l => l.SubProgramId == subProgramId))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<Measurement?> GetByIdWithSubProgramsAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    }
+}
+```
+(`DbSet` is the `protected readonly DbSet<T>` field `GenericRepository<T>` already exposes to subclasses — same access pattern `SubProjectRepository`/`ProjectAssignmentRepository` already use for their own custom queries.)
+
+- [ ] **Step 5: Create `IMeasurementService`**
 
 `Backend/src/SmartInvest.Application/Interfaces/IMeasurementService.cs`:
 ```csharp
@@ -1950,39 +2012,37 @@ public interface IMeasurementService
 }
 ```
 
-- [ ] **Step 5: Implement `MeasurementService`**
+- [ ] **Step 6: Implement `MeasurementService`**
 
 `Backend/src/SmartInvest.Application/Services/MeasurementService.cs`:
 ```csharp
 using AutoMapper;
-using Microsoft.EntityFrameworkCore;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Domain.Entities;
 using SmartInvest.Domain.Interfaces;
-using SmartInvest.Infrastructure.Data;
 
 namespace SmartInvest.Application.Services;
 
 public class MeasurementService : IMeasurementService
 {
-    private readonly IGenericRepository<Measurement> _measurementRepository;
+    private readonly IMeasurementRepository _measurementRepository;
     private readonly IGenericRepository<MeasurementSubProgram> _linkRepository;
     private readonly IGenericRepository<SubProjectMeasurementValue> _valueRepository;
     private readonly IGenericRepository<SubProject> _subProjectRepository;
+    private readonly IGenericRepository<MainProject> _mainProjectRepository;
     private readonly IGenericRepository<SubProgram> _subProgramRepository;
-    private readonly AppDbContext _context;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public MeasurementService(
-        IGenericRepository<Measurement> measurementRepository,
+        IMeasurementRepository measurementRepository,
         IGenericRepository<MeasurementSubProgram> linkRepository,
         IGenericRepository<SubProjectMeasurementValue> valueRepository,
         IGenericRepository<SubProject> subProjectRepository,
+        IGenericRepository<MainProject> mainProjectRepository,
         IGenericRepository<SubProgram> subProgramRepository,
-        AppDbContext context,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -1990,26 +2050,21 @@ public class MeasurementService : IMeasurementService
         _linkRepository = linkRepository;
         _valueRepository = valueRepository;
         _subProjectRepository = subProjectRepository;
+        _mainProjectRepository = mainProjectRepository;
         _subProgramRepository = subProgramRepository;
-        _context = context;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
     public async Task<IReadOnlyList<MeasurementDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var measurements = await _context.Set<Measurement>()
-            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
-            .ToListAsync(cancellationToken);
+        var measurements = await _measurementRepository.GetAllWithSubProgramsAsync(cancellationToken);
         return _mapper.Map<List<MeasurementDto>>(measurements);
     }
 
     public async Task<IReadOnlyList<MeasurementDto>> GetApplicableForSubProgramAsync(int subProgramId, CancellationToken cancellationToken = default)
     {
-        var measurements = await _context.Set<Measurement>()
-            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
-            .Where(x => x.MeasurementSubPrograms.Any(l => l.SubProgramId == subProgramId))
-            .ToListAsync(cancellationToken);
+        var measurements = await _measurementRepository.GetApplicableForSubProgramAsync(subProgramId, cancellationToken);
         return _mapper.Map<List<MeasurementDto>>(measurements);
     }
 
@@ -2036,9 +2091,7 @@ public class MeasurementService : IMeasurementService
     {
         await ValidateSubProgramIdsAsync(dto.SubProgramIds, cancellationToken);
 
-        var entity = await _context.Set<Measurement>()
-            .Include(x => x.MeasurementSubPrograms)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var entity = await _measurementRepository.GetByIdWithSubProgramsAsync(id, cancellationToken)
             ?? throw new NotFoundException($"القياس رقم {id} غير موجود");
 
         entity.Name = dto.Name.Trim();
@@ -2060,9 +2113,7 @@ public class MeasurementService : IMeasurementService
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Set<Measurement>()
-            .Include(x => x.MeasurementSubPrograms)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var entity = await _measurementRepository.GetByIdWithSubProgramsAsync(id, cancellationToken)
             ?? throw new NotFoundException($"القياس رقم {id} غير موجود");
 
         var linkedValues = await _valueRepository.FindAsync(x => x.MeasurementId == id, cancellationToken);
@@ -2082,12 +2133,13 @@ public class MeasurementService : IMeasurementService
 
     public async Task<IReadOnlyList<SubProjectMeasurementValueDto>> GetValuesForSubProjectAsync(int subProjectId, CancellationToken cancellationToken = default)
     {
-        var subProject = await _context.Set<SubProject>()
-            .Include(x => x.MainProject)
-            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken)
+        var subProject = await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken)
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
 
-        var applicable = await GetApplicableForSubProgramAsync(subProject.MainProject.SubProgramId, cancellationToken);
+        var mainProject = await _mainProjectRepository.GetByIdAsync(subProject.MainProjectId, cancellationToken)
+            ?? throw new NotFoundException("المشروع الرئيسي التابع له غير موجود");
+
+        var applicable = await GetApplicableForSubProgramAsync(mainProject.SubProgramId, cancellationToken);
 
         var existingValues = await _valueRepository.FindAsync(x => x.SubProjectId == subProjectId, cancellationToken);
         var valuesByMeasurementId = existingValues.ToDictionary(x => x.MeasurementId, x => x.Value);
@@ -2143,9 +2195,7 @@ public class MeasurementService : IMeasurementService
 
     private async Task<MeasurementDto> GetByIdOrThrowAsync(int id, CancellationToken cancellationToken)
     {
-        var entity = await _context.Set<Measurement>()
-            .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
+        var entity = await _measurementRepository.GetByIdWithSubProgramsAsync(id, cancellationToken)
             ?? throw new NotFoundException($"القياس رقم {id} غير موجود");
         return _mapper.Map<MeasurementDto>(entity);
     }
@@ -2164,7 +2214,7 @@ public class MeasurementService : IMeasurementService
 }
 ```
 
-- [ ] **Step 6: Create `MeasurementsController`**
+- [ ] **Step 7: Create `MeasurementsController`**
 
 `Backend/src/SmartInvest.API/Controllers/MeasurementsController.cs`:
 ```csharp
@@ -2228,7 +2278,7 @@ public class MeasurementsController : ControllerBase
 }
 ```
 
-- [ ] **Step 7: Create `SubProjectMeasurementValuesController`**
+- [ ] **Step 8: Create `SubProjectMeasurementValuesController`**
 
 `Backend/src/SmartInvest.API/Controllers/SubProjectMeasurementValuesController.cs`:
 ```csharp
@@ -2271,33 +2321,34 @@ public class SubProjectMeasurementValuesController : ControllerBase
 
 (`PlanningStaff`, not `PlanningManager`, on the write action here — matches `SubProjectFinancialYearsController`'s existing convention for sub-resources attached to a sub-project the staff member is actively editing, as opposed to top-level lookup management which is manager-only.)
 
-- [ ] **Step 8: Register in DI**
+- [ ] **Step 9: Register in DI**
 
-In `Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs`, add one line among the existing service registrations:
+In `Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs`, add two lines among the existing repository/service registrations:
 ```csharp
+        services.AddScoped<IMeasurementRepository, MeasurementRepository>();
         services.AddScoped<IMeasurementService, MeasurementService>();
 ```
 
-- [ ] **Step 9: Build the backend**
+- [ ] **Step 10: Build the backend**
 
 ```bash
 cd Backend/src/SmartInvest.API && dotnet build
 ```
 Expected: `Build succeeded.`
 
-- [ ] **Step 10: Generate and apply the migration**
+- [ ] **Step 11: Generate and apply the migration**
 
 ```bash
 cd Backend/src/SmartInvest.API
 dotnet ef migrations add AddMeasurements --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
 ```
-Inspect the generated migration — expect 3 `CreateTable` calls (`Measurement`, `MeasurementSubProgram` with FKs to `Measurement`/`SubProgram`, `SubProjectMeasurementValue` with FKs to `SubProject`/`Measurement`) plus their indexes. No hand-written SQL needed this time (nothing to backfill — these are brand new, empty concepts with no prior data).
+Inspect the generated migration — expect 3 `CreateTable` calls (`Measurement`, `MeasurementSubProgram` with FKs to `Measurement`/`SubProgram`, `SubProjectMeasurementValue` with FKs to `SubProject`/`Measurement`) plus their indexes. No hand-written SQL needed this time (nothing to backfill — these are brand new, empty concepts with no prior data). If it comes out empty despite the `DbSet<Measurement>` fix from Step 1, stop and report BLOCKED rather than guessing — that would mean something is genuinely different from what Task 2 taught us about EF entity discovery.
 
 ```bash
 dotnet ef database update --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
 ```
 
-- [ ] **Step 11: Empty-probe verify**
+- [ ] **Step 12: Empty-probe verify**
 
 ```bash
 dotnet ef migrations add ProbeCheck --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
@@ -2307,14 +2358,14 @@ Confirm empty, then remove:
 dotnet ef migrations remove --project ../SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj --startup-project .
 ```
 
-- [ ] **Step 12: Manual check via Swagger**
+- [ ] **Step 13: Manual check via Swagger**
 
 Create a measurement (`POST /api/measurements` with `{ "name": "الارتفاع", "unit": "متر", "subProgramIds": [1] }`), confirm it appears in `GET /api/measurements` with `subProgramNames` populated. Confirm `GET /api/measurements/applicable?subProgramId=1` returns it, and `?subProgramId=999` (or any sub-program it's not linked to) returns an empty list. Pick a real `SubProject` whose `MainProject.SubProgramId == 1`, confirm `GET /api/subprojects/{id}/measurement-values` returns this measurement with `value: null`; `PUT` the same endpoint with `{ "values": [{ "measurementId": <id>, "value": 12.5 }] }`, confirm a re-`GET` shows `value: 12.5`. Confirm deleting the measurement while still linked to the sub-program fails with the business-rule message; update it with an empty `subProgramIds` array to unlink, confirm delete now still fails (there's a recorded value); `PUT` measurement-values again with `value: null` for that measurement to clear it, confirm delete now succeeds.
 
-- [ ] **Step 13: Commit**
+- [ ] **Step 14: Commit**
 
 ```bash
-git add Backend/src/SmartInvest.Domain/Entities/Measurement.cs Backend/src/SmartInvest.Domain/Entities/MeasurementSubProgram.cs Backend/src/SmartInvest.Domain/Entities/SubProjectMeasurementValue.cs Backend/src/SmartInvest.Application/DTOs/MeasurementDtos.cs Backend/src/SmartInvest.Application/Common/Mappings/MeasurementMappingProfile.cs Backend/src/SmartInvest.Application/Interfaces/IMeasurementService.cs Backend/src/SmartInvest.Application/Services/MeasurementService.cs Backend/src/SmartInvest.API/Controllers/MeasurementsController.cs Backend/src/SmartInvest.API/Controllers/SubProjectMeasurementValuesController.cs Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs Backend/src/SmartInvest.Infrastructure/Migrations/
+git add Backend/src/SmartInvest.Domain/Entities/Measurement.cs Backend/src/SmartInvest.Domain/Entities/MeasurementSubProgram.cs Backend/src/SmartInvest.Domain/Entities/SubProjectMeasurementValue.cs Backend/src/SmartInvest.Domain/Interfaces/IMeasurementRepository.cs Backend/src/SmartInvest.Infrastructure/Repositories/MeasurementRepository.cs Backend/src/SmartInvest.Application/DTOs/MeasurementDtos.cs Backend/src/SmartInvest.Application/Common/Mappings/MeasurementMappingProfile.cs Backend/src/SmartInvest.Application/Interfaces/IMeasurementService.cs Backend/src/SmartInvest.Application/Services/MeasurementService.cs Backend/src/SmartInvest.API/Controllers/MeasurementsController.cs Backend/src/SmartInvest.API/Controllers/SubProjectMeasurementValuesController.cs Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs Backend/src/SmartInvest.Infrastructure/Migrations/
 git commit -m "feat: add custom measurements (definitions, sub-program links, per-sub-project values)
 
 Measurement { Name, Unit } many-to-many with SubProgram; a sub-project's
