@@ -2,8 +2,6 @@ export const Roles = {
   SuperAdmin: 'SuperAdmin',
   PlanningManager: 'PlanningManager',
   PlanningEmployee: 'PlanningEmployee',
-  ExecutiveAgency: 'ExecutiveAgency',
-  Contractor: 'Contractor',
 } as const;
 
 export type AppRole = (typeof Roles)[keyof typeof Roles];

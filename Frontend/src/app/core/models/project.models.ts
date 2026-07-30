@@ -58,6 +58,9 @@ export interface SubProjectListItem {
   bankFunding: number;
   selfFunding: number;
   totalCost: number;
+  executiveAgencyId: number | null;
+  executiveAgencyName: string | null;
+  contractorName: string | null;
 }
 
 export interface SubProjectDetail {
@@ -277,4 +280,58 @@ export interface CreatedPlan {
 
 export interface ApprovePlan {
   approvalDate: string;
+}
+
+export interface AssignedSubProject {
+  id: number;
+  name: string;
+  mainProjectName: string;
+}
+
+export interface Contractor {
+  id: number;
+  contractorName: string;
+  companyType: string;
+  nationalIdOrCommercialRegister: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  category: string;
+  isActive: boolean;
+  assignedSubProjects: AssignedSubProject[];
+}
+
+export interface CreateContractor {
+  contractorName: string;
+  companyType: string;
+  nationalIdOrCommercialRegister: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  category: string;
+}
+
+export interface UpdateContractor extends CreateContractor {
+  isActive: boolean;
+}
+
+export interface ExecutiveAgencyProfile {
+  id: number;
+  agencyName: string;
+  phone: string;
+  email: string;
+  address: string;
+  isActive: boolean;
+  assignedSubProjects: AssignedSubProject[];
+}
+
+export interface CreateAgency {
+  agencyName: string;
+  phone: string;
+  email: string;
+  address: string;
+}
+
+export interface UpdateAgency extends CreateAgency {
+  isActive: boolean;
 }

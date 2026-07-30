@@ -114,10 +114,6 @@ export class Users {
         return 'سوبر أدمن';
       case Roles.PlanningManager:
         return 'مدير التخطيط';
-      case Roles.ExecutiveAgency:
-        return 'جهة تنفيذية';
-      case Roles.Contractor:
-        return 'مقاول';
       default:
         return 'موظف تخطيط';
     }
