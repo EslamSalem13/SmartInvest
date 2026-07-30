@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { MeasurementsService } from '../../core/services/measurements.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
   FinancialYear,
@@ -11,6 +12,7 @@ import {
   MainProjectListItem,
   MarkazLookup,
   SubProjectListItem,
+  SubProjectMeasurementValue,
 } from '../../core/models/project.models';
 
 export interface LockedParent {
@@ -135,6 +137,23 @@ export interface LockedParent {
                 <p class="hint">لا توجد سنوات مالية بعد.</p>
               }
             </div>
+
+            @if (applicableMeasurements().length > 0) {
+              <div class="si-step"><span class="n">4</span><h4>القياسات المخصصة</h4></div>
+              <div class="si-grid">
+                @for (m of applicableMeasurements(); track m.id) {
+                  <div class="si-fld">
+                    <label>{{ m.name }} ({{ m.unit }})</label>
+                    <input
+                      type="number"
+                      [ngModel]="measurementValues()[m.id] ?? null"
+                      (ngModelChange)="setMeasurementValue(m.id, $event)"
+                      placeholder="اختياري"
+                    />
+                  </div>
+                }
+              </div>
+            }
           </div>
 
           <div class="si-modal-foot">
@@ -156,6 +175,7 @@ export class SubProjectForm {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly measurementsService = inject(MeasurementsService);
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
@@ -192,6 +212,9 @@ export class SubProjectForm {
   protected readonly bankFunding = signal<number>(0);
   protected readonly selfFunding = signal<number>(0);
   protected readonly description = signal('');
+
+  protected readonly applicableMeasurements = signal<{ id: number; name: string; unit: string }[]>([]);
+  protected readonly measurementValues = signal<Record<number, number | null>>({});
 
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -252,6 +275,7 @@ export class SubProjectForm {
 
     if (lockedParent) {
       this.mainProjectId.set(lockedParent.id);
+      this.loadApplicableMeasurements(lockedParent.id);
     }
 
     if (e) {
@@ -270,6 +294,7 @@ export class SubProjectForm {
           this.bankFunding.set(d.bankFunding);
           this.selfFunding.set(d.selfFunding);
           this.description.set(d.description ?? '');
+          this.loadApplicableMeasurements(d.mainProjectId, e.id);
         },
         error: () => this.error.set('تعذّر تحميل بيانات المشروع الفرعي'),
       });
@@ -289,6 +314,41 @@ export class SubProjectForm {
     }
   }
 
+  private loadApplicableMeasurements(mainProjectId: number, subProjectId?: number): void {
+    const mainProject = this.mains().find((m) => m.id === mainProjectId);
+    if (!mainProject) {
+      this.applicableMeasurements.set([]);
+      this.measurementValues.set({});
+      return;
+    }
+
+    this.measurementsService.getApplicable(mainProject.subProgramId).subscribe({
+      next: (measurements) => {
+        this.applicableMeasurements.set(measurements.map((m) => ({ id: m.id, name: m.name, unit: m.unit })));
+
+        if (subProjectId != null) {
+          this.measurementsService.getValuesForSubProject(subProjectId).subscribe({
+            next: (values: SubProjectMeasurementValue[]) => {
+              const map: Record<number, number | null> = {};
+              for (const v of values) {
+                map[v.measurementId] = v.value;
+              }
+              this.measurementValues.set(map);
+            },
+            error: () => {},
+          });
+        } else {
+          this.measurementValues.set({});
+        }
+      },
+      error: () => this.applicableMeasurements.set([]),
+    });
+  }
+
+  protected setMeasurementValue(measurementId: number, value: number | null): void {
+    this.measurementValues.update((current) => ({ ...current, [measurementId]: value }));
+  }
+
   private resetForm(): void {
     this.mainProjectId.set(null);
     this.code.set('');
@@ -304,6 +364,8 @@ export class SubProjectForm {
     this.description.set('');
     this.checkedYearIds.set(new Set());
     this.originalYearIds = new Set<number>();
+    this.applicableMeasurements.set([]);
+    this.measurementValues.set({});
   }
 
   protected onDelete(): void {
@@ -380,19 +442,38 @@ export class SubProjectForm {
     ];
 
     if (calls.length === 0) {
+      this.syncMeasurementValues(subProjectId);
+      return;
+    }
+
+    forkJoin(calls).subscribe({
+      next: () => this.syncMeasurementValues(subProjectId),
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(err?.error?.message ?? 'تعذّر تحديث ربط السنوات المالية');
+      },
+    });
+  }
+
+  private syncMeasurementValues(subProjectId: number): void {
+    const applicable = this.applicableMeasurements();
+    if (applicable.length === 0) {
       this.saving.set(false);
       this.saved.emit();
       return;
     }
 
-    forkJoin(calls).subscribe({
+    const values = this.measurementValues();
+    const payload = applicable.map((m) => ({ measurementId: m.id, value: values[m.id] ?? null }));
+
+    this.measurementsService.setValuesForSubProject(subProjectId, payload).subscribe({
       next: () => {
         this.saving.set(false);
         this.saved.emit();
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error?.message ?? 'تعذّر تحديث ربط السنوات المالية');
+        this.error.set(err?.error?.message ?? 'تعذّر حفظ القياسات');
       },
     });
   }
