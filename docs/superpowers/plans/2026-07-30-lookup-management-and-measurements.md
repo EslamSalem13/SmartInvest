@@ -14,7 +14,7 @@
 - Follow existing conventions exactly: Arabic UI strings, `si-btn`/`si-modal`/`si-overlay`/`si-grid`/`si-fld`/`si-err` shared classes from `Frontend/src/styles.css`, per-component CSS (default `ViewEncapsulation.Emulated`), Signals-based state, `[ngModel]`/`(ngModelChange)` (no Reactive Forms), `AuthService.isManager` for manager-gated mutation actions (view is all-staff, create/edit/delete is manager-only — matches every existing CRUD page in this app).
 - Backend: class-level `[Authorize]` broad/none, method-level narrower/explicit — never rely on class+method role intersection accidentally locking everyone out (documented pitfall in `docs/PROJECT.md`). All new mutation actions in this plan use `[Authorize(Roles = Roles.PlanningManager)]` — matches the Contractors/Agencies convention (all mutations manager-only), not `ContractTypesController`'s looser existing pattern (which is untouched by this plan).
 - Migrations: follow `docs/PROJECT.md` §9's procedure exactly — generate, inspect the raw `Up()`/`Down()` SQL for anything requiring manual ordering, apply, then run the empty-probe-migration technique to verify the snapshot matches, delete the probe files.
-- Table naming in this codebase is singular (e.g. `ContractType`, not `ContractTypes`) — new tables in this plan (`ComponentType`, `ProjectLevel`, `AccountingUnit`, `Measurement`, `MeasurementSubProgram`, `SubProjectMeasurementValue`) follow this convention.
+- Table naming convention is conditional, not simply singular: an entity discovered by EF purely through another entity's navigation property (no explicit `DbSet<T>` on `AppDbContext`, e.g. `ContractType`, `Governorate`, `ProjectPriority`) gets a table named after the singular CLR class name. An entity that has an explicit `DbSet<T>` property on `AppDbContext` (e.g. `MainProjects`, `SubProjects`, `AuditLogs`) gets a table named after that property — which by this codebase's convention is always plural. **Any new entity with no navigation path from the existing model graph needs an explicit `DbSet<T>` property to be discovered by `dotnet ef migrations add` at all** (confirmed the hard way during Task 2 — `ComponentType`/`ProjectLevel`/`AccountingUnit` produced an empty migration until `DbSet<ComponentType> ComponentTypes => Set<ComponentType>();`-style properties were added to `AppDbContext.cs`, which is why their real table names are `ComponentTypes`/`ProjectLevels`/`AccountingUnits`, plural). Task 4's new entities need the same treatment — see that task's Step 1.
 - Never run dev servers via Bash — use the `preview_start` tool.
 - **Known recurring issue:** a stray `SmartInvest.API.exe` process can hold the build output DLL locked. If `dotnet build` fails with a file-lock error, find and stop it first (Windows: `taskkill //F //IM SmartInvest.API.exe` via bash, or PowerShell `Get-Process -Name SmartInvest.API | Stop-Process -Force`), then rebuild.
 
@@ -1625,10 +1625,10 @@ Inspect the generated `Up()`. EF will likely generate `AddColumn<int>` for the 3
             migrationBuilder.Sql(@"
                 UPDATE sp SET sp.ProjectLevelId = pl.Id
                 FROM SubProjects sp
-                JOIN ProjectLevel pl ON pl.Name = sp.ProjectLevel
+                JOIN ProjectLevels pl ON pl.Name = sp.ProjectLevel
             ");
             migrationBuilder.Sql(@"
-                UPDATE sp SET sp.ProjectLevelId = (SELECT TOP 1 Id FROM ProjectLevel WHERE Name = N'غير محدد')
+                UPDATE sp SET sp.ProjectLevelId = (SELECT TOP 1 Id FROM ProjectLevels WHERE Name = N'غير محدد')
                 FROM SubProjects sp
                 WHERE sp.ProjectLevelId IS NULL
             ");
@@ -1636,10 +1636,10 @@ Inspect the generated `Up()`. EF will likely generate `AddColumn<int>` for the 3
             migrationBuilder.Sql(@"
                 UPDATE sp SET sp.ComponentTypeId = ct.Id
                 FROM SubProjects sp
-                JOIN ComponentType ct ON ct.Name = sp.ComponentType
+                JOIN ComponentTypes ct ON ct.Name = sp.ComponentType
             ");
             migrationBuilder.Sql(@"
-                UPDATE sp SET sp.ComponentTypeId = (SELECT TOP 1 Id FROM ComponentType WHERE Name = N'غير محدد')
+                UPDATE sp SET sp.ComponentTypeId = (SELECT TOP 1 Id FROM ComponentTypes WHERE Name = N'غير محدد')
                 FROM SubProjects sp
                 WHERE sp.ComponentTypeId IS NULL
             ");
@@ -1647,10 +1647,10 @@ Inspect the generated `Up()`. EF will likely generate `AddColumn<int>` for the 3
             migrationBuilder.Sql(@"
                 UPDATE sp SET sp.AccountingUnitId = au.Id
                 FROM SubProjects sp
-                JOIN AccountingUnit au ON au.Name = sp.AccountingUnit
+                JOIN AccountingUnits au ON au.Name = sp.AccountingUnit
             ");
             migrationBuilder.Sql(@"
-                UPDATE sp SET sp.AccountingUnitId = (SELECT TOP 1 Id FROM AccountingUnit WHERE Name = N'غير محدد')
+                UPDATE sp SET sp.AccountingUnitId = (SELECT TOP 1 Id FROM AccountingUnits WHERE Name = N'غير محدد')
                 FROM SubProjects sp
                 WHERE sp.AccountingUnitId IS NULL
             ");
@@ -1702,26 +1702,26 @@ Inspect the generated `Up()`. EF will likely generate `AddColumn<int>` for the 3
                 column: "AccountingUnitId");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_SubProjects_ProjectLevel_ProjectLevelId",
+                name: "FK_SubProjects_ProjectLevels_ProjectLevelId",
                 table: "SubProjects",
                 column: "ProjectLevelId",
-                principalTable: "ProjectLevel",
+                principalTable: "ProjectLevels",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_SubProjects_ComponentType_ComponentTypeId",
+                name: "FK_SubProjects_ComponentTypes_ComponentTypeId",
                 table: "SubProjects",
                 column: "ComponentTypeId",
-                principalTable: "ComponentType",
+                principalTable: "ComponentTypes",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_SubProjects_AccountingUnit_AccountingUnitId",
+                name: "FK_SubProjects_AccountingUnits_AccountingUnitId",
                 table: "SubProjects",
                 column: "AccountingUnitId",
-                principalTable: "AccountingUnit",
+                principalTable: "AccountingUnits",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.Restrict);
 ```
@@ -1774,6 +1774,7 @@ always been blank)."
 - Create: `Backend/src/SmartInvest.API/Controllers/MeasurementsController.cs`
 - Create: `Backend/src/SmartInvest.API/Controllers/SubProjectMeasurementValuesController.cs`
 - Modify: `Backend/src/SmartInvest.Infrastructure/DependencyInjection.cs`
+- Modify: `Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs`
 - Create (generated): a new EF migration creating the 3 tables.
 
 **Interfaces:**
@@ -1840,6 +1841,13 @@ namespace SmartInvest.Domain.Entities
         public decimal Value { get; set; }
     }
 }
+```
+
+**None of these 3 entities are reachable from `AppDbContext`'s existing model graph** — unlike Task 2's lookups, which at least got discovered once `DbSet<T>` properties were added, these three don't gain a discovery path just from their own mutual navigation properties (`Measurement` → `MeasurementSubProgram`/`SubProjectMeasurementValue` is a graph among themselves, with no edge from anything `AppDbContext` already knows about — `SubProgram`/`SubProject` don't have reverse navigation properties pointing back at them). Add an explicit `DbSet<Measurement>` to seed discovery — once EF can see `Measurement`, it walks its `MeasurementSubPrograms`/`Values` navigation properties and discovers `MeasurementSubProgram`/`SubProjectMeasurementValue` automatically, so only one `DbSet` is needed here (not three, unlike Task 2 where none of the 3 entities pointed at each other).
+
+In `Backend/src/SmartInvest.Infrastructure/Data/AppDbContext.cs`, add one line among the existing `DbSet` properties (after `public DbSet<FinancialYear> FinancialYears { get; set; }`, matching the expression-bodied style Task 2 used for its 3 lookups):
+```csharp
+    public DbSet<Measurement> Measurements => Set<Measurement>();
 ```
 
 - [ ] **Step 2: Create the DTOs**
