@@ -50,6 +50,7 @@ export class MainLayout {
     { label: 'لوحة التحكم', route: '/app/dashboard', icon: 'M4 13h6V4H4v9Zm10 7h6v-9h-6v9ZM4 20h6v-4H4v4ZM14 4v5h6V4h-6Z', managerOnly: true },
     { label: 'المشروعات', route: '/app/projects', icon: 'M3 7h18M3 12h18M3 17h18', managerOnly: false },
     { label: 'إدارة المستخدمين', route: '/app/users', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z', managerOnly: true },
+    { label: 'المقاولون', route: '/app/contractors', icon: 'M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6', managerOnly: false },
   ];
 
   protected readonly nav = computed(() =>
