@@ -65,6 +65,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/settings').then((m) => m.Settings),
       },
+      {
+        path: 'measurements',
+        loadComponent: () =>
+          import('./features/measurements/measurements').then((m) => m.Measurements),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

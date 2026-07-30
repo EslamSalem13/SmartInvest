@@ -367,3 +367,31 @@ export interface CreateVillage {
 }
 
 export type UpdateVillage = CreateVillage;
+
+export interface Measurement {
+  id: number;
+  name: string;
+  unit: string;
+  subProgramIds: number[];
+  subProgramNames: string[];
+}
+
+export interface CreateMeasurement {
+  name: string;
+  unit: string;
+  subProgramIds: number[];
+}
+
+export type UpdateMeasurement = CreateMeasurement;
+
+export interface SubProjectMeasurementValue {
+  measurementId: number;
+  measurementName: string;
+  unit: string;
+  value: number | null;
+}
+
+export interface SetMeasurementValue {
+  measurementId: number;
+  value: number | null;
+}
