@@ -32,15 +32,6 @@
   padding: 14px 32px;
 }
 .brand { display: flex; align-items: center; gap: 12px; }
-.brand-mark {
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #E7CE8C, #C79A3A);
-  color: #2A2107;
-  font-size: 20px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
-}
 .brand-txt b { display: block; font-size: 18px; color: #fff; letter-spacing: .3px; }
 .brand-txt b span { color: #E7CE8C; }
 .brand-txt small { color: #A9C4B2; font-size: 12.5px; }
