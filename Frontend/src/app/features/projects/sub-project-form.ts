@@ -70,17 +70,23 @@ export interface LockedParent {
               </div>
               <div class="si-fld">
                 <label>المستوى <span class="req">*</span></label>
-                <select [ngModel]="projectLevel()" (ngModelChange)="projectLevel.set($event)">
-                  <option value="">— اختر —</option>
-                  <option value="محلي">محلي</option>
-                  <option value="مشترك">مشترك</option>
+                <select [ngModel]="projectLevelId()" (ngModelChange)="projectLevelId.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  @for (pl of projectLevels(); track pl.id) { <option [ngValue]="pl.id">{{ pl.name }}</option> }
                 </select>
               </div>
               <div class="si-fld">
-                <label>المكوّن العيني</label>
-                <select [ngModel]="componentType()" (ngModelChange)="componentType.set($event)">
-                  <option value="">— اختر —</option>
-                  @for (c of componentTypes; track c) { <option [value]="c">{{ c }}</option> }
+                <label>المكوّن العيني <span class="req">*</span></label>
+                <select [ngModel]="componentTypeId()" (ngModelChange)="componentTypeId.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  @for (c of componentTypes(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+                </select>
+              </div>
+              <div class="si-fld">
+                <label>الوحدة الحسابية <span class="req">*</span></label>
+                <select [ngModel]="accountingUnitId()" (ngModelChange)="accountingUnitId.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  @for (a of accountingUnits(); track a.id) { <option [ngValue]="a.id">{{ a.name }}</option> }
                 </select>
               </div>
               <div class="si-fld">
@@ -166,6 +172,9 @@ export class SubProjectForm {
   protected readonly priorities = signal<Lookup[]>([]);
   protected readonly statuses = signal<Lookup[]>([]);
   protected readonly markazList = signal<MarkazLookup[]>([]);
+  protected readonly projectLevels = signal<Lookup[]>([]);
+  protected readonly componentTypes = signal<Lookup[]>([]);
+  protected readonly accountingUnits = signal<Lookup[]>([]);
 
   protected readonly financialYears = signal<FinancialYear[]>([]);
   protected readonly checkedYearIds = signal<Set<number>>(new Set());
@@ -174,8 +183,9 @@ export class SubProjectForm {
   protected readonly mainProjectId = signal<number | null>(null);
   protected readonly code = signal('');
   protected readonly name = signal('');
-  protected readonly projectLevel = signal('');
-  protected readonly componentType = signal('');
+  protected readonly projectLevelId = signal<number | null>(null);
+  protected readonly componentTypeId = signal<number | null>(null);
+  protected readonly accountingUnitId = signal<number | null>(null);
   protected readonly markazId = signal<number | null>(null);
   protected readonly priorityId = signal<number | null>(null);
   protected readonly statusId = signal<number | null>(null);
@@ -185,17 +195,6 @@ export class SubProjectForm {
 
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
-
-  // قائمة ثابتة للمكوّن العيني (حقل نصي في الـ backend)
-  protected readonly componentTypes = [
-    'الات ومعدات',
-    'الات ومعدات (نفقات)',
-    'تجهيزات',
-    'تشييدات',
-    'شراء أرض',
-    'مبانى سكنية',
-    'مبانى غير سكنية',
-  ];
 
   private lookupsLoaded = false;
   private wasOpen = false;
@@ -226,12 +225,18 @@ export class SubProjectForm {
       priorities: this.lookups.getPriorities(),
       statuses: this.lookups.getStatuses(),
       markaz: this.lookups.getMarkaz(),
+      projectLevels: this.lookups.getProjectLevels(),
+      componentTypes: this.lookups.getComponentTypes(),
+      accountingUnits: this.lookups.getAccountingUnits(),
       financialYears: this.financialYearsService.getAll(),
     }).subscribe({
-      next: ({ priorities, statuses, markaz, financialYears }) => {
+      next: ({ priorities, statuses, markaz, projectLevels, componentTypes, accountingUnits, financialYears }) => {
         this.priorities.set(priorities);
         this.statuses.set(statuses);
         this.markazList.set(markaz);
+        this.projectLevels.set(projectLevels);
+        this.componentTypes.set(componentTypes);
+        this.accountingUnits.set(accountingUnits);
         this.financialYears.set(financialYears);
         this.lookupsLoaded = true;
         done();
@@ -256,8 +261,9 @@ export class SubProjectForm {
           this.mainProjectId.set(d.mainProjectId);
           this.code.set(d.code ?? '');
           this.name.set(d.name);
-          this.projectLevel.set(d.projectLevel);
-          this.componentType.set(d.componentType);
+          this.projectLevelId.set(d.projectLevelId);
+          this.componentTypeId.set(d.componentTypeId);
+          this.accountingUnitId.set(d.accountingUnitId);
           this.markazId.set(d.markazId);
           this.priorityId.set(d.priorityId);
           this.statusId.set(d.statusId);
@@ -287,8 +293,9 @@ export class SubProjectForm {
     this.mainProjectId.set(null);
     this.code.set('');
     this.name.set('');
-    this.projectLevel.set('');
-    this.componentType.set('');
+    this.projectLevelId.set(null);
+    this.componentTypeId.set(null);
+    this.accountingUnitId.set(null);
     this.markazId.set(null);
     this.priorityId.set(null);
     this.statusId.set(null);
@@ -320,7 +327,9 @@ export class SubProjectForm {
     this.error.set(null);
 
     if (!this.name().trim()) { this.error.set('برجاء إدخال اسم المشروع الفرعي'); return; }
-    if (!this.projectLevel()) { this.error.set('برجاء اختيار المستوى'); return; }
+    if (this.projectLevelId() == null) { this.error.set('برجاء اختيار المستوى'); return; }
+    if (this.componentTypeId() == null) { this.error.set('برجاء اختيار المكوّن العيني'); return; }
+    if (this.accountingUnitId() == null) { this.error.set('برجاء اختيار الوحدة الحسابية'); return; }
     if (this.markazId() == null) { this.error.set('برجاء اختيار المركز'); return; }
     if (this.priorityId() == null) { this.error.set('برجاء اختيار الأولوية'); return; }
     if (this.statusId() == null) { this.error.set('برجاء اختيار حالة المشروع'); return; }
@@ -329,9 +338,9 @@ export class SubProjectForm {
     const base = {
       code: this.code().trim() || null,
       name: this.name().trim(),
-      projectLevel: this.projectLevel(),
-      componentType: this.componentType().trim(),
-      accountingUnit: '',
+      projectLevelId: this.projectLevelId()!,
+      componentTypeId: this.componentTypeId()!,
+      accountingUnitId: this.accountingUnitId()!,
       projectNature: '',
       markazId: this.markazId()!,
       priorityId: this.priorityId()!,

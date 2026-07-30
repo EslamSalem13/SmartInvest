@@ -84,7 +84,7 @@ export class Projects {
   private matchesSubFilters(s: SubProjectListItem): boolean {
     if (this.approvalFilter() === 'approved' && !s.isApproved) return false;
     if (this.approvalFilter() === 'pending' && s.isApproved) return false;
-    if (this.fLevel() && s.projectLevel !== this.fLevel()) return false;
+    if (this.fLevel() && s.projectLevelName !== this.fLevel()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
     if (this.fFunding() === 'bank' && s.bankFunding <= 0) return false;
