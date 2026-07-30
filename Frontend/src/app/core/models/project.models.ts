@@ -335,3 +335,30 @@ export interface CreateAgency {
 export interface UpdateAgency extends CreateAgency {
   isActive: boolean;
 }
+
+export interface CreateNamedLookup {
+  name: string;
+}
+
+export type UpdateNamedLookup = CreateNamedLookup;
+
+export interface CreateSubProgram {
+  name: string;
+  mainProgramId: number;
+}
+
+export type UpdateSubProgram = CreateSubProgram;
+
+export interface CreateMarkaz {
+  name: string;
+  governorateId: number;
+}
+
+export type UpdateMarkaz = CreateMarkaz;
+
+export interface CreateVillage {
+  name: string;
+  markazId: number;
+}
+
+export type UpdateVillage = CreateVillage;

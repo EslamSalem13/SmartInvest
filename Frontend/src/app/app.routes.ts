@@ -60,6 +60,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/agencies/agencies').then((m) => m.Agencies),
       },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/settings/settings').then((m) => m.Settings),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

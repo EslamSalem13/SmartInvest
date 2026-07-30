@@ -1,0 +1,86 @@
+<div class="lookup-panel">
+  <div class="panel-head">
+    <div>
+      <h2>{{ title() }}</h2>
+    </div>
+    @if (isManager()) {
+      <button class="si-btn gold" (click)="openAdd()">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+        {{ addLabel() }}
+      </button>
+    }
+  </div>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+    <input placeholder="بحث…" [ngModel]="search()" (ngModelChange)="setSearch($event)" />
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else if (filtered().length === 0) {
+    <div class="state">لا توجد عناصر مطابقة.</div>
+  } @else {
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ nameLabel() }}</th>
+            @if (hasParent()) { <th>{{ parentLabel() }}</th> }
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filtered(); track item.id) {
+            <tr>
+              <td><b>{{ item.name }}</b></td>
+              @if (hasParent()) { <td>{{ item.parentName }}</td> }
+              <td>
+                @if (isManager()) {
+                  <div class="acts">
+                    <button class="act" title="تعديل" (click)="openEdit(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                    <button class="act danger" title="حذف" (click)="onDelete(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>{{ editingId() ? 'تعديل' : addLabel() }}</h3></div>
+          <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          <div class="si-grid">
+            <div class="si-fld full">
+              <label>{{ nameLabel() }} <span class="req">*</span></label>
+              <input [ngModel]="formName()" (ngModelChange)="formName.set($event)" />
+            </div>
+            @if (hasParent()) {
+              <div class="si-fld full">
+                <label>{{ parentLabel() }} <span class="req">*</span></label>
+                <select [ngModel]="formParentId()" (ngModelChange)="formParentId.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  @for (p of parentOptions(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" (click)="submitForm()">{{ editingId() ? 'حفظ التعديلات' : addLabel() }}</button>
+          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

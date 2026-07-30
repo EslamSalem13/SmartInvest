@@ -1,0 +1,32 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>الإعدادات</h1>
+      <p>إدارة القوائم الأساسية المستخدمة في المشروعات</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="tabs">
+      @for (t of tabs; track t.key) {
+        <button class="tab" [class.on]="activeTab() === t.key" (click)="selectTab(t.key)">{{ t.label }}</button>
+      }
+    </nav>
+
+    <div class="content">
+      <app-settings-lookup-table
+        [title]="activeTabDef().label"
+        [addLabel]="activeTabDef().addLabel"
+        [hasParent]="activeTabDef().hasParent"
+        [parentLabel]="activeTabDef().parentLabel"
+        [parentOptions]="parentOptions()"
+        [items]="items()"
+        [loading]="loading()"
+        [error]="error()"
+        [isManager]="isManager()"
+        (save)="onSave($event)"
+        (remove)="onDelete($event)"
+      />
+    </div>
+  </div>
+</div>
