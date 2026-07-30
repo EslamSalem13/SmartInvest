@@ -37,7 +37,8 @@ tr.main-row:hover td { background: #FAFCFA; }
 .chevron.open { transform: rotate(90deg); }
 
 tr.sub-row td { background: var(--surface-2); white-space: normal; }
-.empty-subs { color: var(--muted); font-size: 12.5px; }
+.empty-subs { color: var(--muted); font-size: 12.5px; display: inline-flex; align-items: center; gap: 8px; }
+.subs-error { color: #b32a39; font-size: 12.5px; display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .assigned-list { display: flex; flex-direction: column; gap: 6px; }
 .assigned-list a { color: var(--green-700); font-weight: 700; text-decoration: none; font-size: 13px; }
 .assigned-list a:hover { text-decoration: underline; }

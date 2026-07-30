@@ -51,7 +51,11 @@
           </thead>
           <tbody>
             @for (a of paged(); track a.id) {
-              <tr class="main-row" tabindex="0" role="button" (click)="toggleExpand(a, $event)">
+              <tr class="main-row" tabindex="0" role="button"
+                  [attr.aria-expanded]="isExpanded(a.id)"
+                  (click)="toggleExpand(a, $event)"
+                  (keydown.enter)="toggleExpand(a, $event)"
+                  (keydown.space)="$event.preventDefault(); toggleExpand(a, $event)">
                 <td>
                   <svg class="chevron" [class.open]="isExpanded(a.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
                   <b>{{ a.agencyName }}</b>
@@ -71,7 +75,14 @@
               @if (isExpanded(a.id)) {
                 <tr class="sub-row">
                   <td colspan="5">
-                    @if (a.assignedSubProjects.length === 0) {
+                    @if (isDetailError(a.id)) {
+                      <span class="subs-error">
+                        تعذّر تحميل المشروعات الفرعية المسندة إلى هذه الجهة.
+                        <button class="si-btn" (click)="retryDetail(a.id)">إعادة المحاولة</button>
+                      </span>
+                    } @else if (!isDetailLoaded(a.id)) {
+                      <span class="empty-subs"><span class="spinner"></span> جاري التحميل…</span>
+                    } @else if (a.assignedSubProjects.length === 0) {
                       <span class="empty-subs">لا توجد مشروعات فرعية مسندة إلى هذه الجهة.</span>
                     } @else {
                       <div class="assigned-list">

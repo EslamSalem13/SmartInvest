@@ -25,6 +25,8 @@ export class Agencies {
   protected readonly search = signal('');
   protected readonly statusFilter = signal<StatusFilter>('all');
   protected readonly expandedIds = signal<Set<number>>(new Set());
+  protected readonly detailLoaded = signal<Set<number>>(new Set());
+  protected readonly detailError = signal<Set<number>>(new Set());
 
   protected readonly filtered = computed(() => {
     const term = this.search().trim().toLowerCase();
@@ -70,7 +72,7 @@ export class Agencies {
     }
     next.add(a.id);
     this.expandedIds.set(next);
-    if (a.assignedSubProjects.length === 0) {
+    if (!this.detailLoaded().has(a.id)) {
       this.loadDetail(a.id);
     }
   }
@@ -79,12 +81,40 @@ export class Agencies {
     return this.expandedIds().has(id);
   }
 
+  protected isDetailLoaded(id: number): boolean {
+    return this.detailLoaded().has(id);
+  }
+
+  protected isDetailError(id: number): boolean {
+    return this.detailError().has(id);
+  }
+
+  protected retryDetail(id: number): void {
+    this.loadDetail(id);
+  }
+
   private loadDetail(id: number): void {
     this.agenciesService.getById(id).subscribe({
       next: (full) => {
         this.agencies.update((list) => list.map((a) => (a.id === id ? full : a)));
+        this.detailLoaded.update((s) => {
+          const n = new Set(s);
+          n.add(id);
+          return n;
+        });
+        this.detailError.update((s) => {
+          const n = new Set(s);
+          n.delete(id);
+          return n;
+        });
       },
-      error: () => {},
+      error: () => {
+        this.detailError.update((s) => {
+          const n = new Set(s);
+          n.add(id);
+          return n;
+        });
+      },
     });
   }
 
@@ -115,6 +145,18 @@ export class Agencies {
       next: (data) => {
         this.agencies.set(data);
         this.loading.set(false);
+        // list endpoint never populates assignedSubProjects, so any previously
+        // loaded detail is now stale; clear and re-fetch for rows left expanded.
+        // Also drop ids that no longer exist (e.g. just deleted) so we don't
+        // re-fetch a detail for a row that will never render again.
+        const existingIds = new Set(data.map((a) => a.id));
+        const stillExpanded = new Set([...this.expandedIds()].filter((id) => existingIds.has(id)));
+        this.expandedIds.set(stillExpanded);
+        this.detailLoaded.set(new Set());
+        this.detailError.set(new Set());
+        for (const id of stillExpanded) {
+          this.loadDetail(id);
+        }
       },
       error: () => {
         this.error.set('تعذّر تحميل الجهات التنفيذية. تأكد من تسجيل الدخول.');
