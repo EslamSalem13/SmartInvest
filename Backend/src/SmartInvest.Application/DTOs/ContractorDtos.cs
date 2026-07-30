@@ -11,7 +11,7 @@ public class ContractorDto
     public string Address { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public bool IsActive { get; set; }
-    public string UserName { get; set; } = string.Empty;
+    public List<AssignedSubProjectDto> AssignedSubProjects { get; set; } = new();
 }
 
 public class CreateContractorDto
@@ -23,8 +23,6 @@ public class CreateContractorDto
     public string Email { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
 }
 
 public class UpdateContractorDto

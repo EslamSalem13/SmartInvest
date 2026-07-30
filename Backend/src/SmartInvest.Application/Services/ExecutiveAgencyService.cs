@@ -11,20 +11,17 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
 {
     private readonly IGenericRepository<ExecutiveAgency> _agencyRepository;
     private readonly ISubProjectRepository _subProjectRepository;
-    private readonly IIdentityService _identityService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public ExecutiveAgencyService(
         IGenericRepository<ExecutiveAgency> agencyRepository,
         ISubProjectRepository subProjectRepository,
-        IIdentityService identityService,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _agencyRepository = agencyRepository;
         _subProjectRepository = subProjectRepository;
-        _identityService = identityService;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -32,19 +29,25 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
     public async Task<IReadOnlyList<ExecutiveAgencyDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var agencies = await _agencyRepository.GetAllAsync(cancellationToken);
-        var result = new List<ExecutiveAgencyDto>();
-        foreach (var agency in agencies)
-        {
-            result.Add(await MapWithUserAsync(agency, cancellationToken));
-        }
-
-        return result;
+        return _mapper.Map<List<ExecutiveAgencyDto>>(agencies);
     }
 
     public async Task<ExecutiveAgencyDto> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var agency = await GetOrThrowAsync(id, cancellationToken);
-        return await MapWithUserAsync(agency, cancellationToken);
+        var dto = _mapper.Map<ExecutiveAgencyDto>(agency);
+
+        var subProjects = await _subProjectRepository.GetByExecutiveAgencyAsync(id, cancellationToken);
+        dto.AssignedSubProjects = subProjects
+            .Select(s => new AssignedSubProjectDto
+            {
+                Id = s.SubProjectId,
+                Name = s.SubProjectName,
+                MainProjectName = s.MainProject.MainProjectName,
+            })
+            .ToList();
+
+        return dto;
     }
 
     public async Task<ExecutiveAgencyDto> CreateAsync(CreateExecutiveAgencyDto dto, CancellationToken cancellationToken = default)
@@ -55,24 +58,13 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
             Phone = dto.Phone,
             Email = dto.Email,
             Address = dto.Address,
+            IsActive = true,
         };
 
         await _agencyRepository.AddAsync(agency, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        try
-        {
-            await _identityService.CreateAgencyUserAsync(
-                dto.UserName, dto.Email, dto.Phone, dto.Password, agency.ExecutiveAgencyId, cancellationToken);
-        }
-        catch
-        {
-            _agencyRepository.Remove(agency);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            throw;
-        }
-
-        return await MapWithUserAsync(agency, cancellationToken);
+        return _mapper.Map<ExecutiveAgencyDto>(agency);
     }
 
     public async Task<ExecutiveAgencyDto> UpdateAsync(int id, UpdateExecutiveAgencyDto dto, CancellationToken cancellationToken = default)
@@ -83,11 +75,12 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
         agency.Phone = dto.Phone;
         agency.Email = dto.Email;
         agency.Address = dto.Address;
+        agency.IsActive = dto.IsActive;
 
         _agencyRepository.Update(agency);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await MapWithUserAsync(agency, cancellationToken);
+        return _mapper.Map<ExecutiveAgencyDto>(agency);
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -100,16 +93,8 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
             throw new BusinessRuleException("لا يمكن حذف الجهة لوجود مشروعات فرعية مسندة إليها");
         }
 
-        await _identityService.DeleteUserByExecutiveAgencyIdAsync(id, cancellationToken);
-
         _agencyRepository.Remove(agency);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task ResetPasswordAsync(int id, string newPassword, CancellationToken cancellationToken = default)
-    {
-        await GetOrThrowAsync(id, cancellationToken);
-        await _identityService.ResetPasswordForAgencyAsync(id, newPassword, cancellationToken);
     }
 
     private async Task<ExecutiveAgency> GetOrThrowAsync(int id, CancellationToken cancellationToken)
@@ -121,14 +106,5 @@ public class ExecutiveAgencyService : IExecutiveAgencyService
         }
 
         return agency;
-    }
-
-    private async Task<ExecutiveAgencyDto> MapWithUserAsync(ExecutiveAgency agency, CancellationToken cancellationToken)
-    {
-        var dto = _mapper.Map<ExecutiveAgencyDto>(agency);
-        var user = await _identityService.GetUserByExecutiveAgencyIdAsync(agency.ExecutiveAgencyId, cancellationToken);
-        dto.UserName = user?.UserName ?? string.Empty;
-        dto.IsActive = user?.IsActive ?? false;
-        return dto;
     }
 }

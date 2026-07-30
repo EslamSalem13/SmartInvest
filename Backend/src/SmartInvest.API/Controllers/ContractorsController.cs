@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/contractors")]
-[Authorize(Roles = Roles.StaffAndAgency)]
+[Authorize(Roles = Roles.PlanningStaff)]
 public class ContractorsController : ControllerBase
 {
     private readonly IContractorService _contractorService;
@@ -33,7 +33,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.ManagerAndAgency)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ContractorDto>> Create(CreateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.CreateAsync(dto, cancellationToken);
@@ -53,14 +53,6 @@ public class ContractorsController : ControllerBase
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _contractorService.DeleteAsync(id, cancellationToken);
-        return NoContent();
-    }
-
-    [HttpPut("{id:int}/reset-password")]
-    [Authorize(Roles = Roles.PlanningManager)]
-    public async Task<IActionResult> ResetPassword(int id, ResetPasswordDto dto, CancellationToken cancellationToken)
-    {
-        await _contractorService.ResetPasswordAsync(id, dto.NewPassword, cancellationToken);
         return NoContent();
     }
 }

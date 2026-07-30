@@ -9,8 +9,6 @@ public class ExecutiveAgencyMappingProfile : Profile
     public ExecutiveAgencyMappingProfile()
     {
         CreateMap<ExecutiveAgency, ExecutiveAgencyDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ExecutiveAgencyId))
-            .ForMember(dest => dest.UserName, opt => opt.Ignore())
-            .ForMember(dest => dest.IsActive, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ExecutiveAgencyId));
     }
 }

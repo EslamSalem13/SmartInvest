@@ -55,12 +55,4 @@ public class ExecutiveAgenciesController : ControllerBase
         await _agencyService.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
-
-    [HttpPut("{id:int}/reset-password")]
-    [Authorize(Roles = Roles.PlanningManager)]
-    public async Task<IActionResult> ResetPassword(int id, ResetPasswordDto dto, CancellationToken cancellationToken)
-    {
-        await _agencyService.ResetPasswordAsync(id, dto.NewPassword, cancellationToken);
-        return NoContent();
-    }
 }

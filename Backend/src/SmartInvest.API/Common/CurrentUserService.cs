@@ -17,14 +17,4 @@ public class CurrentUserService : ICurrentUserService
     public string? UserId => User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
     public string? Role => User?.FindFirstValue(ClaimTypes.Role);
-
-    public int? ExecutiveAgencyId => ParseIntClaim("executiveAgencyId");
-
-    public int? ContractorId => ParseIntClaim("contractorId");
-
-    private int? ParseIntClaim(string claimType)
-    {
-        var value = User?.FindFirstValue(claimType);
-        return int.TryParse(value, out var id) ? id : null;
-    }
 }

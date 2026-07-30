@@ -7,8 +7,8 @@ public class ExecutiveAgencyDto
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public List<AssignedSubProjectDto> AssignedSubProjects { get; set; } = new();
 }
 
 public class CreateExecutiveAgencyDto
@@ -17,8 +17,6 @@ public class CreateExecutiveAgencyDto
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
 }
 
 public class UpdateExecutiveAgencyDto
@@ -27,4 +25,5 @@ public class UpdateExecutiveAgencyDto
     public string Phone { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
 }

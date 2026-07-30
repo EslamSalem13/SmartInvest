@@ -33,7 +33,6 @@ public class ProjectAssignmentService : IProjectAssignmentService
     public async Task<IReadOnlyList<ProjectAssignmentDto>> GetBySubProjectAsync(int subProjectId, CancellationToken cancellationToken = default)
     {
         var subProject = await GetSubProjectOrThrowAsync(subProjectId, cancellationToken);
-        EnsureAgencyOwnership(subProject);
 
         var assignments = await _assignmentRepository.GetBySubProjectAsync(subProjectId, cancellationToken);
         return _mapper.Map<List<ProjectAssignmentDto>>(assignments);
@@ -42,7 +41,6 @@ public class ProjectAssignmentService : IProjectAssignmentService
     public async Task<ProjectAssignmentDto> CreateAsync(int subProjectId, CreateProjectAssignmentDto dto, CancellationToken cancellationToken = default)
     {
         var subProject = await GetSubProjectOrThrowAsync(subProjectId, cancellationToken);
-        EnsureAgencyOwnership(subProject);
 
         var assignment = new ProjectAssignment
         {
@@ -68,7 +66,6 @@ public class ProjectAssignmentService : IProjectAssignmentService
     public async Task<ProjectAssignmentDto> UpdateGeneralAsync(int subProjectId, int id, UpdateProjectAssignmentDto dto, CancellationToken cancellationToken = default)
     {
         var subProject = await GetSubProjectOrThrowAsync(subProjectId, cancellationToken);
-        EnsureAgencyOwnership(subProject);
 
         var assignment = await GetAssignmentOrThrowAsync(subProjectId, id, cancellationToken);
         if (assignment.IsLocked && _currentUser.Role != Roles.PlanningManager)
@@ -117,21 +114,5 @@ public class ProjectAssignmentService : IProjectAssignmentService
         }
 
         return assignment;
-    }
-
-    /// <summary>
-    /// مدير التخطيط وموظف التخطيط لهم تجاوز كامل. الجهة التنفيذية مقصورة على مشروعاتها فقط.
-    /// </summary>
-    private void EnsureAgencyOwnership(SubProject subProject)
-    {
-        if (_currentUser.Role != Roles.ExecutiveAgency)
-        {
-            return;
-        }
-
-        if (subProject.ExecutiveAgencyId == null || subProject.ExecutiveAgencyId != _currentUser.ExecutiveAgencyId)
-        {
-            throw new ForbiddenAccessException("لا يمكنك التعامل مع تعيينات مشروع غير مسند لجهتك");
-        }
     }
 }

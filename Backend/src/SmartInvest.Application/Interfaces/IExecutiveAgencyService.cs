@@ -13,6 +13,4 @@ public interface IExecutiveAgencyService
     Task<ExecutiveAgencyDto> UpdateAsync(int id, UpdateExecutiveAgencyDto dto, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
-
-    Task ResetPasswordAsync(int id, string newPassword, CancellationToken cancellationToken = default);
 }

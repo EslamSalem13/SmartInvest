@@ -11,8 +11,6 @@ public class CreateExecutiveAgencyDtoValidator : AbstractValidator<CreateExecuti
         RuleFor(x => x.Phone).NotEmpty().WithMessage("رقم الهاتف مطلوب");
         RuleFor(x => x.Email).NotEmpty().WithMessage("البريد الإلكتروني مطلوب")
             .EmailAddress().WithMessage("صيغة البريد الإلكتروني غير صحيحة");
-        RuleFor(x => x.UserName).NotEmpty().WithMessage("اسم المستخدم مطلوب").MinimumLength(3);
-        RuleFor(x => x.Password).NotEmpty().WithMessage("كلمة المرور مطلوبة").MinimumLength(6);
     }
 }
 

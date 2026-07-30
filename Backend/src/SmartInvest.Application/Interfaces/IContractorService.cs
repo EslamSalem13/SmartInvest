@@ -13,6 +13,4 @@ public interface IContractorService
     Task<ContractorDto> UpdateAsync(int id, UpdateContractorDto dto, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
-
-    Task ResetPasswordAsync(int id, string newPassword, CancellationToken cancellationToken = default);
 }

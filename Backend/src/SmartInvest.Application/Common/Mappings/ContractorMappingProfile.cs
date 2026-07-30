@@ -9,7 +9,6 @@ public class ContractorMappingProfile : Profile
     public ContractorMappingProfile()
     {
         CreateMap<Contractor, ContractorDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ContractorId))
-            .ForMember(dest => dest.UserName, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.ContractorId));
     }
 }
