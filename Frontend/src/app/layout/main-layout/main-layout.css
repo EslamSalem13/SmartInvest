@@ -56,7 +56,7 @@
   place-items: center;
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: inset-inline-end .25s ease, transform .15s ease;
+  transition: right .25s ease, transform .15s ease;
 }
 .side-toggle:hover { transform: scale(1.08); }
 .side-toggle svg { width: 15px; height: 15px; transition: transform .25s ease; }

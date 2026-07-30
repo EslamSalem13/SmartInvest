@@ -2,7 +2,7 @@
   <button
     class="side-toggle"
     [class.collapsed]="sidebarCollapsed()"
-    [style.inset-inline-end.px]="sidebarCollapsed() ? 8 : 250"
+    [style.right.px]="sidebarCollapsed() ? 8 : 250"
     (click)="toggleSidebar()"
     [attr.aria-label]="sidebarCollapsed() ? 'إظهار القائمة الجانبية' : 'إخفاء القائمة الجانبية'"
     [attr.aria-expanded]="!sidebarCollapsed()"
