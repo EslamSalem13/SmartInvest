@@ -12,12 +12,10 @@ namespace SmartInvest.API.Controllers;
 public class ProjectAssignmentsController : ControllerBase
 {
     private readonly IProjectAssignmentService _assignmentService;
-    private readonly IChangeRequestService _changeRequestService;
 
-    public ProjectAssignmentsController(IProjectAssignmentService assignmentService, IChangeRequestService changeRequestService)
+    public ProjectAssignmentsController(IProjectAssignmentService assignmentService)
     {
         _assignmentService = assignmentService;
-        _changeRequestService = changeRequestService;
     }
 
     [HttpGet]
@@ -50,37 +48,5 @@ public class ProjectAssignmentsController : ControllerBase
     {
         await _assignmentService.DeleteAsync(subProjectId, id, cancellationToken);
         return NoContent();
-    }
-
-    [HttpGet("{id:int}/change-requests")]
-    [Authorize(Roles = Roles.StaffAndAgency)]
-    public async Task<ActionResult<IReadOnlyList<ChangeRequestDto>>> GetChangeRequests(int subProjectId, int id, CancellationToken cancellationToken)
-    {
-        var result = await _changeRequestService.GetHistoryAsync(id, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpPost("{id:int}/change-requests")]
-    [Authorize(Roles = Roles.AssignmentParties)]
-    public async Task<ActionResult<ChangeRequestDto>> SubmitChangeRequest(int subProjectId, int id, CreateChangeRequestDto dto, CancellationToken cancellationToken)
-    {
-        var result = await _changeRequestService.SubmitAsync(id, dto, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpPut("{id:int}/change-requests/{changeRequestId:int}/approve")]
-    [Authorize(Roles = Roles.StaffAndAgency)]
-    public async Task<ActionResult<ChangeRequestDto>> ApproveChangeRequest(int subProjectId, int id, int changeRequestId, ReviewChangeRequestDto dto, CancellationToken cancellationToken)
-    {
-        var result = await _changeRequestService.ApproveAsync(id, changeRequestId, dto, cancellationToken);
-        return Ok(result);
-    }
-
-    [HttpPut("{id:int}/change-requests/{changeRequestId:int}/reject")]
-    [Authorize(Roles = Roles.StaffAndAgency)]
-    public async Task<ActionResult<ChangeRequestDto>> RejectChangeRequest(int subProjectId, int id, int changeRequestId, ReviewChangeRequestDto dto, CancellationToken cancellationToken)
-    {
-        var result = await _changeRequestService.RejectAsync(id, changeRequestId, dto, cancellationToken);
-        return Ok(result);
     }
 }
