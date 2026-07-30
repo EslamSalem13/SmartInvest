@@ -55,6 +55,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/contractors/contractors').then((m) => m.Contractors),
       },
+      {
+        path: 'agencies',
+        loadComponent: () =>
+          import('./features/agencies/agencies').then((m) => m.Agencies),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

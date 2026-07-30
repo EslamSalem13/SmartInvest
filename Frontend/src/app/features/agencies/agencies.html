@@ -1,0 +1,139 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>الجهات التنفيذية</h1>
+      <p>ملفات الجهات التنفيذية والمشروعات الفرعية المسندة إليها</p>
+    </div>
+    @if (isManager()) {
+      <button class="si-btn gold" (click)="openAddForm()">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+        إضافة جهة جديدة
+      </button>
+    }
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><span class="lab">إجمالي الجهات</span><b class="val tnum">{{ total() }}</b></div>
+    <div class="kpi ok"><span class="lab">نشط</span><b class="val tnum">{{ activeCount() }}</b></div>
+    <div class="kpi bad"><span class="lab">غير نشط</span><b class="val tnum">{{ inactiveCount() }}</b></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" width="17" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+      <input placeholder="البحث بالاسم أو الهاتف…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <div class="seg">
+      <button [class.on]="statusFilter() === 'all'" (click)="statusFilter.set('all')">الكل</button>
+      <button [class.on]="statusFilter() === 'active'" (click)="statusFilter.set('active')">نشط</button>
+      <button [class.on]="statusFilter() === 'inactive'" (click)="statusFilter.set('inactive')">غير نشط</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري تحميل الجهات التنفيذية…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }} <button class="si-btn" (click)="load()">إعادة المحاولة</button></div>
+  } @else if (filtered().length === 0) {
+    <div class="state">لا توجد جهات تنفيذية مطابقة.</div>
+  } @else {
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم الجهة</th>
+              <th>الهاتف</th>
+              <th>البريد الإلكتروني</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of paged(); track a.id) {
+              <tr class="main-row" tabindex="0" role="button" (click)="toggleExpand(a, $event)">
+                <td>
+                  <svg class="chevron" [class.open]="isExpanded(a.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
+                  <b>{{ a.agencyName }}</b>
+                </td>
+                <td class="tnum">{{ a.phone }}</td>
+                <td>{{ a.email }}</td>
+                <td><span class="pill" [class.ok]="a.isActive">{{ a.isActive ? 'نشط' : 'غير نشط' }}</span></td>
+                <td>
+                  @if (isManager()) {
+                    <div class="acts">
+                      <button class="act" title="تعديل" (click)="openEditForm(a, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                      <button class="act danger" title="حذف" (click)="deleteAgency(a, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                    </div>
+                  }
+                </td>
+              </tr>
+              @if (isExpanded(a.id)) {
+                <tr class="sub-row">
+                  <td colspan="5">
+                    @if (a.assignedSubProjects.length === 0) {
+                      <span class="empty-subs">لا توجد مشروعات فرعية مسندة إلى هذه الجهة.</span>
+                    } @else {
+                      <div class="assigned-list">
+                        @for (sp of a.assignedSubProjects; track sp.id) {
+                          <a [routerLink]="['/app/projects', sp.id]" (click)="$event.stopPropagation()">
+                            {{ sp.name }} <span class="muted">— {{ sp.mainProjectName }}</span>
+                          </a>
+                        }
+                      </div>
+                    }
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="tblfoot">
+        <span class="muted">عرض {{ rangeStart() }}–{{ rangeEnd() }} من أصل {{ filtered().length }} جهة</span>
+        <div class="pager">
+          <button (click)="goToPage(page() - 1)" [disabled]="page() === 1">‹</button>
+          @for (p of [].constructor(totalPages()); track $index) {
+            <button [class.on]="page() === $index + 1" (click)="goToPage($index + 1)">{{ $index + 1 }}</button>
+          }
+          <button (click)="goToPage(page() + 1)" [disabled]="page() === totalPages()">›</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(560px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>{{ editing() ? 'تعديل جهة تنفيذية' : 'إضافة جهة تنفيذية جديدة' }}</h3><p>بيانات ملف الجهة</p></div>
+          <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (formError()) { <div class="si-err">{{ formError() }}</div> }
+          <div class="si-grid">
+            <div class="si-fld full"><label>اسم الجهة <span class="req">*</span></label><input [ngModel]="fAgencyName()" (ngModelChange)="fAgencyName.set($event)" placeholder="اسم الجهة التنفيذية" /></div>
+            <div class="si-fld"><label>الهاتف</label><input [ngModel]="fPhone()" (ngModelChange)="fPhone.set($event)" placeholder="01XXXXXXXXX" /></div>
+            <div class="si-fld"><label>البريد الإلكتروني</label><input type="email" [ngModel]="fEmail()" (ngModelChange)="fEmail.set($event)" /></div>
+            <div class="si-fld full"><label>العنوان</label><input [ngModel]="fAddress()" (ngModelChange)="fAddress.set($event)" /></div>
+            @if (editing()) {
+              <div class="si-fld">
+                <label>الحالة</label>
+                <select [ngModel]="fIsActive()" (ngModelChange)="fIsActive.set($event)">
+                  <option [ngValue]="true">نشط</option>
+                  <option [ngValue]="false">غير نشط</option>
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="saving()" (click)="submitForm()">
+            @if (saving()) { جاري الحفظ… } @else { {{ editing() ? 'حفظ التعديلات' : 'إضافة الجهة' }} }
+          </button>
+          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
