@@ -374,15 +374,16 @@ export type UpdateVillage = CreateVillage;
 export interface Measurement {
   id: number;
   name: string;
-  unit: string;
   subProgramIds: number[];
   subProgramNames: string[];
+  unitIds: number[];
+  unitNames: string[];
 }
 
 export interface CreateMeasurement {
   name: string;
-  unit: string;
   subProgramIds: number[];
+  unitIds: number[];
 }
 
 export type UpdateMeasurement = CreateMeasurement;
@@ -390,11 +391,13 @@ export type UpdateMeasurement = CreateMeasurement;
 export interface SubProjectMeasurementValue {
   measurementId: number;
   measurementName: string;
-  unit: string;
+  unitId: number | null;
+  unitName: string | null;
   value: number | null;
 }
 
 export interface SetMeasurementValue {
   measurementId: number;
+  unitId: number | null;
   value: number | null;
 }

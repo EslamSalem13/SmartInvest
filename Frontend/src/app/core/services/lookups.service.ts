@@ -193,4 +193,20 @@ export class LookupsService {
   deleteAccountingUnit(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/accounting-units/${id}`);
   }
+
+  getUnits(): Observable<Lookup[]> {
+    return this.http.get<Lookup[]>(`${this.base}/units`);
+  }
+
+  createUnit(dto: CreateNamedLookup): Observable<Lookup> {
+    return this.http.post<Lookup>(`${this.base}/units`, dto);
+  }
+
+  updateUnit(id: number, dto: UpdateNamedLookup): Observable<Lookup> {
+    return this.http.put<Lookup>(`${this.base}/units/${id}`, dto);
+  }
+
+  deleteUnit(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/units/${id}`);
+  }
 }
