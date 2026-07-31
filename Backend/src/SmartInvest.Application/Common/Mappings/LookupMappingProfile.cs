@@ -74,5 +74,7 @@ public class LookupMappingProfile : Profile
         CreateMap<ProjectLevel, LookupDto>();
 
         CreateMap<AccountingUnit, LookupDto>();
+
+        CreateMap<Unit, LookupDto>();
     }
 }

@@ -22,6 +22,7 @@ public class LookupService : ILookupService
     private readonly IGenericRepository<ComponentType> _componentTypeRepository;
     private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
+    private readonly IGenericRepository<Unit> _unitRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -39,6 +40,7 @@ public class LookupService : ILookupService
         IGenericRepository<ComponentType> componentTypeRepository,
         IGenericRepository<ProjectLevel> projectLevelRepository,
         IGenericRepository<AccountingUnit> accountingUnitRepository,
+        IGenericRepository<Unit> unitRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -55,6 +57,7 @@ public class LookupService : ILookupService
         _componentTypeRepository = componentTypeRepository;
         _projectLevelRepository = projectLevelRepository;
         _accountingUnitRepository = accountingUnitRepository;
+        _unitRepository = unitRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -643,6 +646,54 @@ public class LookupService : ILookupService
         }
 
         _accountingUnitRepository.Remove(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<LookupDto>> GetUnitsAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await _unitRepository.GetAllAsync(cancellationToken);
+        return _mapper.Map<List<LookupDto>>(items);
+    }
+
+    public async Task<LookupDto> CreateUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var name = dto.Name.Trim();
+        var duplicates = await _unitRepository.FindAsync(x => x.Name == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الوحدة «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new Unit { Name = name };
+        await _unitRepository.AddAsync(entity, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task<LookupDto> UpdateUnitAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default)
+    {
+        var entity = await _unitRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الوحدة رقم {id} غير موجودة");
+
+        var name = dto.Name.Trim();
+        var duplicates = await _unitRepository.FindAsync(x => x.Name == name && x.Id != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الوحدة «{name}» مستخدم بالفعل");
+        }
+
+        entity.Name = name;
+        _unitRepository.Update(entity);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return _mapper.Map<LookupDto>(entity);
+    }
+
+    public async Task DeleteUnitAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _unitRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"الوحدة رقم {id} غير موجودة");
+
+        _unitRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

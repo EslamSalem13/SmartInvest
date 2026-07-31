@@ -23,6 +23,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SubProgram> SubPrograms { get; set; }
     public DbSet<FinancialYear> FinancialYears { get; set; }
     public DbSet<Measurement> Measurements => Set<Measurement>();
+    public DbSet<Unit> Units => Set<Unit>();
 
     public DbSet<ComponentType> ComponentTypes => Set<ComponentType>();
     public DbSet<ProjectLevel> ProjectLevels => Set<ProjectLevel>();

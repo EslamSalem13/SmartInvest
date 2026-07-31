@@ -60,4 +60,9 @@ public interface ILookupService
     Task<LookupDto> CreateAccountingUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default);
     Task<LookupDto> UpdateAccountingUnitAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default);
     Task DeleteAccountingUnitAsync(int id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<LookupDto>> GetUnitsAsync(CancellationToken cancellationToken = default);
+    Task<LookupDto> CreateUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task<LookupDto> UpdateUnitAsync(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken = default);
+    Task DeleteUnitAsync(int id, CancellationToken cancellationToken = default);
 }

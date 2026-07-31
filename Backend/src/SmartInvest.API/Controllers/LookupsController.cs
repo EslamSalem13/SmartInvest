@@ -327,4 +327,35 @@ public class LookupsController : ControllerBase
         await _lookupService.DeleteAccountingUnitAsync(id, cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("units")]
+    public async Task<ActionResult<IReadOnlyList<LookupDto>>> GetUnits(CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.GetUnitsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("units")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> CreateUnit(CreateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.CreateUnitAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("units/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<LookupDto>> UpdateUnit(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _lookupService.UpdateUnitAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpDelete("units/{id:int}")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> DeleteUnit(int id, CancellationToken cancellationToken)
+    {
+        await _lookupService.DeleteUnitAsync(id, cancellationToken);
+        return NoContent();
+    }
 }
