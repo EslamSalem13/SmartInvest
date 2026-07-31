@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { LookupsService } from '../../core/services/lookups.service';
 import { ContractTypesService } from '../../core/services/contract-types.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -27,6 +27,8 @@ export class Settings {
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
+
+  private readonly lookupTable = viewChild.required<SettingsLookupTable>('lookupTable');
 
   protected readonly tabs: TabDef[] = [
     { key: 'mainProgram', label: 'البرامج الرئيسية', addLabel: 'إضافة برنامج رئيسي', hasParent: false, parentLabel: '' },
@@ -160,8 +162,11 @@ export class Settings {
     const req = this.buildSaveRequest(tab, event);
     if (!req) return;
     req.subscribe({
-      next: () => this.loadAll(),
-      error: (err) => alert(err?.error?.message ?? 'تعذّر الحفظ'),
+      next: () => {
+        this.lookupTable().saveSucceeded();
+        this.loadAll();
+      },
+      error: (err) => this.lookupTable().saveFailed(err?.error?.message ?? 'تعذّر الحفظ'),
     });
   }
 

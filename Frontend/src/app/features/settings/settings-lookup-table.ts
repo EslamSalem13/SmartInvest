@@ -53,6 +53,8 @@ export class SettingsLookupTable {
   protected readonly editingId = signal<number | null>(null);
   protected readonly formName = signal('');
   protected readonly formParentId = signal<number | null>(null);
+  protected readonly saving = signal(false);
+  protected readonly formError = signal<string | null>(null);
 
   protected setSearch(value: string): void {
     this._search.set(value);
@@ -62,6 +64,7 @@ export class SettingsLookupTable {
     this.editingId.set(null);
     this.formName.set('');
     this.formParentId.set(null);
+    this.formError.set(null);
     this.showForm.set(true);
   }
 
@@ -69,24 +72,41 @@ export class SettingsLookupTable {
     this.editingId.set(item.id);
     this.formName.set(item.name);
     this.formParentId.set(item.parentId ?? null);
+    this.formError.set(null);
     this.showForm.set(true);
   }
 
   protected closeForm(): void {
+    if (this.saving()) return;
     this.showForm.set(false);
   }
 
   protected submitForm(): void {
+    if (this.saving()) return;
+    this.formError.set(null);
+
     const name = this.formName().trim();
     if (!name) return;
     if (this.hasParent() && this.formParentId() == null) return;
 
+    this.saving.set(true);
     this.save.emit({
       id: this.editingId(),
       name,
       parentId: this.formParentId(),
     });
+  }
+
+  /** يستدعيها المكوّن الأب عند نجاح الحفظ — يغلق النموذج. */
+  saveSucceeded(): void {
+    this.saving.set(false);
     this.showForm.set(false);
+  }
+
+  /** يستدعيها المكوّن الأب عند فشل الحفظ — يبقي النموذج مفتوحًا مع رسالة الخطأ. */
+  saveFailed(message: string): void {
+    this.saving.set(false);
+    this.formError.set(message);
   }
 
   protected onDelete(item: SettingsLookupItem): void {

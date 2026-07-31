@@ -90,7 +90,30 @@ public class PlansController : ControllerBase
     [HttpPost("{planId}/newProject")]
     public async Task<IActionResult> AddNewProjectToPlan(int planId, AddNewProjectDto projectDto)
     {
-        var project = mapper.Map<SubProject>(projectDto);
+        // AddNewProjectDto's ProjectLevel/ComponentType/AccountingUnit are now FK-based (Name فقط للقراءة)،
+        // لذا لا يمكن الاعتماد على AutoMapper لبناء SubProject من الـ dto - يتم بناء الكيان يدويًا هنا.
+        var project = new SubProject
+        {
+            SubProjectName = projectDto.SubProjectName,
+            MainProjectId = projectDto.MainProjectId,
+            ProjectLevelId = projectDto.ProjectLevelId,
+            ComponentTypeId = projectDto.ComponentTypeId,
+            AccountingUnitId = projectDto.AccountingUnitId,
+            ProjectNature = projectDto.ProjectNature,
+            GreenInvestmentLink = projectDto.GreenInvestmentLink,
+            ProjectDescription = projectDto.ProjectDescription,
+            ProjectGoal = projectDto.ProjectGoal,
+            SocialImpact = projectDto.SocialImpact,
+            EconomicImpact = projectDto.EconomicImpact,
+            EnvironmentalImpact = projectDto.EnvironmentalImpact,
+            MarkazId = projectDto.MarkazId,
+            PriorityId = projectDto.PriorityId,
+            ExecutiveAgencyId = projectDto.ExecutiveAgencyId,
+            Latitude = projectDto.Latitude,
+            Longitude = projectDto.Longitude,
+            StatusId = projectDto.StatusId,
+        };
+
         await planService.AddProjectToPlan(planId, project);
         var projectToReturn = mapper.Map<ProjectInfoDto>(project);
         return Ok(projectToReturn);

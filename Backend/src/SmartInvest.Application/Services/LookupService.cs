@@ -133,7 +133,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreatePriorityAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new ProjectPriority { Priority = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _priorityRepository.FindAsync(x => x.Priority == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الأولوية «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new ProjectPriority { Priority = name };
         await _priorityRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -143,7 +150,15 @@ public class LookupService : ILookupService
     {
         var entity = await _priorityRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"الأولوية رقم {id} غير موجودة");
-        entity.Priority = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _priorityRepository.FindAsync(x => x.Priority == name && x.Id != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الأولوية «{name}» مستخدم بالفعل");
+        }
+
+        entity.Priority = name;
         _priorityRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -166,7 +181,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateStatusAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new ProjectStatus { StatusName = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _statusRepository.FindAsync(x => x.StatusName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الحالة «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new ProjectStatus { StatusName = name };
         await _statusRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -176,7 +198,15 @@ public class LookupService : ILookupService
     {
         var entity = await _statusRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"الحالة رقم {id} غير موجودة");
-        entity.StatusName = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _statusRepository.FindAsync(x => x.StatusName == name && x.StatusId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الحالة «{name}» مستخدم بالفعل");
+        }
+
+        entity.StatusName = name;
         _statusRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -200,7 +230,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateMainProgramAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new MainProgram { ProgramName = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _mainProgramRepository.FindAsync(x => x.ProgramName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم البرنامج الرئيسي «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new MainProgram { ProgramName = name };
         await _mainProgramRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -210,7 +247,15 @@ public class LookupService : ILookupService
     {
         var entity = await _mainProgramRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"البرنامج الرئيسي رقم {id} غير موجود");
-        entity.ProgramName = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _mainProgramRepository.FindAsync(x => x.ProgramName == name && x.ProgramId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم البرنامج الرئيسي «{name}» مستخدم بالفعل");
+        }
+
+        entity.ProgramName = name;
         _mainProgramRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -236,7 +281,14 @@ public class LookupService : ILookupService
         var mainProgram = await _mainProgramRepository.GetByIdAsync(dto.MainProgramId, cancellationToken)
             ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
 
-        var entity = new SubProgram { SubProgramName = dto.Name.Trim(), ProgramId = mainProgram.ProgramId };
+        var name = dto.Name.Trim();
+        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم البرنامج الفرعي «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new SubProgram { SubProgramName = name, ProgramId = mainProgram.ProgramId };
         await _subProgramRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<SubProgramLookupDto>(entity);
@@ -250,7 +302,14 @@ public class LookupService : ILookupService
         var mainProgram = await _mainProgramRepository.GetByIdAsync(dto.MainProgramId, cancellationToken)
             ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
 
-        entity.SubProgramName = dto.Name.Trim();
+        var name = dto.Name.Trim();
+        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name && x.SubProgramId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم البرنامج الفرعي «{name}» مستخدم بالفعل");
+        }
+
+        entity.SubProgramName = name;
         entity.ProgramId = mainProgram.ProgramId;
         _subProgramRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -274,7 +333,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateGovernorateAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new Governorate { GovernorateName = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _governorateRepository.FindAsync(x => x.GovernorateName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المحافظة «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new Governorate { GovernorateName = name };
         await _governorateRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -284,7 +350,15 @@ public class LookupService : ILookupService
     {
         var entity = await _governorateRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"المحافظة رقم {id} غير موجودة");
-        entity.GovernorateName = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _governorateRepository.FindAsync(x => x.GovernorateName == name && x.GovernorateId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المحافظة «{name}» مستخدم بالفعل");
+        }
+
+        entity.GovernorateName = name;
         _governorateRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -310,7 +384,14 @@ public class LookupService : ILookupService
         var governorate = await _governorateRepository.GetByIdAsync(dto.GovernorateId, cancellationToken)
             ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
 
-        var entity = new Markaz { MarkazName = dto.Name.Trim(), GovernorateId = governorate.GovernorateId };
+        var name = dto.Name.Trim();
+        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المركز «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new Markaz { MarkazName = name, GovernorateId = governorate.GovernorateId };
         await _markazRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<MarkazLookupDto>(entity);
@@ -324,7 +405,14 @@ public class LookupService : ILookupService
         var governorate = await _governorateRepository.GetByIdAsync(dto.GovernorateId, cancellationToken)
             ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
 
-        entity.MarkazName = dto.Name.Trim();
+        var name = dto.Name.Trim();
+        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name && x.MarkazId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المركز «{name}» مستخدم بالفعل");
+        }
+
+        entity.MarkazName = name;
         entity.GovernorateId = governorate.GovernorateId;
         _markazRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -352,7 +440,14 @@ public class LookupService : ILookupService
         var markaz = await _markazRepository.GetByIdAsync(dto.MarkazId, cancellationToken)
             ?? throw new NotFoundException("المركز المحدد غير موجود");
 
-        var entity = new Village { VillageName = dto.Name.Trim(), MarkazId = markaz.MarkazId };
+        var name = dto.Name.Trim();
+        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم القرية «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new Village { VillageName = name, MarkazId = markaz.MarkazId };
         await _villageRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<VillageLookupDto>(entity);
@@ -366,7 +461,14 @@ public class LookupService : ILookupService
         var markaz = await _markazRepository.GetByIdAsync(dto.MarkazId, cancellationToken)
             ?? throw new NotFoundException("المركز المحدد غير موجود");
 
-        entity.VillageName = dto.Name.Trim();
+        var name = dto.Name.Trim();
+        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name && x.VillageId != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم القرية «{name}» مستخدم بالفعل");
+        }
+
+        entity.VillageName = name;
         entity.MarkazId = markaz.MarkazId;
         _villageRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -390,7 +492,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateComponentTypeAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new ComponentType { Name = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _componentTypeRepository.FindAsync(x => x.Name == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المكوّن العيني «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new ComponentType { Name = name };
         await _componentTypeRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -400,7 +509,15 @@ public class LookupService : ILookupService
     {
         var entity = await _componentTypeRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"المكوّن العيني رقم {id} غير موجود");
-        entity.Name = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _componentTypeRepository.FindAsync(x => x.Name == name && x.Id != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم المكوّن العيني «{name}» مستخدم بالفعل");
+        }
+
+        entity.Name = name;
         _componentTypeRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -429,7 +546,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateProjectLevelAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new ProjectLevel { Name = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _projectLevelRepository.FindAsync(x => x.Name == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم مستوى المشروع «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new ProjectLevel { Name = name };
         await _projectLevelRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -439,7 +563,15 @@ public class LookupService : ILookupService
     {
         var entity = await _projectLevelRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"مستوى المشروع رقم {id} غير موجود");
-        entity.Name = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _projectLevelRepository.FindAsync(x => x.Name == name && x.Id != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم مستوى المشروع «{name}» مستخدم بالفعل");
+        }
+
+        entity.Name = name;
         _projectLevelRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -468,7 +600,14 @@ public class LookupService : ILookupService
 
     public async Task<LookupDto> CreateAccountingUnitAsync(CreateNamedLookupDto dto, CancellationToken cancellationToken = default)
     {
-        var entity = new AccountingUnit { Name = dto.Name.Trim() };
+        var name = dto.Name.Trim();
+        var duplicates = await _accountingUnitRepository.FindAsync(x => x.Name == name, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الوحدة الحسابية «{name}» مستخدم بالفعل");
+        }
+
+        var entity = new AccountingUnit { Name = name };
         await _accountingUnitRepository.AddAsync(entity, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);
@@ -478,7 +617,15 @@ public class LookupService : ILookupService
     {
         var entity = await _accountingUnitRepository.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException($"الوحدة الحسابية رقم {id} غير موجودة");
-        entity.Name = dto.Name.Trim();
+
+        var name = dto.Name.Trim();
+        var duplicates = await _accountingUnitRepository.FindAsync(x => x.Name == name && x.Id != id, cancellationToken);
+        if (duplicates.Count > 0)
+        {
+            throw new BusinessRuleException($"اسم الوحدة الحسابية «{name}» مستخدم بالفعل");
+        }
+
+        entity.Name = name;
         _accountingUnitRepository.Update(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return _mapper.Map<LookupDto>(entity);

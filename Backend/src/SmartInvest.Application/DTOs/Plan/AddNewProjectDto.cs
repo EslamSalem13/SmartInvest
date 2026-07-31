@@ -4,9 +4,12 @@
     {
         public string SubProjectName { get; set; } = string.Empty;
         public int MainProjectId { get; set; }
-        public string ProjectLevel { get; set; } = string.Empty;
-        public string ComponentType { get; set; } = string.Empty;
-        public string AccountingUnit { get; set; } = string.Empty;
+        public string ProjectLevelName { get; set; } = string.Empty;
+        public string ComponentTypeName { get; set; } = string.Empty;
+        public string AccountingUnitName { get; set; } = string.Empty;
+        public int ProjectLevelId { get; set; }
+        public int ComponentTypeId { get; set; }
+        public int AccountingUnitId { get; set; }
         public decimal TotalCost { get; set; }
         public string ProjectNature { get; set; } = string.Empty;
         public string? GreenInvestmentLink { get; set; }

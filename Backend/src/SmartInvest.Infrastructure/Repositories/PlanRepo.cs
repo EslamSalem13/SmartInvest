@@ -11,6 +11,13 @@
                 return Context.Plans
                     .Include(p => p.PlanProjects!)
                     .ThenInclude(pp => pp.SubProject!)
+                    .ThenInclude(sp => sp.ProjectLevel)
+                    .Include(p => p.PlanProjects!)
+                    .ThenInclude(pp => pp.SubProject!)
+                    .ThenInclude(sp => sp.ComponentType)
+                    .Include(p => p.PlanProjects!)
+                    .ThenInclude(pp => pp.SubProject!)
+                    .ThenInclude(sp => sp.AccountingUnit)
                     .Include(p => p.FinancialYear)
                     .FirstOrDefault(p => p.PlanId == planId);
             }
@@ -22,6 +29,13 @@
                 .OrderByDescending(p => p.StartDate)
                 .Include(p => p.PlanProjects!)
                   .ThenInclude(pp => pp.SubProject!)
+                  .ThenInclude(sp => sp.ProjectLevel)
+                .Include(p => p.PlanProjects!)
+                  .ThenInclude(pp => pp.SubProject!)
+                  .ThenInclude(sp => sp.ComponentType)
+                .Include(p => p.PlanProjects!)
+                  .ThenInclude(pp => pp.SubProject!)
+                  .ThenInclude(sp => sp.AccountingUnit)
                 .Include(p => p.FinancialYear)
                 .FirstOrDefault();
         }

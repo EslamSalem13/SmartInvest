@@ -60,6 +60,7 @@
           <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
         </div>
         <div class="si-modal-body">
+          @if (formError()) { <div class="si-err">{{ formError() }}</div> }
           <div class="si-grid">
             <div class="si-fld full">
               <label>{{ nameLabel() }} <span class="req">*</span></label>
@@ -77,8 +78,10 @@
           </div>
         </div>
         <div class="si-modal-foot">
-          <button class="si-btn primary" (click)="submitForm()">{{ editingId() ? 'حفظ التعديلات' : addLabel() }}</button>
-          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+          <button class="si-btn primary" [disabled]="saving()" (click)="submitForm()">
+            @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { {{ editingId() ? 'حفظ التعديلات' : addLabel() }} }
+          </button>
+          <button class="si-btn" [disabled]="saving()" (click)="closeForm()">إلغاء</button>
         </div>
       </div>
     </div>

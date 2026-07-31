@@ -51,7 +51,7 @@ export interface LockedParent {
               <div class="si-grid">
                 <div class="si-fld full">
                   <label>المشروع الرئيسي <span class="req">*</span></label>
-                  <select [ngModel]="mainProjectId()" (ngModelChange)="mainProjectId.set($event)" [disabled]="!!edit()">
+                  <select [ngModel]="mainProjectId()" (ngModelChange)="onMainProjectSelected($event)" [disabled]="!!edit()">
                     <option [ngValue]="null">— اختر المشروع الرئيسي —</option>
                     @for (m of mains(); track m.id) { <option [ngValue]="m.id">{{ m.code }} — {{ m.name }}</option> }
                   </select>
@@ -311,6 +311,16 @@ export class SubProjectForm {
       this.originalYearIds = new Set<number>();
       const defaultId = this.defaultYearId();
       this.checkedYearIds.set(defaultId != null ? new Set([defaultId]) : new Set<number>());
+    }
+  }
+
+  protected onMainProjectSelected(mainProjectId: number | null): void {
+    this.mainProjectId.set(mainProjectId);
+    if (mainProjectId != null) {
+      this.loadApplicableMeasurements(mainProjectId);
+    } else {
+      this.applicableMeasurements.set([]);
+      this.measurementValues.set({});
     }
   }
 

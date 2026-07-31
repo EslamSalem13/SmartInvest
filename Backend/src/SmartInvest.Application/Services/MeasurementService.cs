@@ -142,6 +142,20 @@ public class MeasurementService : IMeasurementService
         var subProject = await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken)
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
 
+        var mainProject = await _mainProjectRepository.GetByIdAsync(subProject.MainProjectId, cancellationToken)
+            ?? throw new NotFoundException("المشروع الرئيسي التابع له غير موجود");
+
+        var applicable = await GetApplicableForSubProgramAsync(mainProject.SubProgramId, cancellationToken);
+        var applicableIds = applicable.Select(m => m.Id).ToHashSet();
+
+        foreach (var entry in dto.Values)
+        {
+            if (!applicableIds.Contains(entry.MeasurementId))
+            {
+                throw new NotFoundException($"القياس رقم {entry.MeasurementId} غير مرتبط بالبرنامج الفرعي لهذا المشروع");
+            }
+        }
+
         var existingValues = await _valueRepository.FindAsync(x => x.SubProjectId == subProjectId, cancellationToken);
         var existingByMeasurementId = existingValues.ToDictionary(x => x.MeasurementId);
 

@@ -229,9 +229,12 @@ export interface Plan {
 export interface PlanProjectItem {
   subProjectName: string;
   mainProjectId: number;
-  projectLevel: string;
-  componentType: string;
-  accountingUnit: string;
+  projectLevelName: string;
+  componentTypeName: string;
+  accountingUnitName: string;
+  projectLevelId: number;
+  componentTypeId: number;
+  accountingUnitId: number;
   totalCost: number;
   projectNature: string;
   greenInvestmentLink?: string | null;
