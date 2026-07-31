@@ -24,6 +24,7 @@ public class LookupService : ILookupService
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IGenericRepository<Unit> _unitRepository;
     private readonly IGenericRepository<MeasurementUnit> _measurementUnitRepository;
+    private readonly IGenericRepository<SubProjectMeasurementValue> _measurementValueRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -43,6 +44,7 @@ public class LookupService : ILookupService
         IGenericRepository<AccountingUnit> accountingUnitRepository,
         IGenericRepository<Unit> unitRepository,
         IGenericRepository<MeasurementUnit> measurementUnitRepository,
+        IGenericRepository<SubProjectMeasurementValue> measurementValueRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -61,6 +63,7 @@ public class LookupService : ILookupService
         _accountingUnitRepository = accountingUnitRepository;
         _unitRepository = unitRepository;
         _measurementUnitRepository = measurementUnitRepository;
+        _measurementValueRepository = measurementValueRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -700,6 +703,12 @@ public class LookupService : ILookupService
         if (linkedMeasurementUnits.Count > 0)
         {
             throw new BusinessRuleException("لا يمكن حذف الوحدة لارتباطها بقياسات مستخدمة");
+        }
+
+        var linkedValues = await _measurementValueRepository.FindAsync(x => x.UnitId == id, cancellationToken);
+        if (linkedValues.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف الوحدة لوجود قيم مسجلة بها");
         }
 
         _unitRepository.Remove(entity);
