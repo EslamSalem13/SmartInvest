@@ -20,6 +20,8 @@ public class SubProjectService : ISubProjectService
     private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
     private readonly IGenericRepository<ComponentType> _componentTypeRepository;
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
+    private readonly IGenericRepository<SubProjectFinancialYear> _financialYearLinkRepository;
+    private readonly IGenericRepository<ProjectFollowUp> _followUpRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -34,6 +36,8 @@ public class SubProjectService : ISubProjectService
         IGenericRepository<ProjectLevel> projectLevelRepository,
         IGenericRepository<ComponentType> componentTypeRepository,
         IGenericRepository<AccountingUnit> accountingUnitRepository,
+        IGenericRepository<SubProjectFinancialYear> financialYearLinkRepository,
+        IGenericRepository<ProjectFollowUp> followUpRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -47,6 +51,8 @@ public class SubProjectService : ISubProjectService
         _projectLevelRepository = projectLevelRepository;
         _componentTypeRepository = componentTypeRepository;
         _accountingUnitRepository = accountingUnitRepository;
+        _financialYearLinkRepository = financialYearLinkRepository;
+        _followUpRepository = followUpRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -199,6 +205,21 @@ public class SubProjectService : ISubProjectService
         if (subProject == null)
         {
             throw new NotFoundException($"المشروع الفرعي رقم {id} غير موجود");
+        }
+
+        var financialYearLinks = await _financialYearLinkRepository.FindAsync(x => x.SubProjectId == id, cancellationToken);
+        foreach (var link in financialYearLinks)
+        {
+            var followUps = await _followUpRepository.FindAsync(x => x.SubProjectFinancialYearId == link.SubProjectFinancialYearId, cancellationToken);
+            if (followUps.Count > 0)
+            {
+                throw new BusinessRuleException("لا يمكن حذف المشروع الفرعي لوجود بيانات متابعة مسجلة عليه");
+            }
+        }
+
+        foreach (var link in financialYearLinks)
+        {
+            _financialYearLinkRepository.Remove(link);
         }
 
         _subProjectRepository.Remove(subProject);
