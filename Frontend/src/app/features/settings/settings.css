@@ -5,7 +5,7 @@
 
 .layout { display: flex; gap: 20px; align-items: flex-start; }
 .tabs { flex: 0 0 220px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; box-shadow: var(--shadow); }
-.tab { text-align: start; padding: 10px 12px; border-radius: 9px; border: 0; background: transparent; color: var(--ink); font-weight: 700; font-size: 13px; }
+.tab { text-align: start; padding: 10px 12px; border-radius: 9px; border: 0; background: transparent; color: var(--ink); font-weight: 700; font-size: 13px; text-decoration: none; }
 .tab.on { background: var(--green-700); color: #fff; }
 .content { flex: 1; min-width: 0; }
 
