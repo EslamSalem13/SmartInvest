@@ -161,6 +161,11 @@ export class Measurements {
       return;
     }
 
+    if (this.fUnitIds().size === 0) {
+      this.formError.set('برجاء اختيار وحدة قياس واحدة على الأقل');
+      return;
+    }
+
     const dto: CreateMeasurement = {
       name,
       subProgramIds: [...this.fSubProgramIds()],

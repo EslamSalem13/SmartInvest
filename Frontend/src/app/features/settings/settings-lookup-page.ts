@@ -1,4 +1,5 @@
-import { Component, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, viewChild, WritableSignal } from '@angular/core';
+import { Observable } from 'rxjs';
 import { LookupsService } from '../../core/services/lookups.service';
 import { ContractTypesService } from '../../core/services/contract-types.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -106,23 +107,62 @@ export class SettingsLookupPage {
     });
   }
 
+  /** The active tab's own primary list — always loaded. */
+  private ownLoadTask(tab: TabKey): { obs: Observable<any>; target: WritableSignal<any> } {
+    switch (tab) {
+      case 'mainProgram':
+        return { obs: this.lookups.getMainPrograms(), target: this.mainPrograms };
+      case 'subProgram':
+        return { obs: this.lookups.getSubPrograms(), target: this.subPrograms };
+      case 'governorate':
+        return { obs: this.lookups.getGovernorates(), target: this.governorates };
+      case 'markaz':
+        return { obs: this.lookups.getMarkaz(), target: this.markazList };
+      case 'village':
+        return { obs: this.lookups.getVillages(), target: this.villages };
+      case 'priority':
+        return { obs: this.lookups.getPriorities(), target: this.priorities };
+      case 'status':
+        return { obs: this.lookups.getStatuses(), target: this.statuses };
+      case 'componentType':
+        return { obs: this.lookups.getComponentTypes(), target: this.componentTypes };
+      case 'projectLevel':
+        return { obs: this.lookups.getProjectLevels(), target: this.projectLevels };
+      case 'accountingUnit':
+        return { obs: this.lookups.getAccountingUnits(), target: this.accountingUnits };
+      case 'contractType':
+        return { obs: this.contractTypes.getAll(), target: this.contractTypeList };
+      case 'unit':
+        return { obs: this.lookups.getUnits(), target: this.units };
+    }
+  }
+
+  /** The list backing the parent picker, for tabs whose TabDef has hasParent === true. */
+  private parentLoadTask(tab: TabKey): { obs: Observable<any>; target: WritableSignal<any> } | null {
+    switch (tab) {
+      case 'subProgram':
+        return { obs: this.lookups.getMainPrograms(), target: this.mainPrograms };
+      case 'markaz':
+        return { obs: this.lookups.getGovernorates(), target: this.governorates };
+      case 'village':
+        return { obs: this.lookups.getMarkaz(), target: this.markazList };
+      default:
+        return null;
+    }
+  }
+
   private loadAll(): void {
     this.loading.set(true);
     this.error.set(null);
-    Promise.all([
-      this.toPromise(this.lookups.getMainPrograms(), this.mainPrograms),
-      this.toPromise(this.lookups.getSubPrograms(), this.subPrograms),
-      this.toPromise(this.lookups.getGovernorates(), this.governorates),
-      this.toPromise(this.lookups.getMarkaz(), this.markazList),
-      this.toPromise(this.lookups.getVillages(), this.villages),
-      this.toPromise(this.lookups.getPriorities(), this.priorities),
-      this.toPromise(this.lookups.getStatuses(), this.statuses),
-      this.toPromise(this.lookups.getComponentTypes(), this.componentTypes),
-      this.toPromise(this.lookups.getProjectLevels(), this.projectLevels),
-      this.toPromise(this.lookups.getAccountingUnits(), this.accountingUnits),
-      this.toPromise(this.contractTypes.getAll(), this.contractTypeList),
-      this.toPromise(this.lookups.getUnits(), this.units),
-    ])
+
+    const tab = this.tab();
+    const tasks = [this.ownLoadTask(tab)];
+    if (this.activeTabDef().hasParent) {
+      const parentTask = this.parentLoadTask(tab);
+      if (parentTask) tasks.push(parentTask);
+    }
+
+    Promise.all(tasks.map(({ obs, target }) => this.toPromise(obs, target)))
       .then(() => this.loading.set(false))
       .catch(() => {
         this.loading.set(false);
@@ -130,7 +170,7 @@ export class SettingsLookupPage {
       });
   }
 
-  private toPromise<T>(obs: import('rxjs').Observable<T>, target: import('@angular/core').WritableSignal<T>): Promise<void> {
+  private toPromise<T>(obs: Observable<T>, target: WritableSignal<T>): Promise<void> {
     return new Promise((resolve, reject) => {
       obs.subscribe({ next: (v) => { target.set(v); resolve(); }, error: reject });
     });

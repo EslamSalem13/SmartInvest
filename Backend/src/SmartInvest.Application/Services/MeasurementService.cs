@@ -58,6 +58,11 @@ public class MeasurementService : IMeasurementService
 
     public async Task<MeasurementDto> CreateAsync(CreateMeasurementDto dto, CancellationToken cancellationToken = default)
     {
+        if (dto.UnitIds.Count == 0)
+        {
+            throw new BusinessRuleException("يجب اختيار وحدة قياس واحدة على الأقل للقياس");
+        }
+
         await ValidateSubProgramIdsAsync(dto.SubProgramIds, cancellationToken);
         await ValidateUnitIdsAsync(dto.UnitIds, cancellationToken);
 
@@ -80,6 +85,11 @@ public class MeasurementService : IMeasurementService
 
     public async Task<MeasurementDto> UpdateAsync(int id, UpdateMeasurementDto dto, CancellationToken cancellationToken = default)
     {
+        if (dto.UnitIds.Count == 0)
+        {
+            throw new BusinessRuleException("يجب اختيار وحدة قياس واحدة على الأقل للقياس");
+        }
+
         await ValidateSubProgramIdsAsync(dto.SubProgramIds, cancellationToken);
         await ValidateUnitIdsAsync(dto.UnitIds, cancellationToken);
 
@@ -95,6 +105,22 @@ public class MeasurementService : IMeasurementService
         entity.MeasurementSubPrograms = dto.SubProgramIds
             .Select(spId => new MeasurementSubProgram { MeasurementId = id, SubProgramId = spId })
             .ToList();
+
+        var removedUnitIds = entity.MeasurementUnits
+            .Select(ul => ul.UnitId)
+            .Where(unitId => !dto.UnitIds.Contains(unitId))
+            .ToList();
+
+        if (removedUnitIds.Count > 0)
+        {
+            var valuesInRemovedUnits = await _valueRepository.FindAsync(
+                x => x.MeasurementId == id && removedUnitIds.Contains(x.UnitId),
+                cancellationToken);
+            if (valuesInRemovedUnits.Count > 0)
+            {
+                throw new BusinessRuleException("لا يمكن إلغاء ربط الوحدة لوجود قيم مسجلة بها لهذا القياس");
+            }
+        }
 
         foreach (var existingUnitLink in entity.MeasurementUnits.ToList())
         {
