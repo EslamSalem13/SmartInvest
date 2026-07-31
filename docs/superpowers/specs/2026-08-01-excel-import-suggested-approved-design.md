@@ -28,11 +28,17 @@ This matches the codebase's own existing convention: `SubProject.IsApproved` is 
 
 ## 3. Suggested-File Mode
 
-Reuses the base spec's full pipeline unchanged:
+Reuses the base spec's full pipeline, extended with 3 more reconciliation categories:
 
-- **Preview** (`POST /api/subprojects/import/preview`): parse, group by `MainProjectCode`, cross-reference Markaz/MainProgram/SubProgram/ExecutiveAgency names against the DB, detect main-project-code conflicts (the `45181` case) — all exactly as in the base spec §3.1.
-- **Reconcile**: staff resolves unmatched names and code conflicts — exactly as in the base spec §3.2.
-- **Commit** (`POST /api/subprojects/import/commit`): creates Markaz/MainProgram/SubProgram/ExecutiveAgency records marked "new", then Main Projects, then Sub Projects (one per row, always a new `SubProject`, best-effort per-row as in the base spec §3.3) — with every created `SubProject.SubProjectCode = null` and `IsApproved = false` (guaranteed, since this mode only runs when every row's code is blank).
+- **Preview** (`POST /api/subprojects/import/preview`): parse, group by `MainProjectCode`, cross-reference names against the DB for **7 categories** — Markaz, MainProgram, SubProgram, ExecutiveAgency (the base spec's original 4, §3.1), plus **ProjectLevel, ComponentType, AccountingUnit** (new — see §3.1a below) — and detect main-project-code conflicts (the `45181` case), all exactly as in the base spec §3.1.
+- **Reconcile**: staff resolves unmatched names (all 7 categories) and code conflicts — exactly as in the base spec §3.2, extended to the 3 new categories the same way.
+- **Commit** (`POST /api/subprojects/import/commit`): creates Markaz/MainProgram/SubProgram/ExecutiveAgency/ProjectLevel/ComponentType/AccountingUnit records marked "new", then Main Projects, then Sub Projects (one per row, always a new `SubProject`, best-effort per-row as in the base spec §3.3) — with every created `SubProject.SubProjectCode = null` and `IsApproved = false` (guaranteed, since this mode only runs when every row's code is blank).
+
+### 3.1a ProjectLevel / ComponentType / AccountingUnit reconciliation (correction to the base spec)
+
+The base spec's §2 column-mapping table was written describing `مستوى المشروع`/`المكوّن العيني`/`الوحدة الحسابية` as free-text fields. They are not — a same-day, separate piece of work converted `SubProject.ProjectLevel`/`ComponentType`/`AccountingUnit` into required FK lookups (`ProjectLevelId`/`ComponentTypeId`/`AccountingUnitId`), each with existing full CRUD already on `LookupService`/`LookupsController` (`CreateComponentTypeAsync`/`CreateProjectLevelAsync`/`CreateAccountingUnitAsync` and their `api/lookups/component-types`/`project-levels`/`accounting-units` routes) — the exact same flat `{Id, Name}` shape as `Markaz`/`ExecutiveAgency`, reconciled the identical way: unmatched names surfaced to staff as "جديد" (new) vs. map-to-existing, no silent fallback to the seeded `"غير محدد"` row (explicitly rejected — confirmed with the user: these 3 get the same explicit staff-reconciliation treatment as the original 4 categories, not an automatic default).
+
+This only applies to suggested-mode. Approved-mode (§4) never reads or reconciles these 3 columns — it only touches `SubProjectCode`/`IsApproved`/`ApprovedAt`/`StatusId` on a match (§4.1), unchanged.
 
 **New in this mode — Plan linkage, after the commit above succeeds:**
 
@@ -92,7 +98,7 @@ The commit-confirmation screen (base spec §4 Step 3) gains one more field **onl
 
 The wizard from the base spec (§4) is unchanged at Step 1 (upload) — staff does not pick "suggested" or "approved" up front; the system decides from the file's own content per §2 above, after the preview call returns. From Step 2 (Reconcile) onward, the wizard's *content* differs by the detected mode:
 
-- **Suggested mode:** exactly the base spec's Step 2/3 (Markaz/MainProgram/SubProgram/Agency reconciliation, main-project-code conflicts, commit summary, results).
+- **Suggested mode:** the base spec's Step 2/3, extended to 7 reconciliation categories (Markaz/MainProgram/SubProgram/Agency/ProjectLevel/ComponentType/AccountingUnit per §3.1a), plus main-project-code conflicts, commit summary, results.
 - **Approved mode:** Step 2 shows unresolved *project* rows (§4.2) instead of unresolved *lookup names* — a different reconciliation UI, same modal shell. Step 3's commit-confirmation gains the approval-date field (§4.4); the results screen shows `subProjectsApproved`/`subProjectsCreatedAndApproved`/`failedRows` instead of the suggested-mode's counts.
 
 A banner at the top of Step 2 (or Step 3 if nothing needs reconciling) states plainly which mode was detected and why (e.g. `"تم اكتشاف: خطة معتمدة (كل الصفوف تحتوي على كود مشروع)"` / `"تم اكتشاف: خطة مقترحة (لا يوجد أكواد مشروعات)"`), so staff can catch a wrong-file upload before committing.
@@ -108,6 +114,7 @@ A banner at the top of Step 2 (or Step 3 if nothing needs reconciling) states pl
 Manual, via dev servers (no test suite in this repo, per established convention), in addition to the base spec's §7 checklist (which covers suggested-mode end-to-end):
 
 - Upload a file where every row has a code: confirm the wizard banner reports "approved" mode, confirm rows matching existing (suggested-imported) sub-projects by main+sub project name get their code assigned and become approved, confirm non-matching rows appear for reconciliation, confirm mapping one to an existing sub-project approves it and creating one fresh produces an already-approved new sub-project.
+- Upload a suggested file with a `مستوى المشروع`/`المكوّن العيني`/`الوحدة الحسابية` value that doesn't match any existing lookup: confirm it's surfaced in the reconciliation UI as its own category (not silently defaulted to `"غير محدد"`), and that "جديد" creates a real new lookup row usable by the sub-project form afterward.
 - Confirm approving via the approved-file import correctly flips the financial year's existing Suggested plan to Approved (same plan id, `ApprovalDate` set) rather than creating a second plan, when a suggested plan already exists for that year.
 - Confirm importing an approved file for a financial year with no prior suggested plan creates a new plan directly as Approved.
 - Confirm a mixed file (some rows coded, some not) is rejected cleanly at the preview step with the stated message, before any reconciliation UI appears.
