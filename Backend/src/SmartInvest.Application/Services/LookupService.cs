@@ -282,7 +282,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
 
         var name = dto.Name.Trim();
-        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name, cancellationToken);
+        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name && x.ProgramId == mainProgram.ProgramId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم البرنامج الفرعي «{name}» مستخدم بالفعل");
@@ -303,7 +303,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("البرنامج الرئيسي المحدد غير موجود");
 
         var name = dto.Name.Trim();
-        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name && x.SubProgramId != id, cancellationToken);
+        var duplicates = await _subProgramRepository.FindAsync(x => x.SubProgramName == name && x.SubProgramId != id && x.ProgramId == mainProgram.ProgramId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم البرنامج الفرعي «{name}» مستخدم بالفعل");
@@ -385,7 +385,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
 
         var name = dto.Name.Trim();
-        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name, cancellationToken);
+        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name && x.GovernorateId == governorate.GovernorateId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم المركز «{name}» مستخدم بالفعل");
@@ -406,7 +406,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("المحافظة المحددة غير موجودة");
 
         var name = dto.Name.Trim();
-        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name && x.MarkazId != id, cancellationToken);
+        var duplicates = await _markazRepository.FindAsync(x => x.MarkazName == name && x.MarkazId != id && x.GovernorateId == governorate.GovernorateId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم المركز «{name}» مستخدم بالفعل");
@@ -441,7 +441,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("المركز المحدد غير موجود");
 
         var name = dto.Name.Trim();
-        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name, cancellationToken);
+        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name && x.MarkazId == markaz.MarkazId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم القرية «{name}» مستخدم بالفعل");
@@ -462,7 +462,7 @@ public class LookupService : ILookupService
             ?? throw new NotFoundException("المركز المحدد غير موجود");
 
         var name = dto.Name.Trim();
-        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name && x.VillageId != id, cancellationToken);
+        var duplicates = await _villageRepository.FindAsync(x => x.VillageName == name && x.VillageId != id && x.MarkazId == markaz.MarkazId, cancellationToken);
         if (duplicates.Count > 0)
         {
             throw new BusinessRuleException($"اسم القرية «{name}» مستخدم بالفعل");
