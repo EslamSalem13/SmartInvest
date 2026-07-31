@@ -26,6 +26,16 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .picker { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 10px; }
 .pick-chk { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+
+.picker.groups { max-height: 260px; }
+.group { border-bottom: 1px solid var(--line); }
+.group:last-child { border-bottom: 0; }
+.group-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; padding: 8px 4px; border: 0; background: transparent; font-weight: 700; font-size: 13px; color: var(--ink); }
+.chevron { transition: transform .15s ease; }
+.chevron.open { transform: rotate(90deg); }
+.group-body { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 10px 26px; }
+
 .acts { display: inline-flex; gap: 6px; }
 .act { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); }
 .act svg { width: 15px; height: 15px; }
