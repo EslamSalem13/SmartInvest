@@ -152,9 +152,9 @@ public class MeasurementService : IMeasurementService
             throw new BusinessRuleException("لا يمكن حذف القياس وهو مرتبط ببرامج فرعية — قم بإلغاء الربط أولًا");
         }
 
-        if (entity.MeasurementUnits.Count > 0)
+        foreach (var existingUnitLink in entity.MeasurementUnits.ToList())
         {
-            throw new BusinessRuleException("لا يمكن حذف القياس وهو مرتبط بوحدات قياس — قم بإلغاء الربط أولًا");
+            _unitLinkRepository.Remove(existingUnitLink);
         }
 
         _measurementRepository.Remove(entity);
