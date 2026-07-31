@@ -14,6 +14,8 @@ Staff need to upload either file through the same "استيراد من Excel" en
 
 **No AI required.** Every decision in this flow is a deterministic rule: the column layout is fixed and known, suggested-vs-approved detection is one column-emptiness check, and approved-row matching is an exact name match (not fuzzy) — confirmed by the user as the intended behavior ("the only unique identifier of each project" — matched by name, not fuzzy-matched). AI-assisted fuzzy matching remains explicitly out of scope for this version (per the base spec's §6), unchanged by this update.
 
+**Single governorate, confirmed by the user.** This entire application is scoped to one governorate — `LookupSeeder.cs` seeds exactly one `Governorate` row (`"المنوفية"`) and only ever runs once (`if (!context.Set<Governorate>().Any())`), so there is always exactly one `Governorate` in the database. Wherever the base spec's reconciliation flow (§3.2) creates a "new" `Markaz` — `CreateMarkazDto` requires a `GovernorateId` — that id is resolved automatically to the one existing `Governorate` (`_governorateRepository.GetAllAsync()` → single row → its id), with no governorate picker or reconciliation category in the UI. If the query ever returns zero or more than one governorate (a broken/atypical database), the import fails fast with a clear message rather than guessing.
+
 ## 2. Detection: One File, Two Behaviors
 
 After the same upload + column-mapping step described in the base spec (§2), inspect the "كود المشروع" column across all data rows:
