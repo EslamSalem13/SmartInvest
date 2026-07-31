@@ -143,7 +143,19 @@ export interface LockedParent {
               <div class="si-grid">
                 @for (m of applicableMeasurements(); track m.id) {
                   <div class="si-fld">
-                    <label>{{ m.name }} ({{ m.unit }})</label>
+                    <label>{{ m.name }} — الوحدة <span class="req">*</span></label>
+                    <select
+                      [ngModel]="measurementUnits()[m.id] ?? null"
+                      (ngModelChange)="setMeasurementUnit(m.id, $event)"
+                    >
+                      <option [ngValue]="null">اختر الوحدة</option>
+                      @for (unitId of m.unitIds; track unitId; let i = $index) {
+                        <option [ngValue]="unitId">{{ m.unitNames[i] }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="si-fld">
+                    <label>{{ m.name }} — القيمة</label>
                     <input
                       type="number"
                       [ngModel]="measurementValues()[m.id] ?? null"
@@ -213,7 +225,8 @@ export class SubProjectForm {
   protected readonly selfFunding = signal<number>(0);
   protected readonly description = signal('');
 
-  protected readonly applicableMeasurements = signal<{ id: number; name: string; unit: string }[]>([]);
+  protected readonly applicableMeasurements = signal<{ id: number; name: string; unitIds: number[]; unitNames: string[] }[]>([]);
+  protected readonly measurementUnits = signal<Record<number, number | null>>({});
   protected readonly measurementValues = signal<Record<number, number | null>>({});
 
   protected readonly saving = signal(false);
@@ -321,6 +334,7 @@ export class SubProjectForm {
     } else {
       this.applicableMeasurements.set([]);
       this.measurementValues.set({});
+      this.measurementUnits.set({});
     }
   }
 
@@ -329,26 +343,33 @@ export class SubProjectForm {
     if (!mainProject) {
       this.applicableMeasurements.set([]);
       this.measurementValues.set({});
+      this.measurementUnits.set({});
       return;
     }
 
     this.measurementsService.getApplicable(mainProject.subProgramId).subscribe({
       next: (measurements) => {
-        this.applicableMeasurements.set(measurements.map((m) => ({ id: m.id, name: m.name, unit: m.unit })));
+        this.applicableMeasurements.set(
+          measurements.map((m) => ({ id: m.id, name: m.name, unitIds: m.unitIds, unitNames: m.unitNames })),
+        );
 
         if (subProjectId != null) {
           this.measurementsService.getValuesForSubProject(subProjectId).subscribe({
             next: (values: SubProjectMeasurementValue[]) => {
-              const map: Record<number, number | null> = {};
+              const valueMap: Record<number, number | null> = {};
+              const unitMap: Record<number, number | null> = {};
               for (const v of values) {
-                map[v.measurementId] = v.value;
+                valueMap[v.measurementId] = v.value;
+                unitMap[v.measurementId] = v.unitId;
               }
-              this.measurementValues.set(map);
+              this.measurementValues.set(valueMap);
+              this.measurementUnits.set(unitMap);
             },
             error: () => {},
           });
         } else {
           this.measurementValues.set({});
+          this.measurementUnits.set({});
         }
       },
       error: () => this.applicableMeasurements.set([]),
@@ -357,6 +378,10 @@ export class SubProjectForm {
 
   protected setMeasurementValue(measurementId: number, value: number | null): void {
     this.measurementValues.update((current) => ({ ...current, [measurementId]: value }));
+  }
+
+  protected setMeasurementUnit(measurementId: number, unitId: number | null): void {
+    this.measurementUnits.update((current) => ({ ...current, [measurementId]: unitId }));
   }
 
   private resetForm(): void {
@@ -376,6 +401,7 @@ export class SubProjectForm {
     this.originalYearIds = new Set<number>();
     this.applicableMeasurements.set([]);
     this.measurementValues.set({});
+    this.measurementUnits.set({});
   }
 
   protected onDelete(): void {
@@ -406,6 +432,15 @@ export class SubProjectForm {
     if (this.priorityId() == null) { this.error.set('برجاء اختيار الأولوية'); return; }
     if (this.statusId() == null) { this.error.set('برجاء اختيار حالة المشروع'); return; }
     if (!this.edit() && this.mainProjectId() == null) { this.error.set('برجاء اختيار المشروع الرئيسي'); return; }
+
+    for (const m of this.applicableMeasurements()) {
+      const value = this.measurementValues()[m.id];
+      const unitId = this.measurementUnits()[m.id];
+      if (value != null && unitId == null) {
+        this.error.set(`برجاء اختيار وحدة القياس لـ «${m.name}»`);
+        return;
+      }
+    }
 
     const base = {
       code: this.code().trim() || null,
@@ -474,7 +509,12 @@ export class SubProjectForm {
     }
 
     const values = this.measurementValues();
-    const payload = applicable.map((m) => ({ measurementId: m.id, value: values[m.id] ?? null }));
+    const units = this.measurementUnits();
+    const payload = applicable.map((m) => ({
+      measurementId: m.id,
+      unitId: units[m.id] ?? null,
+      value: values[m.id] ?? null,
+    }));
 
     this.measurementsService.setValuesForSubProject(subProjectId, payload).subscribe({
       next: () => {
