@@ -2,32 +2,25 @@
   <header class="page-head">
     <div>
       <h1>الإعدادات</h1>
-      <p>إدارة القوائم الأساسية المستخدمة في المشروعات</p>
+      <p>إدارة القوائم الأساسية والصفحات الإدارية المستخدمة في المشروعات</p>
     </div>
   </header>
 
   <div class="layout">
     <nav class="tabs">
-      @for (t of tabs; track t.key) {
-        <button class="tab" [class.on]="activeTab() === t.key" (click)="selectTab(t.key)">{{ t.label }}</button>
+      @for (t of lookupTabs; track t.key) {
+        <a class="tab" [routerLink]="t.slug" routerLinkActive="on">{{ t.label }}</a>
       }
+      <a class="tab" routerLink="contractors" routerLinkActive="on">المقاولون</a>
+      <a class="tab" routerLink="agencies" routerLinkActive="on">الجهات التنفيذية</a>
+      @if (isManager()) {
+        <a class="tab" routerLink="users" routerLinkActive="on">إدارة المستخدمين</a>
+      }
+      <a class="tab" routerLink="measurements" routerLinkActive="on">القياسات</a>
     </nav>
 
     <div class="content">
-      <app-settings-lookup-table
-        #lookupTable
-        [title]="activeTabDef().label"
-        [addLabel]="activeTabDef().addLabel"
-        [hasParent]="activeTabDef().hasParent"
-        [parentLabel]="activeTabDef().parentLabel"
-        [parentOptions]="parentOptions()"
-        [items]="items()"
-        [loading]="loading()"
-        [error]="error()"
-        [isManager]="isManager()"
-        (save)="onSave($event)"
-        (remove)="onDelete($event)"
-      />
+      <router-outlet />
     </div>
   </div>
 </div>
