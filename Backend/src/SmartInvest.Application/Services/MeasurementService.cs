@@ -11,29 +11,35 @@ public class MeasurementService : IMeasurementService
 {
     private readonly IMeasurementRepository _measurementRepository;
     private readonly IGenericRepository<MeasurementSubProgram> _linkRepository;
+    private readonly IGenericRepository<MeasurementUnit> _unitLinkRepository;
     private readonly IGenericRepository<SubProjectMeasurementValue> _valueRepository;
     private readonly IGenericRepository<SubProject> _subProjectRepository;
     private readonly IGenericRepository<MainProject> _mainProjectRepository;
     private readonly IGenericRepository<SubProgram> _subProgramRepository;
+    private readonly IGenericRepository<Unit> _unitRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
     public MeasurementService(
         IMeasurementRepository measurementRepository,
         IGenericRepository<MeasurementSubProgram> linkRepository,
+        IGenericRepository<MeasurementUnit> unitLinkRepository,
         IGenericRepository<SubProjectMeasurementValue> valueRepository,
         IGenericRepository<SubProject> subProjectRepository,
         IGenericRepository<MainProject> mainProjectRepository,
         IGenericRepository<SubProgram> subProgramRepository,
+        IGenericRepository<Unit> unitRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _measurementRepository = measurementRepository;
         _linkRepository = linkRepository;
+        _unitLinkRepository = unitLinkRepository;
         _valueRepository = valueRepository;
         _subProjectRepository = subProjectRepository;
         _mainProjectRepository = mainProjectRepository;
         _subProgramRepository = subProgramRepository;
+        _unitRepository = unitRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -53,13 +59,16 @@ public class MeasurementService : IMeasurementService
     public async Task<MeasurementDto> CreateAsync(CreateMeasurementDto dto, CancellationToken cancellationToken = default)
     {
         await ValidateSubProgramIdsAsync(dto.SubProgramIds, cancellationToken);
+        await ValidateUnitIdsAsync(dto.UnitIds, cancellationToken);
 
         var entity = new Measurement
         {
             Name = dto.Name.Trim(),
-            Unit = dto.Unit.Trim(),
             MeasurementSubPrograms = dto.SubProgramIds
                 .Select(spId => new MeasurementSubProgram { SubProgramId = spId })
+                .ToList(),
+            MeasurementUnits = dto.UnitIds
+                .Select(uId => new MeasurementUnit { UnitId = uId })
                 .ToList(),
         };
 
@@ -72,12 +81,12 @@ public class MeasurementService : IMeasurementService
     public async Task<MeasurementDto> UpdateAsync(int id, UpdateMeasurementDto dto, CancellationToken cancellationToken = default)
     {
         await ValidateSubProgramIdsAsync(dto.SubProgramIds, cancellationToken);
+        await ValidateUnitIdsAsync(dto.UnitIds, cancellationToken);
 
         var entity = await _measurementRepository.GetByIdWithSubProgramsAsync(id, cancellationToken)
             ?? throw new NotFoundException($"القياس رقم {id} غير موجود");
 
         entity.Name = dto.Name.Trim();
-        entity.Unit = dto.Unit.Trim();
 
         foreach (var existingLink in entity.MeasurementSubPrograms.ToList())
         {
@@ -85,6 +94,14 @@ public class MeasurementService : IMeasurementService
         }
         entity.MeasurementSubPrograms = dto.SubProgramIds
             .Select(spId => new MeasurementSubProgram { MeasurementId = id, SubProgramId = spId })
+            .ToList();
+
+        foreach (var existingUnitLink in entity.MeasurementUnits.ToList())
+        {
+            _unitLinkRepository.Remove(existingUnitLink);
+        }
+        entity.MeasurementUnits = dto.UnitIds
+            .Select(uId => new MeasurementUnit { MeasurementId = id, UnitId = uId })
             .ToList();
 
         _measurementRepository.Update(entity);
@@ -109,6 +126,11 @@ public class MeasurementService : IMeasurementService
             throw new BusinessRuleException("لا يمكن حذف القياس وهو مرتبط ببرامج فرعية — قم بإلغاء الربط أولًا");
         }
 
+        if (entity.MeasurementUnits.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف القياس وهو مرتبط بوحدات قياس — قم بإلغاء الربط أولًا");
+        }
+
         _measurementRepository.Remove(entity);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
@@ -124,15 +146,24 @@ public class MeasurementService : IMeasurementService
         var applicable = await GetApplicableForSubProgramAsync(mainProject.SubProgramId, cancellationToken);
 
         var existingValues = await _valueRepository.FindAsync(x => x.SubProjectId == subProjectId, cancellationToken);
-        var valuesByMeasurementId = existingValues.ToDictionary(x => x.MeasurementId, x => x.Value);
+        var valuesByMeasurementId = existingValues.ToDictionary(x => x.MeasurementId);
+
+        var units = await _unitRepository.GetAllAsync(cancellationToken);
+        var unitNamesById = units.ToDictionary(u => u.Id, u => u.Name);
 
         return applicable
-            .Select(m => new SubProjectMeasurementValueDto
+            .Select(m =>
             {
-                MeasurementId = m.Id,
-                MeasurementName = m.Name,
-                Unit = m.Unit,
-                Value = valuesByMeasurementId.TryGetValue(m.Id, out var v) ? v : null,
+                var hasValue = valuesByMeasurementId.TryGetValue(m.Id, out var existing);
+                int? unitId = hasValue ? existing!.UnitId : null;
+                return new SubProjectMeasurementValueDto
+                {
+                    MeasurementId = m.Id,
+                    MeasurementName = m.Name,
+                    UnitId = unitId,
+                    UnitName = unitId.HasValue && unitNamesById.TryGetValue(unitId.Value, out var n) ? n : null,
+                    Value = hasValue ? existing!.Value : null,
+                };
             })
             .ToList();
     }
@@ -146,13 +177,18 @@ public class MeasurementService : IMeasurementService
             ?? throw new NotFoundException("المشروع الرئيسي التابع له غير موجود");
 
         var applicable = await GetApplicableForSubProgramAsync(mainProject.SubProgramId, cancellationToken);
-        var applicableIds = applicable.Select(m => m.Id).ToHashSet();
+        var applicableById = applicable.ToDictionary(m => m.Id);
 
         foreach (var entry in dto.Values)
         {
-            if (!applicableIds.Contains(entry.MeasurementId))
+            if (!applicableById.TryGetValue(entry.MeasurementId, out var measurement))
             {
                 throw new NotFoundException($"القياس رقم {entry.MeasurementId} غير مرتبط بالبرنامج الفرعي لهذا المشروع");
+            }
+
+            if (entry.Value != null && (entry.UnitId == null || !measurement.UnitIds.Contains(entry.UnitId.Value)))
+            {
+                throw new BusinessRuleException($"وحدة القياس غير صحيحة أو غير مرتبطة بالقياس «{measurement.Name}»");
             }
         }
 
@@ -173,6 +209,7 @@ public class MeasurementService : IMeasurementService
             if (existingByMeasurementId.TryGetValue(entry.MeasurementId, out var toUpdate))
             {
                 toUpdate.Value = entry.Value.Value;
+                toUpdate.UnitId = entry.UnitId!.Value;
                 _valueRepository.Update(toUpdate);
             }
             else
@@ -181,6 +218,7 @@ public class MeasurementService : IMeasurementService
                 {
                     SubProjectId = subProjectId,
                     MeasurementId = entry.MeasurementId,
+                    UnitId = entry.UnitId!.Value,
                     Value = entry.Value.Value,
                 }, cancellationToken);
             }
@@ -204,6 +242,18 @@ public class MeasurementService : IMeasurementService
             if (subProgram == null)
             {
                 throw new NotFoundException($"البرنامج الفرعي رقم {subProgramId} غير موجود");
+            }
+        }
+    }
+
+    private async Task ValidateUnitIdsAsync(List<int> unitIds, CancellationToken cancellationToken)
+    {
+        foreach (var unitId in unitIds.Distinct())
+        {
+            var unit = await _unitRepository.GetByIdAsync(unitId, cancellationToken);
+            if (unit == null)
+            {
+                throw new NotFoundException($"الوحدة رقم {unitId} غير موجودة");
             }
         }
     }

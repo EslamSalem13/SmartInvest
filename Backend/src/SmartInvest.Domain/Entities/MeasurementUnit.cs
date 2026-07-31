@@ -1,13 +1,9 @@
 namespace SmartInvest.Domain.Entities
 {
-    public class SubProjectMeasurementValue
+    public class MeasurementUnit
     {
         [Key]
         public int Id { get; set; }
-
-        [ForeignKey("SubProject")]
-        public int SubProjectId { get; set; }
-        public virtual SubProject SubProject { get; set; }
 
         [ForeignKey("Measurement")]
         public int MeasurementId { get; set; }
@@ -16,8 +12,5 @@ namespace SmartInvest.Domain.Entities
         [ForeignKey("Unit")]
         public int UnitId { get; set; }
         public virtual Unit Unit { get; set; }
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Value { get; set; }
     }
 }

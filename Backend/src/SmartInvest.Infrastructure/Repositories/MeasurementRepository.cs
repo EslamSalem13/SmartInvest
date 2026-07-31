@@ -15,6 +15,7 @@ public class MeasurementRepository : GenericRepository<Measurement>, IMeasuremen
     {
         return await DbSet
             .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .Include(x => x.MeasurementUnits).ThenInclude(u => u.Unit)
             .ToListAsync(cancellationToken);
     }
 
@@ -22,6 +23,7 @@ public class MeasurementRepository : GenericRepository<Measurement>, IMeasuremen
     {
         return await DbSet
             .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .Include(x => x.MeasurementUnits).ThenInclude(u => u.Unit)
             .Where(x => x.MeasurementSubPrograms.Any(l => l.SubProgramId == subProgramId))
             .ToListAsync(cancellationToken);
     }
@@ -30,6 +32,7 @@ public class MeasurementRepository : GenericRepository<Measurement>, IMeasuremen
     {
         return await DbSet
             .Include(x => x.MeasurementSubPrograms).ThenInclude(l => l.SubProgram)
+            .Include(x => x.MeasurementUnits).ThenInclude(u => u.Unit)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 }

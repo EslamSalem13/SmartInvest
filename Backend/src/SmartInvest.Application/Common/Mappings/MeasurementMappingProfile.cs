@@ -14,6 +14,12 @@ public class MeasurementMappingProfile : Profile
                 opt => opt.MapFrom(src => src.MeasurementSubPrograms.Select(x => x.SubProgramId).ToList()))
             .ForMember(
                 dest => dest.SubProgramNames,
-                opt => opt.MapFrom(src => src.MeasurementSubPrograms.Select(x => x.SubProgram.SubProgramName).ToList()));
+                opt => opt.MapFrom(src => src.MeasurementSubPrograms.Select(x => x.SubProgram.SubProgramName).ToList()))
+            .ForMember(
+                dest => dest.UnitIds,
+                opt => opt.MapFrom(src => src.MeasurementUnits.Select(x => x.UnitId).ToList()))
+            .ForMember(
+                dest => dest.UnitNames,
+                opt => opt.MapFrom(src => src.MeasurementUnits.Select(x => x.Unit.Name).ToList()));
     }
 }

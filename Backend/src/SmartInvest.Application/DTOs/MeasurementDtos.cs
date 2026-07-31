@@ -4,36 +4,39 @@ public class MeasurementDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string Unit { get; set; } = string.Empty;
     public List<int> SubProgramIds { get; set; } = new();
     public List<string> SubProgramNames { get; set; } = new();
+    public List<int> UnitIds { get; set; } = new();
+    public List<string> UnitNames { get; set; } = new();
 }
 
 public class CreateMeasurementDto
 {
     public string Name { get; set; } = string.Empty;
-    public string Unit { get; set; } = string.Empty;
     public List<int> SubProgramIds { get; set; } = new();
+    public List<int> UnitIds { get; set; } = new();
 }
 
 public class UpdateMeasurementDto
 {
     public string Name { get; set; } = string.Empty;
-    public string Unit { get; set; } = string.Empty;
     public List<int> SubProgramIds { get; set; } = new();
+    public List<int> UnitIds { get; set; } = new();
 }
 
 public class SubProjectMeasurementValueDto
 {
     public int MeasurementId { get; set; }
     public string MeasurementName { get; set; } = string.Empty;
-    public string Unit { get; set; } = string.Empty;
+    public int? UnitId { get; set; }
+    public string? UnitName { get; set; }
     public decimal? Value { get; set; }
 }
 
 public class SetMeasurementValueDto
 {
     public int MeasurementId { get; set; }
+    public int? UnitId { get; set; }
     public decimal? Value { get; set; }
 }
 
