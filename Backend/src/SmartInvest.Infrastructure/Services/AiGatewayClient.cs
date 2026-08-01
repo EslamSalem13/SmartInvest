@@ -50,7 +50,7 @@ public class AiGatewayClient : IAiGatewayClient
         {
             httpResponse = await _httpClient.SendAsync(httpRequest, cancellationToken);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
         {
             throw new BusinessRuleException($"تعذّر الاتصال بخدمة الذكاء الاصطناعي: {ex.Message}");
         }
