@@ -21,6 +21,7 @@ public class ApprovedPlanImportService
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly ISubProjectService _subProjectService;
     private readonly IPlanRepo _planRepo;
+    private readonly IPlanService _planService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ApprovedPlanImportService(
@@ -36,6 +37,7 @@ public class ApprovedPlanImportService
         IGenericRepository<AccountingUnit> accountingUnitRepository,
         ISubProjectService subProjectService,
         IPlanRepo planRepo,
+        IPlanService planService,
         IUnitOfWork unitOfWork)
     {
         _mainProjectRepository = mainProjectRepository;
@@ -50,6 +52,7 @@ public class ApprovedPlanImportService
         _accountingUnitRepository = accountingUnitRepository;
         _subProjectService = subProjectService;
         _planRepo = planRepo;
+        _planService = planService;
         _unitOfWork = unitOfWork;
     }
 
@@ -107,6 +110,8 @@ public class ApprovedPlanImportService
 
         foreach (var row in file.Rows)
         {
+            MainProject? mainProject = null;
+            SubProject? subProject = null;
             try
             {
                 var match = await MatchRowAsync(row, cancellationToken);
@@ -127,7 +132,11 @@ public class ApprovedPlanImportService
                 else if (rowResolutionByIndex.TryGetValue(row.RowIndex, out var createResolution) && createResolution.CreateNew)
                 {
                     var mainProjects = await _mainProjectRepository.FindByNameAsync(row.MainProjectName, cancellationToken);
-                    var mainProject = mainProjects.FirstOrDefault();
+                    // Only reuse an existing MainProject when the name match is unambiguous.
+                    // If it matched multiple (ambiguous), MatchRowAsync already correctly rejected
+                    // this row as unresolved; since staff explicitly chose "create new" anyway,
+                    // create a genuinely new MainProject instead of guessing which one they meant.
+                    mainProject = mainProjects.Count == 1 ? mainProjects[0] : null;
                     if (mainProject == null)
                     {
                         mainProject = new MainProject
@@ -144,7 +153,7 @@ public class ApprovedPlanImportService
                         result.MainProjectsCreated++;
                     }
 
-                    var subProject = new SubProject
+                    subProject = new SubProject
                     {
                         MainProjectId = mainProject.MainProjectId,
                         SubProjectName = row.SubProjectName.Trim(),
@@ -176,15 +185,34 @@ public class ApprovedPlanImportService
             catch (Exception ex)
             {
                 result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = ex.Message });
+
+                // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
+                // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
+                // mislabeling the next row as failed for the same reason.
+                if (mainProject is not null)
+                {
+                    _mainProjectRepository.Remove(mainProject);
+                }
+
+                if (subProject is not null)
+                {
+                    _subProjectRepository.Remove(subProject);
+                }
             }
         }
 
-        var plan = _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Suggested);
+        var approvedPlan = _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Approved);
+        var suggestedPlan = approvedPlan == null ? _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Suggested) : null;
 
         Plan resultPlan;
-        if (plan != null)
+        if (approvedPlan != null)
         {
-            resultPlan = await ApprovePlanAsync(plan.PlanId, approvalDate, cancellationToken);
+            // Already approved for this financial year - reuse it rather than creating a duplicate.
+            resultPlan = approvedPlan;
+        }
+        else if (suggestedPlan != null)
+        {
+            resultPlan = await _planService.ApproveAsync(suggestedPlan.PlanId, approvalDate);
         }
         else
         {
@@ -215,21 +243,6 @@ public class ApprovedPlanImportService
         result.PlanStatus = resultPlan.PlanStatus.ToString();
 
         return result;
-    }
-
-    private async Task<Plan> ApprovePlanAsync(int planId, DateTime approvalDate, CancellationToken cancellationToken)
-    {
-        var plan = _planRepo.GetPlanWithProjectsById(planId) ?? throw new NotFoundException($"الخطة رقم {planId} غير موجودة");
-        if (plan.ApprovalDate.HasValue)
-        {
-            return plan;
-        }
-
-        plan.ApprovalDate = approvalDate;
-        plan.PlanStatus = PlanStatus.Approved;
-        _planRepo.Update(plan);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return plan;
     }
 
     private async Task<MatchResult> MatchRowAsync(ParsedImportRow row, CancellationToken cancellationToken)
