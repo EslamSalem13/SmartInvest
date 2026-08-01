@@ -22,6 +22,7 @@ public class SubProjectService : ISubProjectService
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IGenericRepository<SubProjectFinancialYear> _financialYearLinkRepository;
     private readonly IGenericRepository<ProjectFollowUp> _followUpRepository;
+    private readonly IGenericRepository<PlanProject> _planProjectRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -38,6 +39,7 @@ public class SubProjectService : ISubProjectService
         IGenericRepository<AccountingUnit> accountingUnitRepository,
         IGenericRepository<SubProjectFinancialYear> financialYearLinkRepository,
         IGenericRepository<ProjectFollowUp> followUpRepository,
+        IGenericRepository<PlanProject> planProjectRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -53,6 +55,7 @@ public class SubProjectService : ISubProjectService
         _accountingUnitRepository = accountingUnitRepository;
         _financialYearLinkRepository = financialYearLinkRepository;
         _followUpRepository = followUpRepository;
+        _planProjectRepository = planProjectRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -220,6 +223,12 @@ public class SubProjectService : ISubProjectService
         foreach (var link in financialYearLinks)
         {
             _financialYearLinkRepository.Remove(link);
+        }
+
+        var planProjectLinks = await _planProjectRepository.FindAsync(x => x.SubProjectId == id, cancellationToken);
+        foreach (var link in planProjectLinks)
+        {
+            _planProjectRepository.Remove(link);
         }
 
         _subProjectRepository.Remove(subProject);
