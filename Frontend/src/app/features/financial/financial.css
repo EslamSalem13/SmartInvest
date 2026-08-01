@@ -1,0 +1,203 @@
+/* ===== الإدارة المالية — أنماط مشتركة (نفس لغة تصميم المشروعات) ===== */
+.page { padding: 28px 32px; }
+.page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.page-head h1 { font-size: var(--text-2xl); color: var(--green-900); }
+.page-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
+.page-head > div:first-child { flex: 1; min-width: 260px; }
+
+.state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: 48px; color: var(--muted); box-shadow: var(--shadow-sm); }
+.state.error { color: #b32a39; border-color: #F3C6CC; background: var(--bad-bg); }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--line-strong); border-top-color: var(--green-700); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* KPIs */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+@media (max-width: 720px) { .kpis { grid-template-columns: 1fr; } }
+.kpi {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(175deg, var(--surface) 0%, var(--surface-2) 145%);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
+}
+.kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--green-500); }
+.kpi::after {
+  content: ""; position: absolute; top: -45%; inset-inline-end: -18%;
+  width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle, var(--green-100), transparent 72%);
+  opacity: .9; pointer-events: none;
+}
+.kpi::before {
+  content: ""; position: relative; z-index: 1; display: block;
+  width: 9px; height: 9px; border-radius: 50%; margin-bottom: 4px;
+  background: var(--green-600); box-shadow: 0 0 0 4px var(--green-100);
+}
+.kpi span { position: relative; z-index: 1; color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
+.kpi b { position: relative; z-index: 1; font-size: var(--text-xl); font-family: var(--font-heading); color: var(--green-900); }
+.kpi b.ok { color: var(--ok); }
+.kpi b.warn { color: var(--warn); }
+
+/* بطاقة + جدول */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.card-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.card-head h3 { font-size: var(--text-md); color: var(--green-900); }
+.card-head .grow { flex: 1; }
+.card-head .search { border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 13px; min-height: 42px; font-family: inherit; font-size: 13px; min-width: 220px; background: var(--surface); color: var(--ink); }
+.card-head .search:focus { outline: none; border-color: var(--green-600); box-shadow: 0 0 0 4px var(--green-100); }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 560px; }
+th { font-size: 11.5px; color: var(--muted); font-weight: 700; text-align: start; padding: 13px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
+td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.empty { text-align: center; color: var(--muted); }
+.muted { color: var(--muted); }
+
+.wait { display: inline-block; color: var(--muted); font-size: 12px; font-weight: 700; background: var(--surface-2); border: 1px dashed var(--line-strong); padding: 3px 9px; border-radius: 7px; }
+
+.chip { display: inline-block; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); padding: 4px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.chip.ok-chip { background: var(--ok-bg); border-color: #BCE3CC; color: var(--ok); }
+.chip.warn-chip { background: var(--warn-bg); border-color: #ECD9A6; color: var(--warn); }
+
+/* شريط التقدم */
+.prog-cell { min-width: 150px; }
+.prog { height: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.prog .bar { height: 100%; background: linear-gradient(90deg, var(--green-600), var(--green-800)); border-radius: 999px; }
+.prog-txt { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+
+.si-btn.sm { padding: 9px 14px; font-size: 12.5px; border-radius: var(--radius-sm); min-height: 38px; }
+.si-btn.danger { color: var(--bad); border-color: #F3C6CC; }
+.si-btn.danger:hover { background: var(--bad-bg); }
+
+/* هيدر التفاصيل */
+.detail-head { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 22px; margin-bottom: 16px; display: flex; gap: 16px; }
+.detail-head .grow { flex: 1; }
+.codes { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.code-chip { background: linear-gradient(155deg, var(--green-700), var(--green-900)); color: #EAF3EC; padding: 5px 13px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; }
+.detail-head h2 { font-size: var(--text-xl); color: var(--green-900); }
+.detail-head .sub { color: var(--muted); font-size: var(--text-sm); margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; }
+.lnk { color: var(--green-700); font-weight: 700; }
+
+.memo-chip { display: inline-flex; gap: 5px; align-items: center; background: var(--warn-bg); border: 1px solid #ECD9A6; color: #8a6206; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; text-decoration: none; }
+.memo-chip.done { background: var(--ok-bg); border-color: #BCE3CC; color: var(--ok); }
+.memo-subs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.memo-subs .lbl { color: var(--muted); font-size: 12.5px; font-weight: 700; }
+
+/* فلاتر مذكرات العرض */
+.memo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.filter-tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; box-shadow: var(--shadow-xs); }
+.ftab { border: 0; background: transparent; color: var(--muted); padding: 9px 14px; border-radius: 9px; font-weight: 700; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: background .15s var(--ease), color .15s var(--ease); }
+.ftab.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; }
+.ftab .fcount { background: rgba(0,0,0,.08); border-radius: 999px; padding: 1px 7px; font-size: 11px; }
+.ftab.on .fcount { background: rgba(255,255,255,.22); }
+.memo-filters .search { border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm); padding: 10px 13px; min-height: 42px; font-family: inherit; font-size: 13px; min-width: 260px; flex: 1; background: var(--surface); color: var(--ink); }
+.memo-filters .search:focus { outline: none; border-color: var(--green-600); }
+
+/* بطاقات المراحل */
+.stages { display: flex; flex-direction: column; gap: 14px; }
+.stage-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: border-color .2s var(--ease); }
+.stage-card.open { border-color: var(--green-600); box-shadow: var(--shadow-md); }
+.stage-card.locked { opacity: .65; }
+.stage-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; text-align: start; }
+.stage-head:disabled { cursor: not-allowed; }
+.stage-head .n { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--muted); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+.stage-head .n.done { background: linear-gradient(155deg, var(--green-600), var(--green-800)); border-color: var(--green-700); color: #fff; }
+.stage-title { font-weight: 800; font-size: 14.5px; color: var(--green-900); }
+.stage-head .vers { color: var(--muted); font-size: 12px; font-weight: 700; }
+.stage-head .grow { flex: 1; }
+.arrow { color: var(--muted); transition: transform .18s var(--ease); }
+.arrow.rot { transform: rotate(180deg); }
+.chip.lock-chip { background: var(--surface-2); border: 1px dashed var(--line-strong); color: var(--muted); }
+
+/* الدفعة المقدمة 25% — checkbox بدل ملف */
+.advance-payment {
+  display: flex; align-items: flex-start; gap: 11px;
+  border: 1.5px solid var(--line-strong); border-radius: var(--radius);
+  padding: 13px 15px; margin-bottom: 16px; cursor: pointer;
+  background: var(--surface); transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.advance-payment:hover { border-color: var(--green-600); }
+.advance-payment.done { border-color: #BCE3CC; background: var(--ok-bg); }
+.advance-payment.disabled { cursor: default; opacity: .75; }
+.advance-payment input { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.advance-payment .ap-box {
+  flex-shrink: 0; width: 23px; height: 23px; margin-top: 1px; border-radius: 6px;
+  border: 2px solid var(--line-strong); background: var(--surface);
+  display: grid; place-items: center; color: #fff;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+.advance-payment.done .ap-box { background: var(--green-700); border-color: var(--green-700); }
+.advance-payment input:focus-visible + .ap-box { outline: 3px solid var(--gold-soft); outline-offset: 2px; }
+.ap-text { display: flex; flex-direction: column; gap: 2px; }
+.ap-text b { font-size: 13.5px; }
+.ap-hint { font-size: 11.5px; color: var(--muted); }
+
+.stage-body { border-top: 1px solid var(--line); padding: 18px; }
+.stage-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.si-note-inline { color: var(--muted); font-size: 12.5px; font-weight: 700; background: var(--surface-2); border: 1px dashed var(--line-strong); padding: 7px 13px; border-radius: 8px; }
+
+/* نموذج الرفع */
+.upload-form { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); padding: 15px 17px; margin-bottom: 16px; }
+.upload-foot { display: flex; gap: 8px; }
+
+/* منطقة اختيار/إفلات الملف — بديل عصري لزر <input type=file> الافتراضي */
+.file-drop-input {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.file-drop {
+  position: relative;
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 13px 15px;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease), transform .1s var(--ease);
+}
+.file-drop:hover { border-color: var(--green-600); background: var(--surface-2); }
+.file-drop:active { transform: scale(.995); }
+.file-drop-input:focus-visible + .fd-icon,
+.file-drop:has(.file-drop-input:focus-visible) { outline: 3px solid var(--gold-soft); outline-offset: 2px; }
+.file-drop.drag-over { border-color: var(--green-700); background: var(--ok-bg); box-shadow: 0 0 0 4px var(--green-100); }
+.file-drop.has-file { border-style: solid; border-color: #BCE3CC; background: var(--ok-bg); }
+
+.fd-icon {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  background: var(--surface-2); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.file-drop:hover .fd-icon { color: var(--green-700); }
+.fd-icon.ok { background: var(--green-700); color: #fff; border-color: var(--green-700); }
+
+.fd-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.fd-name { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-drop:not(.has-file) .fd-name { color: var(--muted); font-weight: 600; }
+.fd-hint { font-size: 11.5px; color: var(--muted); }
+
+.fd-clear {
+  flex-shrink: 0; width: 27px; height: 27px; border-radius: 50%;
+  border: 1px solid var(--line-strong); background: var(--surface);
+  color: var(--muted); font-size: 15px; line-height: 1;
+  display: grid; place-items: center; transition: background .15s var(--ease), color .15s var(--ease);
+}
+.fd-clear:hover { background: var(--bad-bg); border-color: #F3C6CC; color: var(--bad); }
+
+/* ملفات الإصدار */
+.files { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.file-lnk { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--green-700); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 6px 11px; font-family: inherit; transition: background .15s var(--ease); }
+.file-lnk:hover { background: var(--ok-bg); }
+.file-lnk .fsize { color: var(--muted); font-weight: 600; font-size: 11px; }
+td.notes { color: var(--muted); max-width: 240px; }
+
+/* قائمة اختيار المشروعات (مودال المذكرة) */
+.check-list { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); max-height: 240px; overflow: auto; padding: 6px; }
+.check-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background .15s var(--ease); }
+.check-item:hover { background: var(--surface-2); }
+.check-item input { accent-color: var(--green-700); width: 16px; height: 16px; }

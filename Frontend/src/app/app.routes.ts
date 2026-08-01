@@ -44,6 +44,22 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/plans/plan-print').then((m) => m.PlanPrint),
       },
+      // ===== الإدارة المالية (قسم مستقل — مراحل الطرح) =====
+      {
+        path: 'financial',
+        loadComponent: () =>
+          import('./features/financial/financial-list').then((m) => m.FinancialList),
+      },
+      {
+        path: 'financial/memos',
+        loadComponent: () =>
+          import('./features/financial/presentation-memos').then((m) => m.PresentationMemos),
+      },
+      {
+        path: 'financial/:id',
+        loadComponent: () =>
+          import('./features/financial/procurement-workflow').then((m) => m.ProcurementWorkflow),
+      },
       {
         path: 'settings',
         loadComponent: () =>

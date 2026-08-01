@@ -169,7 +169,76 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AccountingUnits", (string)null);
+                    b.ToTable("AccountingUnits");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.Announcement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("Announcements");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.AnnouncementVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AnnouncementId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnnouncementId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("AnnouncementVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.AuditLog", b =>
@@ -208,7 +277,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("AuditLogId");
 
-                    b.ToTable("AuditLogs", (string)null);
+                    b.ToTable("AuditLogs");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ComponentType", b =>
@@ -225,7 +294,79 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ComponentTypes", (string)null);
+                    b.ToTable("ComponentTypes");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AdvancePaymentDone")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("ContractAwards");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAwardVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ContractAwardId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContractAwardId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("ContractAwardVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractType", b =>
@@ -242,7 +383,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ContractTypeId");
 
-                    b.ToTable("ContractType", (string)null);
+                    b.ToTable("ContractType");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Contractor", b =>
@@ -286,7 +427,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ContractorId");
 
-                    b.ToTable("Contractor", (string)null);
+                    b.ToTable("Contractor");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.DelayReason", b =>
@@ -303,7 +444,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("DelayReason", (string)null);
+                    b.ToTable("DelayReason");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ExecutiveAgency", b =>
@@ -335,7 +476,76 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ExecutiveAgencyId");
 
-                    b.ToTable("ExecutiveAgency", (string)null);
+                    b.ToTable("ExecutiveAgency");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("FinancialEvaluations");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluationVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FinancialEvaluationId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialEvaluationId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("FinancialEvaluationVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialYear", b =>
@@ -364,7 +574,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("FinancialYearId");
 
-                    b.ToTable("FinancialYears", (string)null);
+                    b.ToTable("FinancialYears");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Governorate", b =>
@@ -381,7 +591,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("GovernorateId");
 
-                    b.ToTable("Governorate", (string)null);
+                    b.ToTable("Governorate");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProgram", b =>
@@ -398,7 +608,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("ProgramId");
 
-                    b.ToTable("MainPrograms", (string)null);
+                    b.ToTable("MainPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
@@ -437,7 +647,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProgramId");
 
-                    b.ToTable("MainProjects", (string)null);
+                    b.ToTable("MainProjects");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Markaz", b =>
@@ -459,7 +669,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("GovernorateId");
 
-                    b.ToTable("Markaz", (string)null);
+                    b.ToTable("Markaz");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Measurement", b =>
@@ -476,7 +686,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Measurements", (string)null);
+                    b.ToTable("Measurements");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementSubProgram", b =>
@@ -499,7 +709,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProgramId");
 
-                    b.ToTable("MeasurementSubProgram", (string)null);
+                    b.ToTable("MeasurementSubProgram");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementUnit", b =>
@@ -522,7 +732,76 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("UnitId");
 
-                    b.ToTable("MeasurementUnit", (string)null);
+                    b.ToTable("MeasurementUnit");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("OpeningEnvelopes");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopesVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("OpeningEnvelopesId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OpeningEnvelopesId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("OpeningEnvelopesVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Plan", b =>
@@ -562,7 +841,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FinancialYearId");
 
-                    b.ToTable("Plans", (string)null);
+                    b.ToTable("Plans");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
@@ -586,7 +865,108 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("PlanId", "SubProjectId")
                         .IsUnique();
 
-                    b.ToTable("PlanProjects", (string)null);
+                    b.ToTable("PlanProjects");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PresentationMemos");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemoSubProject", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PresentationMemoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId");
+
+                    b.HasIndex("PresentationMemoId", "SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("PresentationMemoSubProjects");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemoVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("PresentationMemoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PresentationMemoId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("PresentationMemoVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignment", b =>
@@ -635,7 +1015,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectId");
 
-                    b.ToTable("ProjectAssignment", (string)null);
+                    b.ToTable("ProjectAssignment");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAttachment", b =>
@@ -668,7 +1048,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("FollowUpId");
 
-                    b.ToTable("ProjectAttachment", (string)null);
+                    b.ToTable("ProjectAttachment");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectFollowUp", b =>
@@ -705,7 +1085,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectFinancialYearId");
 
-                    b.ToTable("ProjectFollowUp", (string)null);
+                    b.ToTable("ProjectFollowUp");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectLevel", b =>
@@ -722,7 +1102,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProjectLevels", (string)null);
+                    b.ToTable("ProjectLevels");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectPriority", b =>
@@ -739,7 +1119,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProjectPriority", (string)null);
+                    b.ToTable("ProjectPriority");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectSpecification", b =>
@@ -769,7 +1149,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("SubProjectId");
 
-                    b.ToTable("ProjectSpecification", (string)null);
+                    b.ToTable("ProjectSpecification");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectStatus", b =>
@@ -786,7 +1166,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("StatusId");
 
-                    b.ToTable("ProjectStatus", (string)null);
+                    b.ToTable("ProjectStatus");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProgram", b =>
@@ -808,7 +1188,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("ProgramId");
 
-                    b.ToTable("SubPrograms", (string)null);
+                    b.ToTable("SubPrograms");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
@@ -922,7 +1302,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("SubProjectName")
                         .IsUnique();
 
-                    b.ToTable("SubProjects", (string)null);
+                    b.ToTable("SubProjects");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
@@ -946,7 +1326,7 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("SubProjectId", "FinancialYearId")
                         .IsUnique();
 
-                    b.ToTable("SubProjectFinancialYear", (string)null);
+                    b.ToTable("SubProjectFinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectMeasurementValue", b =>
@@ -977,7 +1357,145 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("UnitId");
 
-                    b.ToTable("SubProjectMeasurementValue", (string)null);
+                    b.ToTable("SubProjectMeasurementValue");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("TechnicalEvaluations");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluationVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("TechnicalEvaluationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicalEvaluationId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("TechnicalEvaluationVersions");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TenderDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CurrentVersionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SubProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubProjectId")
+                        .IsUnique();
+
+                    b.ToTable("TenderDocuments");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TenderDocumentVersion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("TenderDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenderDocumentId", "VersionNumber")
+                        .IsUnique();
+
+                    b.ToTable("TenderDocumentVersions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Unit", b =>
@@ -994,7 +1512,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Units", (string)null);
+                    b.ToTable("Units");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
@@ -1016,7 +1534,7 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasIndex("MarkazId");
 
-                    b.ToTable("Village", (string)null);
+                    b.ToTable("Village");
                 });
 
             modelBuilder.Entity("SmartInvest.Infrastructure.Identity.ApplicationUser", b =>
@@ -1026,6 +1544,12 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("AvatarContent")
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("AvatarContentType")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -1145,6 +1669,360 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.Announcement", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.Announcement", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.AnnouncementVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.Announcement", "Announcement")
+                        .WithMany("Versions")
+                        .HasForeignKey("AnnouncementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "CompetentAuthorityApproval", b1 =>
+                        {
+                            b1.Property<int>("AnnouncementVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("CompetentAuthorityApproval_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("CompetentAuthorityApproval_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("CompetentAuthorityApproval_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("CompetentAuthorityApproval_FileSize");
+
+                            b1.HasKey("AnnouncementVersionId");
+
+                            b1.ToTable("AnnouncementVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "NewspaperAdvertisement", b1 =>
+                        {
+                            b1.Property<int>("AnnouncementVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("NewspaperAdvertisement_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("NewspaperAdvertisement_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("NewspaperAdvertisement_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("NewspaperAdvertisement_FileSize");
+
+                            b1.HasKey("AnnouncementVersionId");
+
+                            b1.ToTable("AnnouncementVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "PortalAdvertisement", b1 =>
+                        {
+                            b1.Property<int>("AnnouncementVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("PortalAdvertisement_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("PortalAdvertisement_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("PortalAdvertisement_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("PortalAdvertisement_FileSize");
+
+                            b1.HasKey("AnnouncementVersionId");
+
+                            b1.ToTable("AnnouncementVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementVersionId");
+                        });
+
+                    b.Navigation("Announcement");
+
+                    b.Navigation("CompetentAuthorityApproval");
+
+                    b.Navigation("NewspaperAdvertisement");
+
+                    b.Navigation("PortalAdvertisement");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.ContractAward", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAwardVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.ContractAward", "ContractAward")
+                        .WithMany("Versions")
+                        .HasForeignKey("ContractAwardId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "AwardOrder", b1 =>
+                        {
+                            b1.Property<int>("ContractAwardVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("AwardOrder_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("AwardOrder_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("AwardOrder_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("AwardOrder_FileSize");
+
+                            b1.HasKey("ContractAwardVersionId");
+
+                            b1.ToTable("ContractAwardVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContractAwardVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "Contract", b1 =>
+                        {
+                            b1.Property<int>("ContractAwardVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("Contract_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("Contract_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("Contract_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("Contract_FileSize");
+
+                            b1.HasKey("ContractAwardVersionId");
+
+                            b1.ToTable("ContractAwardVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContractAwardVersionId");
+                        });
+
+                    b.Navigation("AwardOrder");
+
+                    b.Navigation("Contract");
+
+                    b.Navigation("ContractAward");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluation", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.FinancialEvaluation", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluationVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.FinancialEvaluation", "FinancialEvaluation")
+                        .WithMany("Versions")
+                        .HasForeignKey("FinancialEvaluationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "EstimatedCostSheet", b1 =>
+                        {
+                            b1.Property<int>("FinancialEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("EstimatedCostSheet_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("EstimatedCostSheet_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("EstimatedCostSheet_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("EstimatedCostSheet_FileSize");
+
+                            b1.HasKey("FinancialEvaluationVersionId");
+
+                            b1.ToTable("FinancialEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FinancialEvaluationVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "FinancialBidOpeningMinutes", b1 =>
+                        {
+                            b1.Property<int>("FinancialEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("FinancialBidOpeningMinutes_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("FinancialBidOpeningMinutes_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("FinancialBidOpeningMinutes_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("FinancialBidOpeningMinutes_FileSize");
+
+                            b1.HasKey("FinancialEvaluationVersionId");
+
+                            b1.ToTable("FinancialEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FinancialEvaluationVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "FinancialEvaluationReport", b1 =>
+                        {
+                            b1.Property<int>("FinancialEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("FinancialEvaluationReport_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("FinancialEvaluationReport_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("FinancialEvaluationReport_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("FinancialEvaluationReport_FileSize");
+
+                            b1.HasKey("FinancialEvaluationVersionId");
+
+                            b1.ToTable("FinancialEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FinancialEvaluationVersionId");
+                        });
+
+                    b.Navigation("EstimatedCostSheet");
+
+                    b.Navigation("FinancialBidOpeningMinutes");
+
+                    b.Navigation("FinancialEvaluation");
+
+                    b.Navigation("FinancialEvaluationReport");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.MainProject", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.SubProgram", "SubProgram")
@@ -1205,6 +2083,65 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Unit");
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.OpeningEnvelopes", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopesVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.OpeningEnvelopes", "OpeningEnvelopes")
+                        .WithMany("Versions")
+                        .HasForeignKey("OpeningEnvelopesId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "File", b1 =>
+                        {
+                            b1.Property<int>("OpeningEnvelopesVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("File_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("File_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("File_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("File_FileSize");
+
+                            b1.HasKey("OpeningEnvelopesVersionId");
+
+                            b1.ToTable("OpeningEnvelopesVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OpeningEnvelopesVersionId");
+                        });
+
+                    b.Navigation("File")
+                        .IsRequired();
+
+                    b.Navigation("OpeningEnvelopes");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.Plan", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.FinancialYear", "FinancialYear")
@@ -1233,6 +2170,73 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Plan");
 
                     b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemoSubProject", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.PresentationMemo", "PresentationMemo")
+                        .WithMany("MemoSubProjects")
+                        .HasForeignKey("PresentationMemoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithMany()
+                        .HasForeignKey("SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PresentationMemo");
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemoVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.PresentationMemo", "PresentationMemo")
+                        .WithMany("Versions")
+                        .HasForeignKey("PresentationMemoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "File", b1 =>
+                        {
+                            b1.Property<int>("PresentationMemoVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("File_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("File_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("File_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("File_FileSize");
+
+                            b1.HasKey("PresentationMemoVersionId");
+
+                            b1.ToTable("PresentationMemoVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PresentationMemoVersionId");
+                        });
+
+                    b.Navigation("File")
+                        .IsRequired();
+
+                    b.Navigation("PresentationMemo");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectAssignment", b =>
@@ -1431,6 +2435,195 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Unit");
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluation", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.TechnicalEvaluation", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluationVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.TechnicalEvaluation", "TechnicalEvaluation")
+                        .WithMany("Versions")
+                        .HasForeignKey("TechnicalEvaluationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "FinalTechnicalEvaluationReport", b1 =>
+                        {
+                            b1.Property<int>("TechnicalEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("FinalTechnicalEvaluationReport_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("FinalTechnicalEvaluationReport_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("FinalTechnicalEvaluationReport_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("FinalTechnicalEvaluationReport_FileSize");
+
+                            b1.HasKey("TechnicalEvaluationVersionId");
+
+                            b1.ToTable("TechnicalEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TechnicalEvaluationVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "FirstCommitteeReport", b1 =>
+                        {
+                            b1.Property<int>("TechnicalEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("FirstCommitteeReport_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("FirstCommitteeReport_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("FirstCommitteeReport_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("FirstCommitteeReport_FileSize");
+
+                            b1.HasKey("TechnicalEvaluationVersionId");
+
+                            b1.ToTable("TechnicalEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TechnicalEvaluationVersionId");
+                        });
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "SecondCommitteeReport", b1 =>
+                        {
+                            b1.Property<int>("TechnicalEvaluationVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("SecondCommitteeReport_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("SecondCommitteeReport_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("SecondCommitteeReport_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("SecondCommitteeReport_FileSize");
+
+                            b1.HasKey("TechnicalEvaluationVersionId");
+
+                            b1.ToTable("TechnicalEvaluationVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TechnicalEvaluationVersionId");
+                        });
+
+                    b.Navigation("FinalTechnicalEvaluationReport");
+
+                    b.Navigation("FirstCommitteeReport");
+
+                    b.Navigation("SecondCommitteeReport");
+
+                    b.Navigation("TechnicalEvaluation");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TenderDocument", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
+                        .WithOne()
+                        .HasForeignKey("SmartInvest.Domain.Entities.TenderDocument", "SubProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SubProject");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TenderDocumentVersion", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.TenderDocument", "TenderDocument")
+                        .WithMany("Versions")
+                        .HasForeignKey("TenderDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "File", b1 =>
+                        {
+                            b1.Property<int>("TenderDocumentVersionId")
+                                .HasColumnType("int");
+
+                            b1.Property<byte[]>("Content")
+                                .IsRequired()
+                                .HasColumnType("varbinary(max)")
+                                .HasColumnName("File_Content");
+
+                            b1.Property<string>("FileExtension")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("nvarchar(20)")
+                                .HasColumnName("File_FileExtension");
+
+                            b1.Property<string>("FileName")
+                                .IsRequired()
+                                .HasMaxLength(255)
+                                .HasColumnType("nvarchar(255)")
+                                .HasColumnName("File_FileName");
+
+                            b1.Property<long>("FileSize")
+                                .HasColumnType("bigint")
+                                .HasColumnName("File_FileSize");
+
+                            b1.HasKey("TenderDocumentVersionId");
+
+                            b1.ToTable("TenderDocumentVersions");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TenderDocumentVersionId");
+                        });
+
+                    b.Navigation("File")
+                        .IsRequired();
+
+                    b.Navigation("TenderDocument");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.Markaz", "Markaz")
@@ -1440,6 +2633,16 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Markaz");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.Announcement", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractType", b =>
@@ -1455,6 +2658,11 @@ namespace SmartInvest.Infrastructure.Migrations
             modelBuilder.Entity("SmartInvest.Domain.Entities.DelayReason", b =>
                 {
                     b.Navigation("ProjectFollowUps");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluation", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialYear", b =>
@@ -1495,9 +2703,21 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Values");
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.Plan", b =>
                 {
                     b.Navigation("PlanProjects");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemo", b =>
+                {
+                    b.Navigation("MemoSubProjects");
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectFollowUp", b =>
@@ -1536,6 +2756,16 @@ namespace SmartInvest.Infrastructure.Migrations
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
                 {
                     b.Navigation("ProjectFollowUps");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluation", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.TenderDocument", b =>
+                {
+                    b.Navigation("Versions");
                 });
 #pragma warning restore 612, 618
         }

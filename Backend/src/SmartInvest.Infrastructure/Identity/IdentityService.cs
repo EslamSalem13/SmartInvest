@@ -63,7 +63,8 @@ public class IdentityService : IIdentityService
             UserId = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
-            Role = role
+            Role = role,
+            HasAvatar = user.AvatarContent is { Length: > 0 }
         };
 
         return result;
@@ -124,6 +125,7 @@ public class IdentityService : IIdentityService
             PhoneNumber = user.PhoneNumber,
             Role = dto.Role,
             IsActive = user.IsActive,
+            HasAvatar = false,
             CreatedAt = user.CreatedAt
         };
 
@@ -177,6 +179,7 @@ public class IdentityService : IIdentityService
                 PhoneNumber = user.PhoneNumber,
                 Role = roles.FirstOrDefault() ?? string.Empty,
                 IsActive = user.IsActive,
+                HasAvatar = user.AvatarContent is { Length: > 0 },
                 CreatedAt = user.CreatedAt
             };
 
@@ -184,6 +187,30 @@ public class IdentityService : IIdentityService
         }
 
         return result;
+    }
+
+    public async Task UpdateAvatarAsync(string userId, byte[] content, string contentType, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException("المستخدم غير موجود");
+        }
+
+        user.AvatarContent = content;
+        user.AvatarContentType = contentType;
+        await _userManager.UpdateAsync(user);
+    }
+
+    public async Task<AvatarDto?> GetAvatarAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user?.AvatarContent is not { Length: > 0 } || string.IsNullOrEmpty(user.AvatarContentType))
+        {
+            return null;
+        }
+
+        return new AvatarDto { Content = user.AvatarContent, ContentType = user.AvatarContentType };
     }
 
     private string GenerateJwtToken(ApplicationUser user, string role, DateTime expiresAt)

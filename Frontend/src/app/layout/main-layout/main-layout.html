@@ -2,7 +2,7 @@
   <button
     class="side-toggle"
     [class.collapsed]="sidebarCollapsed()"
-    [style.right.px]="sidebarCollapsed() ? 8 : 250"
+    [style.right.px]="sidebarCollapsed() ? 8 : 274"
     (click)="toggleSidebar()"
     [attr.aria-label]="sidebarCollapsed() ? 'إظهار القائمة الجانبية' : 'إخفاء القائمة الجانبية'"
     [attr.aria-expanded]="!sidebarCollapsed()"
@@ -10,22 +10,28 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6" /></svg>
   </button>
 
+  <button class="mobile-menu-btn" type="button" (click)="toggleMobileNav()" aria-label="فتح القائمة الجانبية" [attr.aria-expanded]="mobileNavOpen()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+  </button>
+
+  @if (mobileNavOpen()) {
+    <div class="mobile-backdrop" (click)="closeMobileNav()"></div>
+  }
+
   <!-- الشريط الجانبي على اليمين (الأول في الـ DOM = يمين في RTL) -->
-  <aside class="side" [class.collapsed]="sidebarCollapsed()">
-    <div class="logo">
-      <div class="mark">
-        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg>
-      </div>
-      <div class="logo-txt">
-        <b>{{ user()?.fullName }}</b>
-        <span>{{ roleLabel() }}</span>
+  <aside class="side" [class.collapsed]="sidebarCollapsed()" [class.mobile-open]="mobileNavOpen()">
+    <div class="brand">
+      <img class="brand-mark" src="/Menoufia-Logo.png" alt="شعار محافظة المنوفية" />
+      <div class="brand-txt">
+        <b>SmartInvest</b>
+        <span>محافظة المنوفية</span>
       </div>
     </div>
 
     <div class="sec">القائمة الرئيسية</div>
     <nav class="nav-list">
       @for (item of nav(); track item.route) {
-        <a class="nav" [routerLink]="item.route" routerLinkActive="active">
+        <a class="nav" [routerLink]="item.route" routerLinkActive="active" (click)="closeMobileNav()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path [attr.d]="item.icon" />
           </svg>
@@ -34,13 +40,30 @@
       }
     </nav>
 
-    <div class="sec">المرحلة الحالية</div>
-    <div class="phase">المرحلة الأولى — إدارة التخطيط</div>
-
     <div class="grow"></div>
 
+    @if (avatarError()) {
+      <div class="avatar-err">{{ avatarError() }}</div>
+    }
+
     <div class="me">
-      <div class="av">{{ initial() }}</div>
+      <button class="me-avatar-btn" type="button" (click)="avatarInput.click()" [disabled]="avatarUploading()" aria-label="تغيير الصورة الشخصية">
+        <span class="av si-avatar">
+          @if (avatarUrl()) {
+            <img [src]="avatarUrl()" alt="" />
+          } @else {
+            {{ initial() }}
+          }
+        </span>
+        <span class="av-edit" [class.busy]="avatarUploading()">
+          @if (avatarUploading()) {
+            <span class="spinner"></span>
+          } @else {
+            <svg viewBox="0 0 24 24" width="11" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 13v6a1 1 0 0 0 1 1h6M20 11V5a1 1 0 0 0-1-1h-6M14 10l7-7M10 14l-7 7" /></svg>
+          }
+        </span>
+      </button>
+      <input #avatarInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onAvatarFileSelected($event)" />
       <div class="me-txt">
         <b>{{ user()?.fullName }}</b>
         <span>{{ roleLabel() }}</span>

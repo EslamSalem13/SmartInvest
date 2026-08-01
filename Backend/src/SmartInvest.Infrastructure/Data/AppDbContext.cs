@@ -31,6 +31,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     // end
 
+    // ===== Financial Management (دورة التعاقدات) =====
+    public DbSet<PresentationMemo> PresentationMemos => Set<PresentationMemo>();
+    public DbSet<PresentationMemoSubProject> PresentationMemoSubProjects => Set<PresentationMemoSubProject>();
+    public DbSet<PresentationMemoVersion> PresentationMemoVersions => Set<PresentationMemoVersion>();
+    public DbSet<TenderDocument> TenderDocuments => Set<TenderDocument>();
+    public DbSet<TenderDocumentVersion> TenderDocumentVersions => Set<TenderDocumentVersion>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<AnnouncementVersion> AnnouncementVersions => Set<AnnouncementVersion>();
+    public DbSet<OpeningEnvelopes> OpeningEnvelopes => Set<OpeningEnvelopes>();
+    public DbSet<OpeningEnvelopesVersion> OpeningEnvelopesVersions => Set<OpeningEnvelopesVersion>();
+    public DbSet<TechnicalEvaluation> TechnicalEvaluations => Set<TechnicalEvaluation>();
+    public DbSet<TechnicalEvaluationVersion> TechnicalEvaluationVersions => Set<TechnicalEvaluationVersion>();
+    public DbSet<FinancialEvaluation> FinancialEvaluations => Set<FinancialEvaluation>();
+    public DbSet<FinancialEvaluationVersion> FinancialEvaluationVersions => Set<FinancialEvaluationVersion>();
+    public DbSet<ContractAward> ContractAwards => Set<ContractAward>();
+    public DbSet<ContractAwardVersion> ContractAwardVersions => Set<ContractAwardVersion>();
+    // ===== end Financial Management =====
+
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

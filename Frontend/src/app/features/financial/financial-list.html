@@ -1,0 +1,95 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>الإدارة المالية — مراحل الطرح</h1>
+      <p>متابعة مراحل التعاقد لكل مشروع فرعي: من كراسة الشروط حتى العقد والترسية</p>
+    </div>
+    <a class="si-btn gold" routerLink="/app/financial/memos">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z M14 2v6h6" /></svg>
+      مذكرات العرض
+    </a>
+  </header>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else {
+    <div class="kpis">
+      <div class="kpi">
+        <span>إجمالي المشروعات</span>
+        <b class="tnum">{{ kpiTotal() }}</b>
+      </div>
+      <div class="kpi">
+        <span>مكتملة الطرح</span>
+        <b class="tnum ok">{{ kpiDone() }}</b>
+      </div>
+      <div class="kpi">
+        <span>قيد الطرح</span>
+        <b class="tnum warn">{{ kpiActive() }}</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>المشروعات الفرعية</h3>
+        <div class="grow"></div>
+        <input
+          class="search"
+          placeholder="بحث بالاسم أو الكود…"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>المشروع الفرعي</th>
+              <th>الكود</th>
+              <th>المشروع الرئيسي</th>
+              <th>مذكرة عرض</th>
+              <th>تقدم الطرح</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtered(); track item.subProjectId) {
+              <tr>
+                <td>{{ item.subProjectName }}</td>
+                <td>
+                  @if (item.subProjectCode) {
+                    <span class="tnum">{{ item.subProjectCode }}</span>
+                  } @else {
+                    <span class="wait">بانتظار الاعتماد</span>
+                  }
+                </td>
+                <td>{{ item.mainProjectName }}</td>
+                <td>
+                  @if (item.hasPresentationMemo) {
+                    <span class="chip ok-chip">مرتبط</span>
+                  } @else {
+                    <span class="chip">لا يوجد</span>
+                  }
+                </td>
+                <td class="prog-cell">
+                  <div class="prog">
+                    <div class="bar" [style.width.%]="progress(item)"></div>
+                  </div>
+                  <span class="tnum prog-txt">{{ item.completedStages }}/{{ item.totalStages }}</span>
+                </td>
+                <td>
+                  <a class="si-btn primary sm" [routerLink]="['/app/financial', item.subProjectId]">
+                    مراحل الطرح
+                  </a>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
