@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ImportService } from '../../core/services/import.service';
 import {
@@ -83,8 +83,8 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 @for (row of a.unresolvedRows; track row.rowIndex) {
                   <div class="recon-row">
                     <span class="recon-name">{{ row.mainProjectName }} / {{ row.subProjectName }} (كود {{ row.code }})</span>
-                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="true" (change)="setRowCreateNew(row.rowIndex)" /> إنشاء جديد (معتمد)</label>
-                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود، رقم:</label>
+                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="isRowCreateNew(row.rowIndex)" (change)="setRowCreateNew(row.rowIndex)" /> إنشاء جديد (معتمد)</label>
+                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="!isRowCreateNew(row.rowIndex)" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود، رقم:</label>
                     <input type="number" [ngModel]="existingSubProjectId(row.rowIndex)" (ngModelChange)="setRowExisting(row.rowIndex, $event)" style="width:90px" />
                   </div>
                 }
@@ -96,7 +96,7 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 @if (preview()?.mode === 'Suggested') {
                   سيتم إنشاء {{ preview()?.suggested?.mainProjectCount }} مشروع رئيسي و{{ preview()?.suggested?.subProjectCount }} مشروع فرعي ضمن خطة مقترحة للسنة المالية المحددة.
                 } @else {
-                  سيتم اعتماد {{ preview()?.approved?.matchedCount }} مشروع مطابق، وإنشاء واعتماد {{ pendingCreateNewCount() }} مشروع جديد.
+                  سيتم اعتماد {{ preview()?.approved?.matchedCount }} مشروع مطابق، وربط {{ pendingLinkExistingCount() }} مشروع بمشروعات موجودة، وإنشاء واعتماد {{ pendingCreateNewCount() }} مشروع جديد.
                 }
               </p>
               @if (preview()?.mode === 'Approved') {
@@ -175,6 +175,20 @@ export class ExcelImportWizard {
   private readonly codeResolutions = new Map<string, MainProjectCodeResolution>();
   private readonly rowResolutions = new Map<number, ImportRowResolution>();
 
+  private wasOpen = false;
+
+  constructor() {
+    effect(() => {
+      const isOpen = this.open();
+      if (isOpen && !this.wasOpen) {
+        this.wasOpen = true;
+        this.reset();
+      } else if (!isOpen) {
+        this.wasOpen = false;
+      }
+    });
+  }
+
   protected suggestedCategories(s: NonNullable<ImportPreviewResult['suggested']>) {
     return [
       { key: 'markaz', label: 'مراكز غير معروفة', items: s.unresolvedMarkaz },
@@ -215,8 +229,16 @@ export class ExcelImportWizard {
     this.rowResolutions.set(rowIndex, { rowIndex, createNew: false, existingSubProjectId: subProjectId });
   }
 
+  protected isRowCreateNew(rowIndex: number): boolean {
+    return this.rowResolutions.get(rowIndex)?.createNew ?? true;
+  }
+
   protected pendingCreateNewCount(): number {
     return [...this.rowResolutions.values()].filter((r) => r.createNew).length;
+  }
+
+  protected pendingLinkExistingCount(): number {
+    return [...this.rowResolutions.values()].filter((r) => !r.createNew).length;
   }
 
   protected onFileSelected(event: Event): void {
@@ -234,6 +256,13 @@ export class ExcelImportWizard {
       next: (result) => {
         this.uploading.set(false);
         this.preview.set(result);
+        if (result.suggested) {
+          for (const group of this.suggestedCategories(result.suggested)) {
+            for (const item of group.items) {
+              this.setNew(group.key, item.name);
+            }
+          }
+        }
         for (const row of result.approved?.unresolvedRows ?? []) {
           this.setRowCreateNew(row.rowIndex);
         }
@@ -249,7 +278,12 @@ export class ExcelImportWizard {
   protected submitCommit(): void {
     const preview = this.preview();
     const yearId = this.financialYearId();
-    if (!preview || yearId == null || this.committing()) return;
+    if (!preview || this.committing()) return;
+
+    if (yearId == null) {
+      this.error.set('برجاء اختيار سنة مالية أولاً');
+      return;
+    }
 
     if (preview.mode === 'Approved' && !this.approvalDate()) {
       this.error.set('برجاء إدخال تاريخ الاعتماد');
