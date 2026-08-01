@@ -16,6 +16,7 @@ public class ApprovedPlanImportService
     private readonly IGenericRepository<ProjectPriority> _priorityRepository;
     private readonly IGenericRepository<ProjectStatus> _statusRepository;
     private readonly IGenericRepository<Markaz> _markazRepository;
+    private readonly IGenericRepository<SubProgram> _subProgramRepository;
     private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
     private readonly IGenericRepository<ComponentType> _componentTypeRepository;
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
@@ -32,6 +33,7 @@ public class ApprovedPlanImportService
         IGenericRepository<ProjectPriority> priorityRepository,
         IGenericRepository<ProjectStatus> statusRepository,
         IGenericRepository<Markaz> markazRepository,
+        IGenericRepository<SubProgram> subProgramRepository,
         IGenericRepository<ProjectLevel> projectLevelRepository,
         IGenericRepository<ComponentType> componentTypeRepository,
         IGenericRepository<AccountingUnit> accountingUnitRepository,
@@ -47,6 +49,7 @@ public class ApprovedPlanImportService
         _priorityRepository = priorityRepository;
         _statusRepository = statusRepository;
         _markazRepository = markazRepository;
+        _subProgramRepository = subProgramRepository;
         _projectLevelRepository = projectLevelRepository;
         _componentTypeRepository = componentTypeRepository;
         _accountingUnitRepository = accountingUnitRepository;
@@ -96,14 +99,28 @@ public class ApprovedPlanImportService
             ?? throw new BusinessRuleException("أولوية «منخفضة» الافتراضية غير موجودة في قاعدة البيانات");
         var runningStatusId = (await _statusRepository.FirstOrDefaultAsync(x => x.StatusName == "قيد التنفيذ", cancellationToken))?.StatusId
             ?? throw new BusinessRuleException("حالة «قيد التنفيذ» الافتراضية غير موجودة في قاعدة البيانات");
-        var unspecifiedMarkazId = (await _markazRepository.GetAllAsync(cancellationToken)).FirstOrDefault()?.MarkazId
-            ?? throw new BusinessRuleException("لا يوجد أي مركز في قاعدة البيانات");
         var unspecifiedProjectLevelId = (await _projectLevelRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
             ?? throw new BusinessRuleException("مستوى «غير محدد» الافتراضي غير موجود في قاعدة البيانات");
         var unspecifiedComponentTypeId = (await _componentTypeRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
             ?? throw new BusinessRuleException("مكوّن عيني «غير محدد» الافتراضي غير موجود في قاعدة البيانات");
         var unspecifiedAccountingUnitId = (await _accountingUnitRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
             ?? throw new BusinessRuleException("وحدة حسابية «غير محدد» الافتراضية غير موجودة في قاعدة البيانات");
+
+        // A new SubProject needs a Markaz/SubProgram even when the row's own values don't match an
+        // existing record (this mode has no per-row reconciliation for these two, unlike suggested
+        // mode). Resolve by exact name from the row first; only fall back to an arbitrary existing
+        // record - never a fabricated "unspecified" one, since neither table seeds such a sentinel.
+        var allMarkaz = await _markazRepository.GetAllAsync(cancellationToken);
+        var markazIdByName = allMarkaz.ToDictionary(x => x.MarkazName.Trim(), x => x.MarkazId);
+        var fallbackMarkazId = allMarkaz.FirstOrDefault()?.MarkazId
+            ?? throw new BusinessRuleException("لا يوجد أي مركز في قاعدة البيانات");
+
+        var allSubPrograms = await _subProgramRepository.GetAllAsync(cancellationToken);
+        var subProgramIdByName = allSubPrograms
+            .GroupBy(x => x.SubProgramName.Trim())
+            .ToDictionary(g => g.Key, g => g.First().SubProgramId);
+        var fallbackSubProgramId = allSubPrograms.FirstOrDefault()?.SubProgramId
+            ?? throw new BusinessRuleException("لا يوجد أي برنامج فرعي في قاعدة البيانات لإنشاء مشروع رئيسي جديد عليه");
 
         var result = new ImportCommitResultDto { Mode = "Approved" };
         var approvedSubProjectIds = new List<int>();
@@ -145,8 +162,9 @@ public class ApprovedPlanImportService
                             MainProjectName = row.MainProjectName.Trim(),
                             MainProjectCode = null,
                             ExecutingAgency = string.Empty,
-                            SubProgramId = (await _mainProjectRepository.GetAllWithDetailsAsync(cancellationToken)).FirstOrDefault()?.SubProgramId
-                                ?? throw new BusinessRuleException("لا يوجد أي برنامج فرعي في قاعدة البيانات لإنشاء مشروع رئيسي جديد عليه"),
+                            SubProgramId = subProgramIdByName.TryGetValue(row.SubProgramName.Trim(), out var resolvedSubProgramId)
+                                ? resolvedSubProgramId
+                                : fallbackSubProgramId,
                             IsApproved = true,
                         };
                         await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
@@ -166,7 +184,7 @@ public class ApprovedPlanImportService
                         ComponentTypeId = unspecifiedComponentTypeId,
                         AccountingUnitId = unspecifiedAccountingUnitId,
                         ProjectNature = string.Empty,
-                        MarkazId = unspecifiedMarkazId,
+                        MarkazId = markazIdByName.TryGetValue(row.MarkazName.Trim(), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
                         PriorityId = defaultPriorityId,
                         StatusId = runningStatusId,
                         BankFunding = 0,
@@ -207,42 +225,57 @@ public class ApprovedPlanImportService
             }
         }
 
-        var approvedPlan = _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Approved);
-        var suggestedPlan = approvedPlan == null ? _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Suggested) : null;
+        Plan? resultPlan;
+        try
+        {
+            var approvedPlan = _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Approved);
+            var suggestedPlan = approvedPlan == null ? _planRepo.GetByFinancialYearAndStatus(dto.FinancialYearId, PlanStatus.Suggested) : null;
 
-        Plan resultPlan;
-        if (approvedPlan != null)
-        {
-            // Already approved for this financial year - reuse it rather than creating a duplicate.
-            resultPlan = approvedPlan;
-        }
-        else if (suggestedPlan != null)
-        {
-            resultPlan = await _planService.ApproveAsync(suggestedPlan.PlanId, approvalDate);
-        }
-        else
-        {
-            resultPlan = new Plan
+            if (approvedPlan != null)
             {
-                PlanName = $"الخطة المعتمدة – {financialYear.Name}",
-                PlanStatus = PlanStatus.Approved,
-                ApprovalDate = approvalDate,
-                StartDate = financialYear.StartDate,
-                EndDate = financialYear.EndDate,
-                FinancialYearId = dto.FinancialYearId,
-                SuggestionDate = DateTime.UtcNow,
-            };
-            await _planRepo.AddAsync(resultPlan, cancellationToken);
+                // Already approved for this financial year - reuse it rather than creating a duplicate.
+                resultPlan = approvedPlan;
+            }
+            else if (suggestedPlan != null)
+            {
+                resultPlan = await _planService.ApproveAsync(suggestedPlan.PlanId, approvalDate);
+            }
+            else
+            {
+                resultPlan = new Plan
+                {
+                    PlanName = $"الخطة المعتمدة – {financialYear.Name}",
+                    PlanStatus = PlanStatus.Approved,
+                    ApprovalDate = approvalDate,
+                    StartDate = financialYear.StartDate,
+                    EndDate = financialYear.EndDate,
+                    FinancialYearId = dto.FinancialYearId,
+                    SuggestionDate = DateTime.UtcNow,
+                };
+                await _planRepo.AddAsync(resultPlan, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            var alreadyLinked = (await _planProjectRepository.FindAsync(x => x.PlanId == resultPlan.PlanId, cancellationToken))
+                .Select(x => x.SubProjectId).ToHashSet();
+            foreach (var subProjectId in approvedSubProjectIds.Where(id => !alreadyLinked.Contains(id)))
+            {
+                await _planProjectRepository.AddAsync(new PlanProject { PlanId = resultPlan.PlanId, SubProjectId = subProjectId }, cancellationToken);
+            }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
-
-        var alreadyLinked = (await _planProjectRepository.FindAsync(x => x.PlanId == resultPlan.PlanId, cancellationToken))
-            .Select(x => x.SubProjectId).ToHashSet();
-        foreach (var subProjectId in approvedSubProjectIds.Where(id => !alreadyLinked.Contains(id)))
+        catch (Exception ex)
         {
-            await _planProjectRepository.AddAsync(new PlanProject { PlanId = resultPlan.PlanId, SubProjectId = subProjectId }, cancellationToken);
+            // The per-row loop above has already committed and approved sub-projects - that work is
+            // real and must not be thrown away just because the plan-level step failed afterward.
+            // Report it as a failure entry instead of letting an exception hide successful rows.
+            result.Failed.Add(new ImportRowFailureDto
+            {
+                Name = "-",
+                Reason = $"تم اعتماد المشروعات الفرعية بنجاح، لكن تعذّر تحديث حالة الخطة: {ex.Message}",
+            });
+            return result;
         }
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         result.PlanId = resultPlan.PlanId;
         result.PlanName = resultPlan.PlanName;

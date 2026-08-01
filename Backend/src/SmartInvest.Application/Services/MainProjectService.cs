@@ -49,12 +49,6 @@ public class MainProjectService : IMainProjectService
 
         var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
 
-        var codeExists = await _mainProjectRepository.CodeExistsAsync(code, null, cancellationToken);
-        if (codeExists)
-        {
-            throw new BusinessRuleException($"كود المشروع الرئيسي «{code}» مستخدم بالفعل");
-        }
-
         var mainProject = _mapper.Map<MainProject>(dto);
         mainProject.MainProjectCode = code;
         mainProject.IsApproved = code != null;
@@ -81,12 +75,6 @@ public class MainProjectService : IMainProjectService
         }
 
         var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
-
-        var codeExists = await _mainProjectRepository.CodeExistsAsync(code, id, cancellationToken);
-        if (codeExists)
-        {
-            throw new BusinessRuleException($"كود المشروع الرئيسي «{code}» مستخدم بالفعل");
-        }
 
         mainProject.MainProjectCode = code;
         mainProject.IsApproved = code != null;

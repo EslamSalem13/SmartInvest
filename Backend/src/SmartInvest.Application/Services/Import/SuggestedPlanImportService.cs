@@ -90,7 +90,7 @@ public class SuggestedPlanImportService
             MainProjectCodeConflicts = DetectCodeConflicts(file.Rows),
         };
 
-        var mainProjectGroups = GroupByMainProject(file.Rows, dto.MainProjectCodeConflicts, new List<MainProjectCodeResolutionDto>());
+        var mainProjectGroups = GroupByMainProject(file.Rows, new List<MainProjectCodeResolutionDto>());
         dto.MainProjectCount = mainProjectGroups.Count;
         dto.SubProjectCount = file.Rows.Count;
 
@@ -107,7 +107,7 @@ public class SuggestedPlanImportService
             dto.MainProgramResolutions, _mainProgramRepository, x => x.ProgramName, x => x.ProgramId,
             async name => (await _lookupService.CreateMainProgramAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
-        var mainProjectGroups = GroupByMainProject(file.Rows, DetectCodeConflicts(file.Rows), dto.MainProjectCodeResolutions);
+        var mainProjectGroups = GroupByMainProject(file.Rows, dto.MainProjectCodeResolutions);
         var neededSubProgramPairs = mainProjectGroups
             .Where(g => mainProgramIdByName.ContainsKey(g.MainProgramName))
             .Select(g => (MainProgramId: mainProgramIdByName[g.MainProgramName], SubProgramName: g.Rows[0].SubProgramName.Trim()))
@@ -330,7 +330,6 @@ public class SuggestedPlanImportService
 
     private static List<MainProjectGroup> GroupByMainProject(
         List<ParsedImportRow> rows,
-        List<MainProjectCodeConflictDto> conflicts,
         List<MainProjectCodeResolutionDto> resolutions)
     {
         var resolutionByCode = resolutions.ToDictionary(r => r.Code.Trim(), r => r);

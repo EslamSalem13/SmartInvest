@@ -118,12 +118,13 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             cancellationToken);
     }
 
-    public async Task<bool> NameExistsAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default)
+    public async Task<bool> NameExistsAsync(string name, int mainProjectId, int? excludeId = null, CancellationToken cancellationToken = default)
     {
         var trimmed = (name ?? string.Empty).Trim();
         // المقارنة تعتمد على collation قاعدة البيانات (SQL Server افتراضيًا case-insensitive)
+        // النطاق يقتصر على المشروع الرئيسي نفسه، بما يطابق الفهرس المركب (MainProjectId, SubProjectName)
         return await DbSet.AnyAsync(x =>
-            x.SubProjectName == trimmed && (excludeId == null || x.SubProjectId != excludeId),
+            x.MainProjectId == mainProjectId && x.SubProjectName == trimmed && (excludeId == null || x.SubProjectId != excludeId),
             cancellationToken);
     }
 

@@ -4,6 +4,7 @@ import { forkJoin } from 'rxjs';
 import { ImportService } from '../../core/services/import.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
+import { ProjectsService } from '../../core/services/projects.service';
 import {
   ImportCommit,
   ImportCommitResult,
@@ -98,8 +99,17 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                   <div class="recon-row">
                     <span class="recon-name">{{ row.mainProjectName }} / {{ row.subProjectName }} (كود {{ row.code }})</span>
                     <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="isRowCreateNew(row.rowIndex)" (change)="setRowCreateNew(row.rowIndex)" /> إنشاء جديد (معتمد)</label>
-                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="!isRowCreateNew(row.rowIndex)" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود، رقم:</label>
-                    <input type="number" [ngModel]="existingSubProjectId(row.rowIndex)" (ngModelChange)="setRowExisting(row.rowIndex, $event)" style="width:90px" />
+                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="!isRowCreateNew(row.rowIndex)" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود:</label>
+                    <select [ngModel]="existingSubProjectId(row.rowIndex)" (ngModelChange)="setRowExisting(row.rowIndex, $event)" [disabled]="isRowCreateNew(row.rowIndex) || subProjectOptionsLoading()" style="max-width:220px">
+                      @if (subProjectOptionsLoading()) {
+                        <option [ngValue]="null">جارٍ التحميل…</option>
+                      } @else {
+                        <option [ngValue]="null">— اختر —</option>
+                        @for (opt of subProjectOptions(); track opt.id) {
+                          <option [ngValue]="opt.id">{{ opt.name }}</option>
+                        }
+                      }
+                    </select>
                   </div>
                 }
               }
@@ -170,6 +180,7 @@ export class ExcelImportWizard {
   private readonly importService = inject(ImportService);
   private readonly lookupsService = inject(LookupsService);
   private readonly agenciesService = inject(AgenciesService);
+  private readonly projectsService = inject(ProjectsService);
 
   readonly open = input(false);
   readonly financialYearId = input.required<number | null>();
@@ -186,6 +197,8 @@ export class ExcelImportWizard {
   protected readonly approvalDate = signal<string>(ExcelImportWizard.today());
   protected readonly existingOptions = signal<Record<string, Lookup[]>>({});
   protected readonly optionsLoading = signal(false);
+  protected readonly subProjectOptions = signal<Lookup[]>([]);
+  protected readonly subProjectOptionsLoading = signal(false);
 
   private readonly resolutions: Record<string, Map<string, ImportResolution>> = {
     markaz: new Map(), mainProgram: new Map(), subProgram: new Map(), agency: new Map(),
@@ -319,6 +332,9 @@ export class ExcelImportWizard {
         for (const row of result.approved?.unresolvedRows ?? []) {
           this.setRowCreateNew(row.rowIndex);
         }
+        if ((result.approved?.unresolvedRows.length ?? 0) > 0) {
+          this.loadSubProjectOptions();
+        }
         this.step.set('reconcile');
       },
       error: (err) => {
@@ -363,6 +379,23 @@ export class ExcelImportWizard {
     });
   }
 
+  private loadSubProjectOptions(): void {
+    const token = this.requestToken;
+    this.subProjectOptionsLoading.set(true);
+    this.projectsService.searchSubProjects({ page: 1, pageSize: 500 }).subscribe({
+      next: (result) => {
+        if (token !== this.requestToken) return;
+        this.subProjectOptionsLoading.set(false);
+        this.subProjectOptions.set(result.items.map((s) => ({ id: s.id, name: `${s.mainProjectName} / ${s.name}` })));
+      },
+      error: () => {
+        if (token !== this.requestToken) return;
+        this.subProjectOptionsLoading.set(false);
+        this.error.set('تعذّر تحميل قائمة المشروعات الفرعية الموجودة لخيار «ربط بمشروع موجود» — يمكنك المتابعة باستخدام «إنشاء جديد» فقط');
+      },
+    });
+  }
+
   private validateResolutions(): string | null {
     const preview = this.preview();
     if (!preview) return null;
@@ -378,7 +411,7 @@ export class ExcelImportWizard {
     } else {
       for (const resolution of this.rowResolutions.values()) {
         if (!resolution.createNew && resolution.existingSubProjectId == null) {
-          return 'برجاء إدخال رقم المشروع الموجود لكل صف تم اختيار «ربط بمشروع موجود» له';
+          return 'برجاء اختيار المشروع الفرعي الموجود لكل صف تم اختيار «ربط بمشروع موجود» له';
         }
       }
     }
@@ -467,6 +500,8 @@ export class ExcelImportWizard {
     this.approvalDate.set(ExcelImportWizard.today());
     this.existingOptions.set({});
     this.optionsLoading.set(false);
+    this.subProjectOptions.set([]);
+    this.subProjectOptionsLoading.set(false);
     for (const map of Object.values(this.resolutions)) map.clear();
     this.codeResolutions.clear();
     this.rowResolutions.clear();
