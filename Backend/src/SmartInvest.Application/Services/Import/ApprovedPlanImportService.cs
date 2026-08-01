@@ -112,6 +112,7 @@ public class ApprovedPlanImportService
         {
             MainProject? mainProject = null;
             SubProject? subProject = null;
+            bool mainProjectCreatedHere = false;
             try
             {
                 var match = await MatchRowAsync(row, cancellationToken);
@@ -150,6 +151,7 @@ public class ApprovedPlanImportService
                         };
                         await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        mainProjectCreatedHere = true;
                         result.MainProjectsCreated++;
                     }
 
@@ -189,7 +191,11 @@ public class ApprovedPlanImportService
                 // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
                 // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
                 // mislabeling the next row as failed for the same reason.
-                if (mainProject is not null)
+                // Only remove mainProject when THIS attempt created it - if it was reused from an
+                // existing, already-persisted MainProject (Count == 1 match), it is tracked as
+                // Unchanged and must not be transitioned to Deleted just because a later SubProject
+                // insert failed; doing so would issue a real DELETE against an unrelated, valid row.
+                if (mainProject is not null && mainProjectCreatedHere)
                 {
                     _mainProjectRepository.Remove(mainProject);
                 }
