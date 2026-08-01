@@ -1,23 +1,46 @@
 <div class="home">
   <div class="bg-glow"></div>
+  <div class="bg-pattern"></div>
 
-  <!-- الشريط العلوي -->
+  <div class="pigeons" aria-hidden="true">
+    <svg class="pigeon p1" viewBox="0 0 24 12"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" /></svg>
+    <svg class="pigeon p2" viewBox="0 0 24 12"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" /></svg>
+    <svg class="pigeon p3" viewBox="0 0 24 12"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" /></svg>
+    <svg class="pigeon p4" viewBox="0 0 24 12"><path d="M0 8 Q6 0 12 8 Q18 0 24 8" /></svg>
+  </div>
+
   <header class="topbar reveal">
     <div class="brand">
+      <img class="brand-badge" src="/Menoufia-Logo.png" alt="شعار محافظة المنوفية" />
       <div class="brand-txt">
-        <b>منصة إدارة الخطة الاستثمارية</b>
+        <b>Smart<span>Invest</span></b>
         <small>محافظة المنوفية</small>
       </div>
     </div>
   </header>
 
-  <!-- المحتوى المركزي -->
   <main class="hero">
-    <img class="emblem-img reveal" src="/menoufia-emblem.svg" alt="شعار محافظة المنوفية" />
+    <section class="showcase reveal d1">
+      <img class="emblem-img" src="/menoufia-emblem.svg" alt="شعار محافظة المنوفية" />
+      <div class="titles">
+        <p class="rep">جمهورية مصر العربية</p>
+        <div class="divider"></div>
+        <h1 class="sys">منصة إدارة الخطة الاستثمارية</h1>
+        <p class="phase">محافظة المنوفية — إدارة التخطيط والإدارة المالية</p>
+      </div>
+      <ul class="feats">
+        <li><span class="dot"></span> متابعة المشروعات ومراحل التنفيذ</li>
+        <li><span class="dot"></span> إدارة مراحل الطرح والتعاقدات</li>
+        <li><span class="dot"></span> تقارير وصلاحيات حسب الدور الوظيفي</li>
+      </ul>
+    </section>
 
-    
+    <section class="lcard reveal d3">
+      <div class="lcard-head">
+        <h2>تسجيل الدخول</h2>
+        <p>أدخل بياناتك للوصول إلى لوحة التحكم</p>
+      </div>
 
-    <div class="lcard reveal d5">
       @if (error()) {
         <div class="alert">{{ error() }}</div>
       }
@@ -75,7 +98,7 @@
           }
         </button>
       </form>
-    </div>
+    </section>
   </main>
 
   <footer class="foot reveal d5">© 2026 محافظة المنوفية — نظام SmartInvest · جميع الحقوق محفوظة</footer>

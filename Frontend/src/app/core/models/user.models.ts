@@ -6,6 +6,7 @@ export interface AppUser {
   phoneNumber: string | null;
   role: string;
   isActive: boolean;
+  hasAvatar: boolean;
   createdAt: string;
 }
 

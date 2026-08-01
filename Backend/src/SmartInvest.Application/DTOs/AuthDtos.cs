@@ -20,6 +20,8 @@ public class AuthResultDto
     public string Email { get; set; } = string.Empty;
 
     public string Role { get; set; } = string.Empty;
+
+    public bool HasAvatar { get; set; }
 }
 
 public class ChangePasswordDto
