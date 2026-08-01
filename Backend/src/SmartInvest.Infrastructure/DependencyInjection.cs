@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SmartInvest.Application.Common.Ai;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Application.Services;
 using SmartInvest.Application.Services.Import;
@@ -24,6 +25,12 @@ public static class DependencyInjection
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+
+        services.Configure<AiGatewayOptions>(configuration.GetSection(AiGatewayOptions.SectionName));
+        services.AddHttpClient<IAiGatewayClient, AiGatewayClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(60);
+        });
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {
