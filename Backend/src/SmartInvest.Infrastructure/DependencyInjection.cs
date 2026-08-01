@@ -54,6 +54,10 @@ public static class DependencyInjection
         services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
 
+        // Financial Management (دورة التعاقدات)
+        services.AddScoped<IProcurementService, Services.ProcurementService>();
+        services.AddScoped<IPresentationMemoService, Services.PresentationMemoService>();
+
         return services;
     }
 }

@@ -1,0 +1,233 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>مراحل الطرح</h1>
+      <p>رفع المستندات الرسمية لكل مرحلة — الإصدارات القديمة سجل تاريخي لا يُعدَّل ولا يُحذف</p>
+    </div>
+    <a class="si-btn" routerLink="/app/financial">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 6l6 6-6 6" /></svg>
+      رجوع للإدارة المالية
+    </a>
+  </header>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error() || !overview()) {
+    <div class="state error">{{ error() ?? 'المشروع غير موجود' }}</div>
+  } @else {
+    <div class="detail-head">
+      <div class="grow">
+        <div class="codes">
+          @if (overview()!.subProjectCode) {
+            <span class="code-chip">الكود: {{ overview()!.subProjectCode }}</span>
+          } @else {
+            <span class="wait">بانتظار الاعتماد</span>
+          }
+          <span class="chip">{{ completedCount() }}/6 مراحل مكتملة</span>
+        </div>
+        <h2>{{ overview()!.subProjectName }}</h2>
+        <div class="sub">
+          مذكرات العرض المرتبطة:
+          @if (overview()!.presentationMemos.length === 0) {
+            <span>لا توجد —</span>
+            <a class="lnk" routerLink="/app/financial/memos">إنشاء مذكرة عرض</a>
+          } @else {
+            @for (memo of overview()!.presentationMemos; track memo.id) {
+              <a class="memo-chip" routerLink="/app/financial/memos" [class.done]="memo.isCompleted">
+                {{ memo.title }}
+              </a>
+            }
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- المراحل -->
+    <div class="stages">
+      @for (stage of overview()!.stages; track stage.stage) {
+        <div class="stage-card" [class.open]="openStage() === stage.stage" [class.locked]="stage.isLocked">
+          <button class="stage-head" [disabled]="stage.isLocked" (click)="toggleStage(stage)">
+            <span class="n" [class.done]="stage.isCompleted">
+              @if (stage.isLocked) {
+                <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+              } @else {
+                {{ stage.order }}
+              }
+            </span>
+            <span class="stage-title">{{ stage.stageLabel }}</span>
+            @if (stage.isLocked) {
+              <span class="chip lock-chip">مقفولة — أكمل المرحلة السابقة أولًا</span>
+            } @else {
+              <span class="chip st" [class.ok-chip]="stage.isCompleted" [class.warn-chip]="statusClass(stage) === 'active'">
+                {{ statusLabel(stage) }}
+              </span>
+              @if (stage.currentVersionNumber > 0) {
+                <span class="vers tnum">الإصدار الحالي: {{ stage.currentVersionNumber }}</span>
+              }
+            }
+            <span class="grow"></span>
+            @if (!stage.isLocked) {
+              <span class="arrow" [class.rot]="openStage() === stage.stage">▾</span>
+            }
+          </button>
+
+          @if (openStage() === stage.stage) {
+            <div class="stage-body">
+              @if (stageLoading()) {
+                <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+              } @else if (stageDetail()) {
+                <!-- أزرار الإجراءات -->
+                @if (isStaff()) {
+                  <div class="stage-actions">
+                    @if (!stageDetail()!.isCompleted) {
+                      <button class="si-btn primary sm" (click)="openUploadForm()">
+                        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+                        رفع إصدار جديد
+                      </button>
+                      @if (stageDetail()!.currentVersionNumber > 0) {
+                        <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المرحلة</button>
+                      }
+                    } @else {
+                      <span class="si-note-inline">المرحلة مكتملة — الإصدارات للقراءة فقط.</span>
+                      @if (isManager()) {
+                        <button class="si-btn sm" [disabled]="busy()" (click)="reopen()">إعادة فتح</button>
+                      }
+                    }
+                  </div>
+                }
+
+                <!-- الدفعة المقدمة 25% — حالة وليست مستندًا (خاص بمرحلة العقد والترسية) -->
+                @if (stageDetail()!.stage === 'contract-award') {
+                  <label
+                    class="advance-payment"
+                    [class.done]="stageDetail()!.advancePaymentDone"
+                    [class.disabled]="!isStaff() || stageDetail()!.isCompleted"
+                  >
+                    <input
+                      type="checkbox"
+                      [checked]="!!stageDetail()!.advancePaymentDone"
+                      [disabled]="!isStaff() || stageDetail()!.isCompleted || busy()"
+                      (change)="toggleAdvancePayment($any($event.target).checked)"
+                    />
+                    <span class="ap-box">
+                      @if (stageDetail()!.advancePaymentDone) {
+                        <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" /></svg>
+                      }
+                    </span>
+                    <span class="ap-text">
+                      <b>تم صرف الدفعة المقدمة 25%</b>
+                      <span class="ap-hint">شرط لازم لإكمال هذه المرحلة</span>
+                    </span>
+                  </label>
+                }
+
+                <!-- نموذج الرفع -->
+                @if (showUpload()) {
+                  <div class="upload-form">
+                    <div class="si-grid">
+                      @for (slot of stageDetail()!.fileSlots; track slot.key) {
+                        <div class="si-fld" [class.full]="stageDetail()!.fileSlots.length === 1">
+                          <label>
+                            {{ slot.label }}
+                            @if (slot.required) { <span class="req">*</span> }
+                          </label>
+                          <label
+                            class="file-drop"
+                            [class.has-file]="!!pickedFile(slot.key)"
+                            [class.drag-over]="dragOverKey() === slot.key"
+                            [for]="'file-' + slot.key"
+                            (dragover)="onDragOver(slot.key, $event)"
+                            (dragleave)="onDragLeave(slot.key)"
+                            (drop)="onDrop(slot.key, $event)"
+                          >
+                            <input
+                              type="file"
+                              [id]="'file-' + slot.key"
+                              class="file-drop-input"
+                              (change)="onFilePicked(slot.key, $event)"
+                            />
+                            @if (pickedFile(slot.key); as file) {
+                              <span class="fd-icon ok">
+                                <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5" /></svg>
+                              </span>
+                              <span class="fd-body">
+                                <span class="fd-name">{{ file.name }}</span>
+                                <span class="fd-hint tnum">{{ fileSize(file.size) }}</span>
+                              </span>
+                              <button type="button" class="fd-clear" title="إزالة الملف" (click)="clearFile(slot.key, $event)">×</button>
+                            } @else {
+                              <span class="fd-icon">
+                                <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M12 4 7 9M12 4l5 5M5 20h14" /></svg>
+                              </span>
+                              <span class="fd-body">
+                                <span class="fd-name">اختر ملفًا أو اسحبه هنا</span>
+                                <span class="fd-hint">PDF, JPG, PNG, DOCX…</span>
+                              </span>
+                            }
+                          </label>
+                        </div>
+                      }
+                      <div class="si-fld full">
+                        <label>ملاحظات</label>
+                        <textarea
+                          [ngModel]="uploadNotes()"
+                          (ngModelChange)="uploadNotes.set($event)"
+                          placeholder="سبب الإصدار الجديد، ملاحظات اللجنة…"
+                        ></textarea>
+                      </div>
+                    </div>
+                    @if (uploadError()) {
+                      <div class="si-err">{{ uploadError() }}</div>
+                    }
+                    <div class="upload-foot">
+                      <button class="si-btn primary sm" [disabled]="uploading()" (click)="submitUpload()">
+                        @if (uploading()) { جاري الرفع… } @else { رفع الإصدار }
+                      </button>
+                      <button class="si-btn sm" (click)="closeUpload()">إلغاء</button>
+                    </div>
+                  </div>
+                }
+
+                <!-- الإصدارات -->
+                <div class="tbl-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>الإصدار</th><th>التاريخ</th><th>الملفات</th><th>ملاحظات</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (version of stageDetail()!.versions; track version.id) {
+                        <tr>
+                          <td class="tnum">
+                            {{ version.versionNumber }}
+                            @if (version.versionNumber === stageDetail()!.currentVersionNumber) {
+                              <span class="chip ok-chip">الحالي</span>
+                            }
+                          </td>
+                          <td>{{ dateStr(version.createdAt) }}</td>
+                          <td>
+                            <div class="files">
+                              @for (file of version.files; track file.key) {
+                                <button class="file-lnk" (click)="download(version, file.key, file.fileName)">
+                                  <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                                  {{ file.label }}
+                                  <span class="fsize tnum">({{ fileSize(file.fileSize) }})</span>
+                                </button>
+                              }
+                            </div>
+                          </td>
+                          <td class="notes">{{ version.notes || '—' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="4" class="empty">لا توجد إصدارات بعد — ارفع الإصدار الأول.</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
