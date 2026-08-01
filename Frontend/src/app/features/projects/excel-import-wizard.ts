@@ -330,6 +330,7 @@ export class ExcelImportWizard {
   }
 
   private loadExistingOptions(): void {
+    const token = this.requestToken;
     this.optionsLoading.set(true);
     forkJoin({
       markaz: this.lookupsService.getMarkaz(),
@@ -341,6 +342,7 @@ export class ExcelImportWizard {
       accountingUnit: this.lookupsService.getAccountingUnits(),
     }).subscribe({
       next: (result) => {
+        if (token !== this.requestToken) return;
         this.optionsLoading.set(false);
         const mainProgramNameById = new Map(result.mainProgram.map((p) => [p.id, p.name]));
         this.existingOptions.set({
@@ -354,6 +356,7 @@ export class ExcelImportWizard {
         });
       },
       error: () => {
+        if (token !== this.requestToken) return;
         this.optionsLoading.set(false);
         this.error.set('تعذّر تحميل القوائم الموجودة لخيار «ربط بموجود» — يمكنك المتابعة باستخدام «جديد» فقط');
       },
