@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.Interfaces;
@@ -14,6 +15,16 @@ public class ExcelImportParser : IExcelImportParser
         "المكوّن العيني", "بنك", "ذاتي", "الوحدة الحسابية",
     };
 
+    // Real-world plan files are typed without tashkeel (e.g. "المكون العيني") even though
+    // the reference header above carries a shadda ("المكوّن العيني") - matching is diacritic-
+    // insensitive so a missing/extra harakah doesn't block recognizing the file's columns.
+    private static readonly Regex ArabicDiacritics = new("[ً-ٰٟۖ-ۭ]", RegexOptions.Compiled);
+
+    private static readonly Dictionary<string, string> NormalizedToExpectedHeader =
+        ExpectedHeaders.ToDictionary(Normalize, h => h);
+
+    private static string Normalize(string text) => ArabicDiacritics.Replace(text, string.Empty).Trim();
+
     public ParsedImportFile Parse(Stream fileStream)
     {
         using var workbook = new XLWorkbook(fileStream);
@@ -29,10 +40,10 @@ public class ExcelImportParser : IExcelImportParser
         var headerRow = worksheet.Row(headerRowNumber);
         foreach (var cell in headerRow.CellsUsed())
         {
-            var text = cell.GetString().Trim();
-            if (ExpectedHeaders.Contains(text) && !columnIndexByHeader.ContainsKey(text))
+            var normalized = Normalize(cell.GetString());
+            if (NormalizedToExpectedHeader.TryGetValue(normalized, out var canonicalHeader) && !columnIndexByHeader.ContainsKey(canonicalHeader))
             {
-                columnIndexByHeader[text] = cell.Address.ColumnNumber;
+                columnIndexByHeader[canonicalHeader] = cell.Address.ColumnNumber;
             }
         }
 
@@ -102,8 +113,8 @@ public class ExcelImportParser : IExcelImportParser
         var lastRowToScan = Math.Min(10, worksheet.LastRowUsed()?.RowNumber() ?? 1);
         for (var rowNumber = 1; rowNumber <= lastRowToScan; rowNumber++)
         {
-            var texts = worksheet.Row(rowNumber).CellsUsed().Select(c => c.GetString().Trim()).ToHashSet();
-            if (ExpectedHeaders.All(h => texts.Contains(h)))
+            var normalizedTexts = worksheet.Row(rowNumber).CellsUsed().Select(c => Normalize(c.GetString())).ToHashSet();
+            if (NormalizedToExpectedHeader.Keys.All(normalizedTexts.Contains))
             {
                 return rowNumber;
             }
