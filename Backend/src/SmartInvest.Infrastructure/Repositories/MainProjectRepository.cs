@@ -42,4 +42,12 @@ public class MainProjectRepository : GenericRepository<MainProject>, IMainProjec
             x.MainProjectCode == code && (excludeId == null || x.MainProjectId != excludeId),
             cancellationToken);
     }
+
+    public async Task<IReadOnlyList<MainProject>> FindByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        var trimmed = name.Trim();
+        return await DbSet
+            .Where(x => x.MainProjectName == trimmed)
+            .ToListAsync(cancellationToken);
+    }
 }

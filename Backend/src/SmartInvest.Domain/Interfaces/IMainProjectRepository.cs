@@ -9,4 +9,6 @@ public interface IMainProjectRepository : IGenericRepository<MainProject>
     Task<MainProject?> GetWithSubProjectsAsync(int id, CancellationToken cancellationToken = default);
 
     Task<bool> CodeExistsAsync(string? code, int? excludeId = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MainProject>> FindByNameAsync(string name, CancellationToken cancellationToken = default);
 }

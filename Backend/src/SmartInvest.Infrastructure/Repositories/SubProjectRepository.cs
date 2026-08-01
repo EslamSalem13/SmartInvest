@@ -126,4 +126,12 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             x.SubProjectName == trimmed && (excludeId == null || x.SubProjectId != excludeId),
             cancellationToken);
     }
+
+    public async Task<IReadOnlyList<SubProject>> FindByNameWithinMainProjectAsync(string name, int mainProjectId, CancellationToken cancellationToken = default)
+    {
+        var trimmed = name.Trim();
+        return await DbSet
+            .Where(x => x.SubProjectName == trimmed && x.MainProjectId == mainProjectId)
+            .ToListAsync(cancellationToken);
+    }
 }

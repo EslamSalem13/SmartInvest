@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddSingleton<ImportSessionStore>();
         services.AddScoped<IExcelImportParser, ExcelImportParser>();
         services.AddScoped<SmartInvest.Application.Services.Import.SuggestedPlanImportService>();
+        services.AddScoped<SmartInvest.Application.Services.Import.ApprovedPlanImportService>();
         services.AddScoped<IMainProjectRepository, MainProjectRepository>();
         services.AddScoped<ISubProjectRepository, SubProjectRepository>();
         services.AddScoped<IProjectAssignmentRepository, ProjectAssignmentRepository>();
