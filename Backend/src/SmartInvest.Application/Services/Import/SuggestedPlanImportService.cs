@@ -104,24 +104,24 @@ public class SuggestedPlanImportService
 
         var markazIdByName = await ResolveMarkazAsync(dto.MarkazResolutions, cancellationToken);
         var mainProgramIdByName = await ResolveNamedLookupAsync(
-            dto.MainProgramResolutions, _mainProgramRepository, x => x.ProgramName,
+            dto.MainProgramResolutions, _mainProgramRepository, x => x.ProgramName, x => x.ProgramId,
             async name => (await _lookupService.CreateMainProgramAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
         var subProgramIdByName = await ResolveSubProgramAsync(dto.SubProgramResolutions, mainProgramIdByName, cancellationToken);
         var agencyIdByName = await ResolveNamedLookupAsync(
-            dto.AgencyResolutions, _agencyRepository, x => x.AgencyName,
+            dto.AgencyResolutions, _agencyRepository, x => x.AgencyName, x => x.ExecutiveAgencyId,
             async name => (await _agencyService.CreateAsync(new CreateExecutiveAgencyDto { AgencyName = name, Phone = string.Empty, Email = string.Empty, Address = string.Empty }, cancellationToken)).Id,
             cancellationToken);
         var projectLevelIdByName = await ResolveNamedLookupAsync(
-            dto.ProjectLevelResolutions, _projectLevelRepository, x => x.Name,
+            dto.ProjectLevelResolutions, _projectLevelRepository, x => x.Name, x => x.Id,
             async name => (await _lookupService.CreateProjectLevelAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
         var componentTypeIdByName = await ResolveNamedLookupAsync(
-            dto.ComponentTypeResolutions, _componentTypeRepository, x => x.Name,
+            dto.ComponentTypeResolutions, _componentTypeRepository, x => x.Name, x => x.Id,
             async name => (await _lookupService.CreateComponentTypeAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
         var accountingUnitIdByName = await ResolveNamedLookupAsync(
-            dto.AccountingUnitResolutions, _accountingUnitRepository, x => x.Name,
+            dto.AccountingUnitResolutions, _accountingUnitRepository, x => x.Name, x => x.Id,
             async name => (await _lookupService.CreateAccountingUnitAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
 
@@ -432,17 +432,16 @@ public class SuggestedPlanImportService
         List<ImportResolutionDto> resolutions,
         IGenericRepository<T> repository,
         Func<T, string> nameSelector,
+        Func<T, int> idSelector,
         Func<string, Task<int>> createNew,
         CancellationToken cancellationToken)
         where T : class
     {
         var existing = await repository.GetAllAsync(cancellationToken);
-        var idSelector = typeof(T).GetProperty("Id") ?? typeof(T).GetProperty($"{typeof(T).Name}Id");
         var result = new Dictionary<string, int>();
         foreach (var item in existing)
         {
-            var id = (int)idSelector!.GetValue(item)!;
-            result[nameSelector(item)] = id;
+            result[nameSelector(item)] = idSelector(item);
         }
 
         foreach (var resolution in resolutions.Where(r => r.CreateNew))
@@ -457,7 +456,7 @@ public class SuggestedPlanImportService
 
         foreach (var resolution in resolutions.Where(r => !r.CreateNew && r.ExistingId.HasValue))
         {
-            var match = existing.FirstOrDefault(x => (int)idSelector!.GetValue(x)! == resolution.ExistingId!.Value);
+            var match = existing.FirstOrDefault(x => idSelector(x) == resolution.ExistingId!.Value);
             if (match != null)
             {
                 result[resolution.Name.Trim()] = resolution.ExistingId!.Value;
