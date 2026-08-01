@@ -56,10 +56,14 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                         <span class="recon-count">({{ item.rowCount }} صف)</span>
                         <label class="recon-choice"><input type="radio" [name]="group.key + '-' + item.name" [checked]="isNew(group.key, item.name)" (change)="setNew(group.key, item.name)" /> جديد</label>
                         <label class="recon-choice"><input type="radio" [name]="group.key + '-' + item.name" [checked]="!isNew(group.key, item.name)" (change)="setExisting(group.key, item.name, existingIdFor(group.key, item.name))" /> ربط بموجود:</label>
-                        <select [ngModel]="existingIdFor(group.key, item.name)" (ngModelChange)="setExisting(group.key, item.name, $event)" [disabled]="isNew(group.key, item.name)" style="max-width:160px">
-                          <option [ngValue]="null">— اختر —</option>
-                          @for (opt of existingOptionsFor(group.key); track opt.id) {
-                            <option [ngValue]="opt.id">{{ opt.name }}</option>
+                        <select [ngModel]="existingIdFor(group.key, item.name)" (ngModelChange)="setExisting(group.key, item.name, $event)" [disabled]="isNew(group.key, item.name) || optionsLoading()" style="max-width:160px">
+                          @if (optionsLoading()) {
+                            <option [ngValue]="null">جارٍ التحميل…</option>
+                          } @else {
+                            <option [ngValue]="null">— اختر —</option>
+                            @for (opt of existingOptionsFor(group.key); track opt.id) {
+                              <option [ngValue]="opt.id">{{ opt.name }}</option>
+                            }
                           }
                         </select>
                       </div>
@@ -73,7 +77,7 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                   @for (conflict of s.mainProjectCodeConflicts; track conflict.code) {
                     <div class="recon-row">
                       <span class="recon-name">كود {{ conflict.code }}</span>
-                      @for (opt of conflict.options; track opt.mainProjectName) {
+                      @for (opt of conflict.options; track opt.mainProjectName + '|' + opt.mainProgramName) {
                         <label class="recon-choice">
                           <input type="radio" [name]="'code-' + conflict.code" [checked]="isCodeOption(conflict.code, opt)" (change)="chooseCodeOption(conflict.code, opt)" />
                           {{ opt.mainProjectName }} ({{ opt.mainProgramName }})
@@ -136,9 +140,10 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
               </button>
             }
             @if (step() === 'reconcile') {
-              <button class="si-btn primary" (click)="step.set('confirm')">التالي</button>
+              <button class="si-btn primary" (click)="goToConfirm()">التالي</button>
             }
             @if (step() === 'confirm') {
+              <button class="si-btn" (click)="step.set('reconcile')">رجوع</button>
               <button class="si-btn primary" [disabled]="committing()" (click)="submitCommit()">
                 @if (committing()) { جاري الحفظ… } @else { تأكيد الاستيراد }
               </button>
@@ -180,6 +185,7 @@ export class ExcelImportWizard {
   protected readonly result = signal<ImportCommitResult | null>(null);
   protected readonly approvalDate = signal<string>(ExcelImportWizard.today());
   protected readonly existingOptions = signal<Record<string, Lookup[]>>({});
+  protected readonly optionsLoading = signal(false);
 
   private readonly resolutions: Record<string, Map<string, ImportResolution>> = {
     markaz: new Map(), mainProgram: new Map(), subProgram: new Map(), agency: new Map(),
@@ -324,6 +330,7 @@ export class ExcelImportWizard {
   }
 
   private loadExistingOptions(): void {
+    this.optionsLoading.set(true);
     forkJoin({
       markaz: this.lookupsService.getMarkaz(),
       mainProgram: this.lookupsService.getMainPrograms(),
@@ -332,16 +339,24 @@ export class ExcelImportWizard {
       projectLevel: this.lookupsService.getProjectLevels(),
       componentType: this.lookupsService.getComponentTypes(),
       accountingUnit: this.lookupsService.getAccountingUnits(),
-    }).subscribe((result) => {
-      this.existingOptions.set({
-        markaz: result.markaz,
-        mainProgram: result.mainProgram,
-        subProgram: result.subProgram,
-        agency: result.agency.map((a) => ({ id: a.id, name: a.agencyName })),
-        projectLevel: result.projectLevel,
-        componentType: result.componentType,
-        accountingUnit: result.accountingUnit,
-      });
+    }).subscribe({
+      next: (result) => {
+        this.optionsLoading.set(false);
+        const mainProgramNameById = new Map(result.mainProgram.map((p) => [p.id, p.name]));
+        this.existingOptions.set({
+          markaz: result.markaz,
+          mainProgram: result.mainProgram,
+          subProgram: result.subProgram.map((sp) => ({ id: sp.id, name: `${sp.name} (${mainProgramNameById.get(sp.mainProgramId) ?? ''})` })),
+          agency: result.agency.map((a) => ({ id: a.id, name: a.agencyName })),
+          projectLevel: result.projectLevel,
+          componentType: result.componentType,
+          accountingUnit: result.accountingUnit,
+        });
+      },
+      error: () => {
+        this.optionsLoading.set(false);
+        this.error.set('تعذّر تحميل القوائم الموجودة لخيار «ربط بموجود» — يمكنك المتابعة باستخدام «جديد» فقط');
+      },
     });
   }
 
@@ -350,7 +365,7 @@ export class ExcelImportWizard {
     if (!preview) return null;
 
     if (preview.mode === 'Suggested') {
-      for (const [category, map] of Object.entries(this.resolutions)) {
+      for (const map of Object.values(this.resolutions)) {
         for (const resolution of map.values()) {
           if (!resolution.createNew && resolution.existingId == null) {
             return 'برجاء اختيار القيمة الموجودة لكل عنصر تم اختيار «ربط بموجود» له';
@@ -365,6 +380,16 @@ export class ExcelImportWizard {
       }
     }
     return null;
+  }
+
+  protected goToConfirm(): void {
+    const validationError = this.validateResolutions();
+    if (validationError) {
+      this.error.set(validationError);
+      return;
+    }
+    this.error.set(null);
+    this.step.set('confirm');
   }
 
   protected submitCommit(): void {
@@ -438,6 +463,7 @@ export class ExcelImportWizard {
     this.error.set(null);
     this.approvalDate.set(ExcelImportWizard.today());
     this.existingOptions.set({});
+    this.optionsLoading.set(false);
     for (const map of Object.values(this.resolutions)) map.clear();
     this.codeResolutions.clear();
     this.rowResolutions.clear();

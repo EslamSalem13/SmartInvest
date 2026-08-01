@@ -107,7 +107,13 @@ public class SuggestedPlanImportService
             dto.MainProgramResolutions, _mainProgramRepository, x => x.ProgramName, x => x.ProgramId,
             async name => (await _lookupService.CreateMainProgramAsync(new CreateNamedLookupDto { Name = name }, cancellationToken)).Id,
             cancellationToken);
-        var subProgramIdByName = await ResolveSubProgramAsync(dto.SubProgramResolutions, mainProgramIdByName, cancellationToken);
+        var mainProjectGroups = GroupByMainProject(file.Rows, DetectCodeConflicts(file.Rows), dto.MainProjectCodeResolutions);
+        var neededSubProgramPairs = mainProjectGroups
+            .Where(g => mainProgramIdByName.ContainsKey(g.MainProgramName))
+            .Select(g => (MainProgramId: mainProgramIdByName[g.MainProgramName], SubProgramName: g.Rows[0].SubProgramName.Trim()))
+            .Distinct()
+            .ToList();
+        var subProgramIdByName = await ResolveSubProgramAsync(dto.SubProgramResolutions, neededSubProgramPairs, cancellationToken);
         var agencyIdByName = await ResolveNamedLookupAsync(
             dto.AgencyResolutions, _agencyRepository, x => x.AgencyName, x => x.ExecutiveAgencyId,
             async name => (await _agencyService.CreateAsync(new CreateExecutiveAgencyDto { AgencyName = name, Phone = string.Empty, Email = string.Empty, Address = string.Empty }, cancellationToken)).Id,
@@ -129,8 +135,6 @@ public class SuggestedPlanImportService
             ?? throw new BusinessRuleException("أولوية «منخفضة» الافتراضية غير موجودة في قاعدة البيانات");
         var defaultStatusId = (await _statusRepository.FirstOrDefaultAsync(x => x.StatusName == "جديد", cancellationToken))?.StatusId
             ?? throw new BusinessRuleException("حالة «جديد» الافتراضية غير موجودة في قاعدة البيانات");
-
-        var mainProjectGroups = GroupByMainProject(file.Rows, DetectCodeConflicts(file.Rows), dto.MainProjectCodeResolutions);
 
         var result = new ImportCommitResultDto { Mode = "Suggested" };
         var createdSubProjects = new List<SubProject>();
@@ -397,7 +401,7 @@ public class SuggestedPlanImportService
     }
 
     private async Task<Dictionary<(int MainProgramId, string SubProgramName), int>> ResolveSubProgramAsync(
-        List<ImportResolutionDto> resolutions, Dictionary<string, int> mainProgramIdByName, CancellationToken cancellationToken)
+        List<ImportResolutionDto> resolutions, List<(int MainProgramId, string SubProgramName)> neededPairs, CancellationToken cancellationToken)
     {
         var existing = await _subProgramRepository.GetAllAsync(cancellationToken);
         var result = existing.ToDictionary(x => (x.ProgramId, x.SubProgramName), x => x.SubProgramId);
@@ -405,7 +409,10 @@ public class SuggestedPlanImportService
         foreach (var resolution in resolutions.Where(r => r.CreateNew))
         {
             var name = resolution.Name.Trim();
-            foreach (var mainProgramId in mainProgramIdByName.Values.Distinct())
+            // Only create under the main program(s) this import file actually pairs this
+            // sub-program name with - not every main program in the database (that used to
+            // fan out one duplicate sub-program row per unrelated existing main program).
+            foreach (var mainProgramId in neededPairs.Where(p => p.SubProgramName == name).Select(p => p.MainProgramId).Distinct())
             {
                 if (result.ContainsKey((mainProgramId, name)))
                 {
@@ -419,9 +426,24 @@ public class SuggestedPlanImportService
         foreach (var resolution in resolutions.Where(r => !r.CreateNew && r.ExistingId.HasValue))
         {
             var match = existing.FirstOrDefault(x => x.SubProgramId == resolution.ExistingId!.Value);
-            if (match != null)
+            if (match == null)
             {
-                result[(match.ProgramId, resolution.Name.Trim())] = match.SubProgramId;
+                continue;
+            }
+            var name = resolution.Name.Trim();
+            // Staff explicitly chose to map this unresolved name to an existing sub-program
+            // regardless of that sub-program's own parent main program - key the mapping by
+            // every main program this file's rows actually need it under (falling back to the
+            // match's own parent if the file happens not to reference any group needing it,
+            // e.g. all rows for that name were rejected earlier for an unrelated reason).
+            var targetProgramIds = neededPairs.Where(p => p.SubProgramName == name).Select(p => p.MainProgramId).Distinct().ToList();
+            if (targetProgramIds.Count == 0)
+            {
+                targetProgramIds.Add(match.ProgramId);
+            }
+            foreach (var mainProgramId in targetProgramIds)
+            {
+                result[(mainProgramId, name)] = match.SubProgramId;
             }
         }
 
