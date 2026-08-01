@@ -150,8 +150,8 @@ public class ApprovedPlanImportService
                             IsApproved = true,
                         };
                         await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
                         mainProjectCreatedHere = true;
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
                         result.MainProjectsCreated++;
                     }
 
