@@ -20,6 +20,7 @@ public class ApprovedPlanImportService
     private readonly IGenericRepository<ProjectLevel> _projectLevelRepository;
     private readonly IGenericRepository<ComponentType> _componentTypeRepository;
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
+    private readonly IGenericRepository<ExecutiveAgency> _agencyRepository;
     private readonly ISubProjectService _subProjectService;
     private readonly IPlanRepo _planRepo;
     private readonly IPlanService _planService;
@@ -37,6 +38,7 @@ public class ApprovedPlanImportService
         IGenericRepository<ProjectLevel> projectLevelRepository,
         IGenericRepository<ComponentType> componentTypeRepository,
         IGenericRepository<AccountingUnit> accountingUnitRepository,
+        IGenericRepository<ExecutiveAgency> agencyRepository,
         ISubProjectService subProjectService,
         IPlanRepo planRepo,
         IPlanService planService,
@@ -53,6 +55,7 @@ public class ApprovedPlanImportService
         _projectLevelRepository = projectLevelRepository;
         _componentTypeRepository = componentTypeRepository;
         _accountingUnitRepository = accountingUnitRepository;
+        _agencyRepository = agencyRepository;
         _subProjectService = subProjectService;
         _planRepo = planRepo;
         _planService = planService;
@@ -122,6 +125,19 @@ public class ApprovedPlanImportService
         var fallbackSubProgramId = allSubPrograms.FirstOrDefault()?.SubProgramId
             ?? throw new BusinessRuleException("لا يوجد أي برنامج فرعي في قاعدة البيانات لإنشاء مشروع رئيسي جديد عليه");
 
+        // Same idea for the row's own ProjectLevel/ComponentType/AccountingUnit/ExecutiveAgency text -
+        // resolve by exact name so a newly-created sub-project reflects what the file actually says
+        // instead of always landing on "غير محدد". Unlike Markaz/SubProgram these three lookups DO
+        // seed a real "غير محدد" sentinel, so that's the fallback (ExecutiveAgency has none - stays null).
+        var projectLevelIdByName = (await _projectLevelRepository.GetAllAsync(cancellationToken))
+            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+        var componentTypeIdByName = (await _componentTypeRepository.GetAllAsync(cancellationToken))
+            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+        var accountingUnitIdByName = (await _accountingUnitRepository.GetAllAsync(cancellationToken))
+            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+        var agencyIdByName = (await _agencyRepository.GetAllAsync(cancellationToken))
+            .GroupBy(x => x.AgencyName.Trim()).ToDictionary(g => g.Key, g => g.First().ExecutiveAgencyId);
+
         var result = new ImportCommitResultDto { Mode = "Approved" };
         var approvedSubProjectIds = new List<int>();
 
@@ -180,15 +196,16 @@ public class ApprovedPlanImportService
                         SubProjectCode = row.SubProjectCode.Trim(),
                         IsApproved = true,
                         ApprovedAt = approvalDate,
-                        ProjectLevelId = unspecifiedProjectLevelId,
-                        ComponentTypeId = unspecifiedComponentTypeId,
-                        AccountingUnitId = unspecifiedAccountingUnitId,
+                        ProjectLevelId = projectLevelIdByName.TryGetValue(row.ProjectLevelName.Trim(), out var resolvedProjectLevelId) ? resolvedProjectLevelId : unspecifiedProjectLevelId,
+                        ComponentTypeId = componentTypeIdByName.TryGetValue(row.ComponentTypeName.Trim(), out var resolvedComponentTypeId) ? resolvedComponentTypeId : unspecifiedComponentTypeId,
+                        AccountingUnitId = accountingUnitIdByName.TryGetValue(row.AccountingUnitName.Trim(), out var resolvedAccountingUnitId) ? resolvedAccountingUnitId : unspecifiedAccountingUnitId,
+                        ExecutiveAgencyId = agencyIdByName.TryGetValue(row.ExecutiveAgencyName.Trim(), out var resolvedAgencyId) ? resolvedAgencyId : null,
                         ProjectNature = string.Empty,
                         MarkazId = markazIdByName.TryGetValue(row.MarkazName.Trim(), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
                         PriorityId = defaultPriorityId,
                         StatusId = runningStatusId,
-                        BankFunding = 0,
-                        SelfFunding = 0,
+                        BankFunding = row.BankFunding,
+                        SelfFunding = row.SelfFunding,
                     };
                     await _subProjectRepository.AddAsync(subProject, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
