@@ -17,6 +17,7 @@ import {
 } from '../../core/models/project.models';
 import { MainProjectForm } from './main-project-form';
 import { SubProjectForm, LockedParent } from './sub-project-form';
+import { ExcelImportWizard } from './excel-import-wizard';
 
 interface MainWithSubs {
   main: MainProjectListItem;
@@ -25,7 +26,7 @@ interface MainWithSubs {
 
 @Component({
   selector: 'app-projects',
-  imports: [FormsModule, RouterLink, MainProjectForm, SubProjectForm],
+  imports: [FormsModule, RouterLink, MainProjectForm, SubProjectForm, ExcelImportWizard],
   templateUrl: './projects.html',
   styleUrl: './projects.css',
 })
@@ -180,6 +181,7 @@ export class Projects {
   protected readonly subEdit = signal<SubProjectListItem | null>(null);
   protected readonly subLocked = signal<LockedParent | null>(null);
   protected readonly addMenuOpen = signal(false);
+  protected readonly showImportWizard = signal(false);
 
   constructor() {
     this.loadFinancialYears();
@@ -267,6 +269,9 @@ export class Projects {
   protected openEditSub(s: SubProjectListItem): void { this.subEdit.set(s); this.subLocked.set(null); this.showSubForm.set(true); }
   protected closeModals(): void { this.showMainForm.set(false); this.showSubForm.set(false); }
   protected onSaved(): void { this.closeModals(); this.load(); }
+  protected openImportExcel(): void { this.addMenuOpen.set(false); this.showImportWizard.set(true); }
+  protected closeImportWizard(): void { this.showImportWizard.set(false); }
+  protected onImportSaved(): void { this.showImportWizard.set(false); this.load(); }
 
   protected deleteMain(m: MainProjectListItem): void {
     if (!confirm(`تأكيد حذف المشروع الرئيسي «${m.name}»؟`)) return;
