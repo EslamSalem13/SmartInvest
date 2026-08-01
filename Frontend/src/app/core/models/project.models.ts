@@ -401,3 +401,100 @@ export interface SetMeasurementValue {
   unitId: number | null;
   value: number | null;
 }
+
+export interface UnresolvedName {
+  name: string;
+  rowCount: number;
+}
+
+export interface MainProjectCodeConflictOption {
+  mainProjectName: string;
+  mainProgramName: string;
+}
+
+export interface MainProjectCodeConflict {
+  code: string;
+  options: MainProjectCodeConflictOption[];
+}
+
+export interface SuggestedImportPreview {
+  mainProjectCount: number;
+  subProjectCount: number;
+  unresolvedMarkaz: UnresolvedName[];
+  unresolvedMainPrograms: UnresolvedName[];
+  unresolvedSubPrograms: UnresolvedName[];
+  unresolvedAgencies: UnresolvedName[];
+  unresolvedProjectLevels: UnresolvedName[];
+  unresolvedComponentTypes: UnresolvedName[];
+  unresolvedAccountingUnits: UnresolvedName[];
+  mainProjectCodeConflicts: MainProjectCodeConflict[];
+}
+
+export interface UnresolvedImportRow {
+  rowIndex: number;
+  mainProjectName: string;
+  subProjectName: string;
+  code: string;
+}
+
+export interface ApprovedImportPreview {
+  matchedCount: number;
+  unresolvedRows: UnresolvedImportRow[];
+}
+
+export interface ImportPreviewResult {
+  importId: string;
+  mode: 'Suggested' | 'Approved';
+  suggested: SuggestedImportPreview | null;
+  approved: ApprovedImportPreview | null;
+}
+
+export interface ImportResolution {
+  name: string;
+  createNew: boolean;
+  existingId: number | null;
+}
+
+export interface MainProjectCodeResolution {
+  code: string;
+  chosenMainProjectName: string;
+  chosenMainProgramName: string;
+}
+
+export interface ImportRowResolution {
+  rowIndex: number;
+  createNew: boolean;
+  existingSubProjectId: number | null;
+}
+
+export interface ImportCommit {
+  importId: string;
+  financialYearId: number;
+  approvalDate?: string | null;
+  markazResolutions: ImportResolution[];
+  mainProgramResolutions: ImportResolution[];
+  subProgramResolutions: ImportResolution[];
+  agencyResolutions: ImportResolution[];
+  projectLevelResolutions: ImportResolution[];
+  componentTypeResolutions: ImportResolution[];
+  accountingUnitResolutions: ImportResolution[];
+  mainProjectCodeResolutions: MainProjectCodeResolution[];
+  rowResolutions: ImportRowResolution[];
+}
+
+export interface ImportRowFailure {
+  name: string;
+  reason: string;
+}
+
+export interface ImportCommitResult {
+  mode: 'Suggested' | 'Approved';
+  mainProjectsCreated: number;
+  subProjectsCreated: number;
+  subProjectsApproved: number;
+  subProjectsCreatedAndApproved: number;
+  failed: ImportRowFailure[];
+  planId: number;
+  planName: string;
+  planStatus: string;
+}

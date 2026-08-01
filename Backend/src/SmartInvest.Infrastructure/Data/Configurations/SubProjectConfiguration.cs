@@ -11,8 +11,10 @@ public class SubProjectConfiguration : IEntityTypeConfiguration<SubProject>
         // كود المشروع الفرعي: مسموح تكراره — فهرس عادي (غير فريد) للبحث فقط
         builder.HasIndex(x => x.SubProjectCode);
 
-        // اسم المشروع الفرعي: فريد على مستوى قاعدة البيانات
-        builder.HasIndex(x => x.SubProjectName)
+        // اسم المشروع الفرعي: فريد ضمن نفس المشروع الرئيسي فقط (وليس على مستوى قاعدة البيانات كاملة —
+        // إعادة استيراد نفس الملف تُنشئ مشروعات رئيسية جديدة في كل مرة، فتتكرر أسماء المشروعات الفرعية
+        // بشكل شرعي تحت مشروعات رئيسية مختلفة)
+        builder.HasIndex(x => new { x.MainProjectId, x.SubProjectName })
                .IsUnique();
 
         // منع الـ cascade delete اللي ممكن يمسح بيانات التخطيط بالغلط (مطلب في الـ Master Prompt)

@@ -25,6 +25,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .menu .mi { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 11px; }
 .menu .mi.main { background: var(--green-700); color: #fff; }
 .menu .mi.sub { background: var(--gold); color: #2A2107; }
+.menu .mi.import { background: #2F6FED; color: #fff; }
 
 /* المؤشرات */
 .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }

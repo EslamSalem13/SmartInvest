@@ -60,7 +60,13 @@
                     Query = Query.Where(p => p.PlanName == PlanName);
                 }
              return Query.ToList();
-          }     
+          }
+            public Plan? GetByFinancialYearAndStatus(int financialYearId, PlanStatus status)
+            {
+                return Context.Plans
+                    .Include(p => p.FinancialYear)
+                    .FirstOrDefault(p => p.FinancialYearId == financialYearId && p.PlanStatus == status);
+            }
             public async Task AddExistingProject(int PlanId, int ProjectId)
             {
                 var project = await Context.SubProjects.FindAsync(ProjectId);

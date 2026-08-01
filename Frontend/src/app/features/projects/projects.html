@@ -30,6 +30,7 @@
         <div class="menu">
           <button (click)="openAddMain()"><span class="mi main">◆</span> مشروع رئيسي</button>
           <button (click)="openAddSub()"><span class="mi sub">◆</span> مشروع فرعي</button>
+          <button (click)="openImportExcel()"><span class="mi import">◆</span> استيراد من Excel</button>
         </div>
       }
     </div>
@@ -200,6 +201,7 @@
   <!-- Modals -->
   <app-main-project-form [open]="showMainForm()" [edit]="mainEdit()" (close)="closeModals()" (saved)="onSaved()" (delete)="deleteMain(mainEdit()!)" />
   <app-sub-project-form [open]="showSubForm()" [edit]="subEdit()" [locked]="subLocked()" [mains]="mains()" [defaultYearId]="selectedYearId()" (close)="closeModals()" (saved)="onSaved()" (delete)="deleteSub(subEdit()!)" />
+  <app-excel-import-wizard [open]="showImportWizard()" [financialYearId]="selectedYearId()" (close)="closeImportWizard()" (saved)="onImportSaved()" />
 
   <!-- نافذة إضافة سنة مالية -->
   @if (showAddYearForm()) {

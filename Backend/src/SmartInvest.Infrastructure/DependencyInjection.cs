@@ -4,10 +4,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Application.Services;
+using SmartInvest.Application.Services.Import;
 using SmartInvest.Domain.Interfaces;
 using SmartInvest.Infrastructure.Data;
 using SmartInvest.Infrastructure.Identity;
 using SmartInvest.Infrastructure.Repositories;
+using SmartInvest.Infrastructure.Services;
 
 namespace SmartInvest.Infrastructure;
 
@@ -37,6 +39,12 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddMemoryCache();
+        services.AddSingleton<ImportSessionStore>();
+        services.AddScoped<IExcelImportParser, ExcelImportParser>();
+        services.AddScoped<SmartInvest.Application.Services.Import.SuggestedPlanImportService>();
+        services.AddScoped<SmartInvest.Application.Services.Import.ApprovedPlanImportService>();
+        services.AddScoped<IImportService, ImportService>();
         services.AddScoped<IMainProjectRepository, MainProjectRepository>();
         services.AddScoped<ISubProjectRepository, SubProjectRepository>();
         services.AddScoped<IProjectAssignmentRepository, ProjectAssignmentRepository>();

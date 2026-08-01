@@ -22,6 +22,7 @@ public class SubProjectService : ISubProjectService
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IGenericRepository<SubProjectFinancialYear> _financialYearLinkRepository;
     private readonly IGenericRepository<ProjectFollowUp> _followUpRepository;
+    private readonly IGenericRepository<PlanProject> _planProjectRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -38,6 +39,7 @@ public class SubProjectService : ISubProjectService
         IGenericRepository<AccountingUnit> accountingUnitRepository,
         IGenericRepository<SubProjectFinancialYear> financialYearLinkRepository,
         IGenericRepository<ProjectFollowUp> followUpRepository,
+        IGenericRepository<PlanProject> planProjectRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
@@ -53,6 +55,7 @@ public class SubProjectService : ISubProjectService
         _accountingUnitRepository = accountingUnitRepository;
         _financialYearLinkRepository = financialYearLinkRepository;
         _followUpRepository = followUpRepository;
+        _planProjectRepository = planProjectRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -89,9 +92,9 @@ public class SubProjectService : ISubProjectService
         await ValidateReferencesAsync(dto.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, dto.ProjectLevelId, dto.ComponentTypeId, dto.AccountingUnitId, cancellationToken);
 
         var name = (dto.Name ?? string.Empty).Trim();
-        if (await _subProjectRepository.NameExistsAsync(name, null, cancellationToken))
+        if (await _subProjectRepository.NameExistsAsync(name, dto.MainProjectId, null, cancellationToken))
         {
-            throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل");
+            throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل ضمن هذا المشروع الرئيسي");
         }
 
         var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
@@ -119,9 +122,9 @@ public class SubProjectService : ISubProjectService
         await ValidateReferencesAsync(subProject.MainProjectId, dto.MarkazId, dto.PriorityId, dto.StatusId, dto.ProjectLevelId, dto.ComponentTypeId, dto.AccountingUnitId, cancellationToken);
 
         var name = (dto.Name ?? string.Empty).Trim();
-        if (await _subProjectRepository.NameExistsAsync(name, id, cancellationToken))
+        if (await _subProjectRepository.NameExistsAsync(name, subProject.MainProjectId, id, cancellationToken))
         {
-            throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل");
+            throw new BusinessRuleException("اسم المشروع الفرعي مستخدم بالفعل ضمن هذا المشروع الرئيسي");
         }
 
         var code = string.IsNullOrWhiteSpace(dto.Code) ? null : dto.Code.Trim();
@@ -220,6 +223,12 @@ public class SubProjectService : ISubProjectService
         foreach (var link in financialYearLinks)
         {
             _financialYearLinkRepository.Remove(link);
+        }
+
+        var planProjectLinks = await _planProjectRepository.FindAsync(x => x.SubProjectId == id, cancellationToken);
+        foreach (var link in planProjectLinks)
+        {
+            _planProjectRepository.Remove(link);
         }
 
         _subProjectRepository.Remove(subProject);

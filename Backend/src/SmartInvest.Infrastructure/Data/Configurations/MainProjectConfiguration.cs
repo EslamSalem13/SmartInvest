@@ -11,9 +11,7 @@ namespace SmartInvest.Infrastructure.Data.Configurations
     {
         public void Configure(EntityTypeBuilder<MainProject> builder)
         {
-            builder.HasIndex(x => x.MainProjectCode)
-           .IsUnique()
-           .HasFilter("[MainProjectCode] IS NOT NULL");
+            builder.HasIndex(x => x.MainProjectCode);
 
             builder.Property(x => x.IsApproved)
            .HasDefaultValue(true);
