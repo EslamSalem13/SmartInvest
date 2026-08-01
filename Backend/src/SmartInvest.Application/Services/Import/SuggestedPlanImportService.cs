@@ -156,7 +156,7 @@ public class SuggestedPlanImportService
                 continue;
             }
 
-            MainProject mainProject;
+            MainProject? mainProject = null;
             try
             {
                 mainProject = new MainProject
@@ -178,11 +178,21 @@ public class SuggestedPlanImportService
                 {
                     result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = ex.Message });
                 }
+
+                // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
+                // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
+                // mislabeling the next group as failed for the same reason.
+                if (mainProject is not null)
+                {
+                    _mainProjectRepository.Remove(mainProject);
+                }
+
                 continue;
             }
 
             foreach (var row in group.Rows)
             {
+                SubProject? subProject = null;
                 try
                 {
                     if (!markazIdByName.TryGetValue(row.MarkazName.Trim(), out var markazId))
@@ -210,7 +220,7 @@ public class SuggestedPlanImportService
                         throw new BusinessRuleException($"الوحدة الحسابية «{row.AccountingUnitName}» غير محلولة");
                     }
 
-                    var subProject = new SubProject
+                    subProject = new SubProject
                     {
                         MainProjectId = mainProject.MainProjectId,
                         SubProjectName = row.SubProjectName.Trim(),
@@ -236,6 +246,14 @@ public class SuggestedPlanImportService
                 catch (Exception ex)
                 {
                     result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = ex.Message });
+
+                    // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
+                    // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
+                    // mislabeling the next row as failed for the same reason.
+                    if (subProject is not null)
+                    {
+                        _subProjectRepository.Remove(subProject);
+                    }
                 }
             }
         }
