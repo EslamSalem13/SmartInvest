@@ -16,7 +16,16 @@ public class UserDto
 
     public bool IsActive { get; set; }
 
+    public bool HasAvatar { get; set; }
+
     public DateTime CreatedAt { get; set; }
+}
+
+public class AvatarDto
+{
+    public byte[] Content { get; set; } = Array.Empty<byte>();
+
+    public string ContentType { get; set; } = string.Empty;
 }
 
 public class CreateEmployeeDto

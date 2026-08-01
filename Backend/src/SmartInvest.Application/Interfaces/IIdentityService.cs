@@ -15,4 +15,8 @@ public interface IIdentityService
     Task SetActiveStatusAsync(string userId, bool isActive, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<UserDto>> GetUsersAsync(CancellationToken cancellationToken = default);
+
+    Task UpdateAvatarAsync(string userId, byte[] content, string contentType, CancellationToken cancellationToken = default);
+
+    Task<AvatarDto?> GetAvatarAsync(string userId, CancellationToken cancellationToken = default);
 }

@@ -18,6 +18,7 @@ export interface AuthResult {
   fullName: string;
   email: string;
   role: string;
+  hasAvatar: boolean;
 }
 
 export interface CurrentUser {
@@ -25,4 +26,5 @@ export interface CurrentUser {
   fullName: string;
   email: string;
   role: string;
+  hasAvatar: boolean;
 }
