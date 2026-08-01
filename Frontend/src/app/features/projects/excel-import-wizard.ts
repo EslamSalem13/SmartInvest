@@ -96,7 +96,7 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 @if (preview()?.mode === 'Suggested') {
                   سيتم إنشاء {{ preview()?.suggested?.mainProjectCount }} مشروع رئيسي و{{ preview()?.suggested?.subProjectCount }} مشروع فرعي ضمن خطة مقترحة للسنة المالية المحددة.
                 } @else {
-                  سيتم اعتماد {{ preview()?.approved?.matchedCount }} مشروع مطابق.
+                  سيتم اعتماد {{ preview()?.approved?.matchedCount }} مشروع مطابق، وإنشاء واعتماد {{ pendingCreateNewCount() }} مشروع جديد.
                 }
               </p>
               @if (preview()?.mode === 'Approved') {
@@ -215,6 +215,10 @@ export class ExcelImportWizard {
     this.rowResolutions.set(rowIndex, { rowIndex, createNew: false, existingSubProjectId: subProjectId });
   }
 
+  protected pendingCreateNewCount(): number {
+    return [...this.rowResolutions.values()].filter((r) => r.createNew).length;
+  }
+
   protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.selectedFile.set(input.files?.[0] ?? null);
@@ -230,6 +234,9 @@ export class ExcelImportWizard {
       next: (result) => {
         this.uploading.set(false);
         this.preview.set(result);
+        for (const row of result.approved?.unresolvedRows ?? []) {
+          this.setRowCreateNew(row.rowIndex);
+        }
         this.step.set('reconcile');
       },
       error: (err) => {
