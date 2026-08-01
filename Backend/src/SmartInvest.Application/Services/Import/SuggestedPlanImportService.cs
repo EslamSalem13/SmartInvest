@@ -137,7 +137,7 @@ public class SuggestedPlanImportService
 
         foreach (var group in mainProjectGroups)
         {
-            if (!mainProgramIdByName.TryGetValue(group.Rows[0].MainProgramName.Trim(), out var mainProgramId))
+            if (!mainProgramIdByName.TryGetValue(group.MainProgramName, out var mainProgramId))
             {
                 foreach (var row in group.Rows)
                 {
@@ -156,18 +156,30 @@ public class SuggestedPlanImportService
                 continue;
             }
 
-            var mainProject = new MainProject
+            MainProject mainProject;
+            try
             {
-                MainProjectCode = string.IsNullOrWhiteSpace(group.Code) ? null : group.Code,
-                MainProjectName = group.MainProjectName,
-                ExecutingAgency = string.Empty,
-                SubProgramId = subProgramId,
-                IsApproved = false,
-            };
+                mainProject = new MainProject
+                {
+                    MainProjectCode = string.IsNullOrWhiteSpace(group.Code) ? null : group.Code,
+                    MainProjectName = group.MainProjectName,
+                    ExecutingAgency = string.Empty,
+                    SubProgramId = subProgramId,
+                    IsApproved = false,
+                };
 
-            await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-            result.MainProjectsCreated++;
+                await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                result.MainProjectsCreated++;
+            }
+            catch (Exception ex)
+            {
+                foreach (var row in group.Rows)
+                {
+                    result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = ex.Message });
+                }
+                continue;
+            }
 
             foreach (var row in group.Rows)
             {
@@ -290,6 +302,7 @@ public class SuggestedPlanImportService
     {
         public string Code { get; set; } = string.Empty;
         public string MainProjectName { get; set; } = string.Empty;
+        public string MainProgramName { get; set; } = string.Empty;
         public List<ParsedImportRow> Rows { get; set; } = new();
     }
 
@@ -320,8 +333,11 @@ public class SuggestedPlanImportService
                 var name = resolutionByCode.TryGetValue(code, out var resolution)
                     ? resolution.ChosenMainProjectName.Trim()
                     : first.MainProjectName.Trim();
+                var programName = resolutionByCode.TryGetValue(code, out var programResolution)
+                    ? programResolution.ChosenMainProgramName.Trim()
+                    : first.MainProgramName.Trim();
 
-                return new MainProjectGroup { Code = code, MainProjectName = name, Rows = g.ToList() };
+                return new MainProjectGroup { Code = code, MainProjectName = name, MainProgramName = programName, Rows = g.ToList() };
             })
             .ToList();
     }
