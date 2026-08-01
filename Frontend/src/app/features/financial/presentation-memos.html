@@ -1,0 +1,250 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>مذكرات العرض</h1>
+      <p>مذكرة العرض قد تغطي أكثر من مشروع فرعي — وكل تعديل يعني إصدارًا جديدًا</p>
+    </div>
+    @if (isStaff()) {
+      <button class="si-btn primary" (click)="openCreate()">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+        مذكرة عرض جديدة
+      </button>
+    }
+    <a class="si-btn" routerLink="/app/financial">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 6l6 6-6 6" /></svg>
+      رجوع للإدارة المالية
+    </a>
+  </header>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else {
+    <div class="memo-filters">
+      <div class="filter-tabs">
+        <button class="ftab" [class.on]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
+          الكل <span class="fcount tnum">{{ countAll() }}</span>
+        </button>
+        <button class="ftab" [class.on]="statusFilter() === 'not-started'" (click)="statusFilter.set('not-started')">
+          لم تبدأ <span class="fcount tnum">{{ countNotStarted() }}</span>
+        </button>
+        <button class="ftab" [class.on]="statusFilter() === 'active'" (click)="statusFilter.set('active')">
+          جارية <span class="fcount tnum">{{ countActive() }}</span>
+        </button>
+        <button class="ftab" [class.on]="statusFilter() === 'completed'" (click)="statusFilter.set('completed')">
+          مكتملة <span class="fcount tnum">{{ countCompleted() }}</span>
+        </button>
+      </div>
+      <input
+        class="search"
+        placeholder="بحث بعنوان المذكرة أو اسم/كود المشروع…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+      />
+    </div>
+
+    <div class="stages">
+      @for (memo of filteredMemos(); track memo.id) {
+        <div class="stage-card" [class.open]="openMemoId() === memo.id">
+          <button class="stage-head" (click)="toggleMemo(memo)">
+            <span class="n" [class.done]="memo.isCompleted">م</span>
+            <span class="stage-title">{{ memo.title }}</span>
+            <span class="chip st" [class.ok-chip]="memo.isCompleted" [class.warn-chip]="memoStatus(memo) === 'active'">
+              {{ memoStatusLabel(memo) }}
+            </span>
+            <span class="vers tnum">{{ memo.subProjects.length }} مشروع</span>
+            <span class="grow"></span>
+            <span class="arrow" [class.rot]="openMemoId() === memo.id">▾</span>
+          </button>
+
+          @if (openMemoId() === memo.id) {
+            <div class="stage-body">
+              @if (detailLoading()) {
+                <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+              } @else if (memoDetail()) {
+                <div class="memo-subs">
+                  <span class="lbl">المشروعات المغطاة:</span>
+                  @for (sub of memoDetail()!.subProjects; track sub.subProjectId) {
+                    <a class="memo-chip" [routerLink]="['/app/financial', sub.subProjectId]">
+                      {{ sub.subProjectName }}
+                      @if (sub.subProjectCode) { <span class="tnum">({{ sub.subProjectCode }})</span> }
+                    </a>
+                  }
+                </div>
+
+                @if (isStaff()) {
+                  <div class="stage-actions">
+                    @if (!memoDetail()!.isCompleted) {
+                      <button class="si-btn primary sm" (click)="openUploadForm()">
+                        <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+                        رفع إصدار جديد
+                      </button>
+                      <button class="si-btn sm" (click)="openEdit(memo)">تعديل البيانات</button>
+                      @if (memoDetail()!.currentVersionNumber > 0) {
+                        <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المذكرة</button>
+                      }
+                    } @else {
+                      <span class="si-note-inline">المذكرة مكتملة — للقراءة فقط.</span>
+                      @if (isManager()) {
+                        <button class="si-btn sm" [disabled]="busy()" (click)="reopen()">إعادة فتح</button>
+                      }
+                    }
+                    @if (isManager() && memoDetail()!.currentVersionNumber === 0) {
+                      <button class="si-btn sm danger" (click)="deleteMemo(memo)">حذف</button>
+                    }
+                  </div>
+                }
+
+                @if (showUpload()) {
+                  <div class="upload-form">
+                    <div class="si-grid">
+                      <div class="si-fld full">
+                        <label>ملف مذكرة العرض <span class="req">*</span></label>
+                        <label
+                          class="file-drop"
+                          [class.has-file]="!!uploadFile()"
+                          [class.drag-over]="dragOverMemoFile()"
+                          for="memo-file-input"
+                          (dragover)="onMemoDragOver($event)"
+                          (dragleave)="onMemoDragLeave()"
+                          (drop)="onMemoDrop($event)"
+                        >
+                          <input type="file" id="memo-file-input" class="file-drop-input" (change)="onFilePicked($event)" />
+                          @if (uploadFile(); as file) {
+                            <span class="fd-icon ok">
+                              <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5" /></svg>
+                            </span>
+                            <span class="fd-body">
+                              <span class="fd-name">{{ file.name }}</span>
+                              <span class="fd-hint tnum">{{ fileSize(file.size) }}</span>
+                            </span>
+                            <button type="button" class="fd-clear" title="إزالة الملف" (click)="clearMemoFile($event)">×</button>
+                          } @else {
+                            <span class="fd-icon">
+                              <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M12 4 7 9M12 4l5 5M5 20h14" /></svg>
+                            </span>
+                            <span class="fd-body">
+                              <span class="fd-name">اختر ملفًا أو اسحبه هنا</span>
+                              <span class="fd-hint">PDF, JPG, PNG, DOCX…</span>
+                            </span>
+                          }
+                        </label>
+                      </div>
+                      <div class="si-fld full">
+                        <label>ملاحظات</label>
+                        <textarea
+                          [ngModel]="uploadNotes()"
+                          (ngModelChange)="uploadNotes.set($event)"
+                          placeholder="سبب الإصدار الجديد…"
+                        ></textarea>
+                      </div>
+                    </div>
+                    @if (uploadError()) {
+                      <div class="si-err">{{ uploadError() }}</div>
+                    }
+                    <div class="upload-foot">
+                      <button class="si-btn primary sm" [disabled]="uploading()" (click)="submitUpload()">
+                        @if (uploading()) { جاري الرفع… } @else { رفع الإصدار }
+                      </button>
+                      <button class="si-btn sm" (click)="closeUpload()">إلغاء</button>
+                    </div>
+                  </div>
+                }
+
+                <div class="tbl-wrap">
+                  <table>
+                    <thead>
+                      <tr><th>الإصدار</th><th>التاريخ</th><th>الملف</th><th>ملاحظات</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (version of memoDetail()!.versions; track version.id) {
+                        <tr>
+                          <td class="tnum">
+                            {{ version.versionNumber }}
+                            @if (version.versionNumber === memoDetail()!.currentVersionNumber) {
+                              <span class="chip ok-chip">الحالي</span>
+                            }
+                          </td>
+                          <td>{{ dateStr(version.createdAt) }}</td>
+                          <td>
+                            @for (file of version.files; track file.key) {
+                              <button class="file-lnk" (click)="download(version)">
+                                <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+                                {{ file.fileName }}
+                                <span class="fsize tnum">({{ fileSize(file.fileSize) }})</span>
+                              </button>
+                            }
+                          </td>
+                          <td class="notes">{{ version.notes || '—' }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="4" class="empty">لا توجد إصدارات بعد.</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <div class="state">
+          @if (countAll() === 0) { لا توجد مذكرات عرض بعد. } @else { لا توجد مذكرات مطابقة لهذا الفلتر أو البحث. }
+        </div>
+      }
+    </div>
+  }
+
+  <!-- نموذج إنشاء/تعديل -->
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(560px,100%)">
+        <div class="si-modal-head">
+          <div class="grow">
+            <h3>{{ editingId() ? 'تعديل مذكرة عرض' : 'مذكرة عرض جديدة' }}</h3>
+            <p>حدد عنوان المذكرة والمشروعات الفرعية التي تغطيها</p>
+          </div>
+          <button class="si-x" (click)="closeForm()">×</button>
+        </div>
+        <div class="si-modal-body">
+          <div class="si-grid">
+            <div class="si-fld full">
+              <label>عنوان المذكرة <span class="req">*</span></label>
+              <input
+                [ngModel]="fTitle()"
+                (ngModelChange)="fTitle.set($event)"
+                placeholder="مثال: مذكرة عرض مشروعات الطرق — الربع الأول"
+              />
+            </div>
+            <div class="si-fld full">
+              <label>المشروعات الفرعية <span class="req">*</span></label>
+              <div class="check-list">
+                @for (sub of subProjects(); track sub.subProjectId) {
+                  <label class="check-item">
+                    <input
+                      type="checkbox"
+                      [checked]="isChecked(sub.subProjectId)"
+                      (change)="toggleSubProject(sub.subProjectId)"
+                    />
+                    <span>{{ sub.subProjectName }}</span>
+                    @if (sub.subProjectCode) { <span class="tnum muted">({{ sub.subProjectCode }})</span> }
+                  </label>
+                } @empty {
+                  <div class="empty">لا توجد مشروعات فرعية.</div>
+                }
+              </div>
+            </div>
+          </div>
+          @if (formError()) {
+            <div class="si-err">{{ formError() }}</div>
+          }
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="saving()" (click)="saveForm()">حفظ</button>
+          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
