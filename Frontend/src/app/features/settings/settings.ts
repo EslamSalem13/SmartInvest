@@ -1,16 +1,28 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { AuthService } from '../../core/services/auth.service';
-import { SETTINGS_LOOKUP_TABS } from './settings-tabs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-settings',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterOutlet],
   templateUrl: './settings.html',
   styleUrl: './settings.css',
 })
 export class Settings {
-  private readonly auth = inject(AuthService);
-  protected readonly isManager = this.auth.isManager;
-  protected readonly lookupTabs = SETTINGS_LOOKUP_TABS;
+  private readonly router = inject(Router);
+
+  /** true عند صفحة قائمة الإعدادات الرئيسية (البطاقات)، false عند الدخول داخل إعداد معيّن */
+  protected readonly isIndex = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => this.checkIsIndex(e.urlAfterRedirects)),
+    ),
+    { initialValue: this.checkIsIndex(this.router.url) },
+  );
+
+  private checkIsIndex(url: string): boolean {
+    const path = url.split('?')[0].split('#')[0];
+    return path === '/app/settings' || path === '/app/settings/';
+  }
 }

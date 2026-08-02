@@ -3,8 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
+import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
-import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
+import { Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
 
 @Component({
   selector: 'app-main-project-form',
@@ -48,7 +49,7 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
                 <label>جهة التنفيذ <span class="req">*</span></label>
                 <select [ngModel]="executingAgency()" (ngModelChange)="executingAgency.set($event)">
                   <option value="">— اختر —</option>
-                  @for (a of agencies; track a) { <option [value]="a">{{ a }}</option> }
+                  @for (a of agencies(); track a) { <option [value]="a">{{ a }}</option> }
                 </select>
               </div>
               <div class="si-fld full">
@@ -77,6 +78,7 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
 export class MainProjectForm {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
+  private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
@@ -96,7 +98,7 @@ export class MainProjectForm {
   protected readonly executingAgency = signal('');
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly agencies = EXECUTING_AGENCIES;
+  protected readonly agencies = signal<string[]>([]);
 
   protected readonly filteredSubPrograms = computed(() => {
     const pid = this.programId();
@@ -137,10 +139,15 @@ export class MainProjectForm {
       done();
       return;
     }
-    forkJoin({ programs: this.lookups.getMainPrograms(), subs: this.lookups.getSubPrograms() }).subscribe({
-      next: ({ programs, subs }) => {
+    forkJoin({
+      programs: this.lookups.getMainPrograms(),
+      subs: this.lookups.getSubPrograms(),
+      agencies: this.agenciesService.getAll(),
+    }).subscribe({
+      next: ({ programs, subs, agencies }) => {
         this.programs.set(programs);
         this.subPrograms.set(subs);
+        this.agencies.set(agencies.map((a) => a.agencyName));
         this.lookupsLoaded = true;
         done();
       },

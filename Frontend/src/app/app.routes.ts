@@ -65,7 +65,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/settings/settings').then((m) => m.Settings),
         children: [
-          { path: '', redirectTo: 'main-programs', pathMatch: 'full' },
+          {
+            path: '',
+            loadComponent: () => import('./features/settings/settings-index').then((m) => m.SettingsIndex),
+          },
           {
             path: 'main-programs',
             data: { tab: 'mainProgram' },

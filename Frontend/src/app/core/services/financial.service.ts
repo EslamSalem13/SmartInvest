@@ -19,8 +19,12 @@ export class FinancialService {
   private readonly base = environment.apiUrl;
 
   // ===== مراحل الطرح =====
-  getSubProjects(): Observable<ProcurementSubProjectListItem[]> {
-    return this.http.get<ProcurementSubProjectListItem[]>(`${this.base}/procurement/subprojects`);
+  getSubProjects(financialYearId?: number | null): Observable<ProcurementSubProjectListItem[]> {
+    const params: Record<string, number> = {};
+    if (financialYearId != null) {
+      params['financialYearId'] = financialYearId;
+    }
+    return this.http.get<ProcurementSubProjectListItem[]>(`${this.base}/procurement/subprojects`, { params });
   }
 
   getOverview(subProjectId: number): Observable<ProcurementOverview> {

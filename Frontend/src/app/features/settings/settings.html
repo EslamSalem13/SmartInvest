@@ -2,25 +2,16 @@
   <header class="page-head">
     <div>
       <h1>الإعدادات</h1>
-      <p>إدارة القوائم الأساسية والصفحات الإدارية المستخدمة في المشروعات</p>
+      @if (isIndex()) {
+        <p>إدارة القوائم الأساسية والصفحات الإدارية المستخدمة في المشروعات</p>
+      } @else {
+        <a class="back" routerLink="/app/settings">
+          <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
+          رجوع لقائمة الإعدادات
+        </a>
+      }
     </div>
   </header>
 
-  <div class="layout">
-    <nav class="tabs">
-      @for (t of lookupTabs; track t.key) {
-        <a class="tab" [routerLink]="t.slug" routerLinkActive="on">{{ t.label }}</a>
-      }
-      <a class="tab" routerLink="contractors" routerLinkActive="on">المقاولون</a>
-      <a class="tab" routerLink="agencies" routerLinkActive="on">الجهات التنفيذية</a>
-      @if (isManager()) {
-        <a class="tab" routerLink="users" routerLinkActive="on">إدارة المستخدمين</a>
-      }
-      <a class="tab" routerLink="measurements" routerLinkActive="on">القياسات</a>
-    </nav>
-
-    <div class="content">
-      <router-outlet />
-    </div>
-  </div>
+  <router-outlet />
 </div>

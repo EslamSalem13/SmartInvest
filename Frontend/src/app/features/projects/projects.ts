@@ -4,10 +4,10 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
+import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import {
-  EXECUTING_AGENCIES,
   FinancialYear,
   Lookup,
   MainProjectListItem,
@@ -33,11 +33,12 @@ interface MainWithSubs {
 export class Projects {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
+  private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
 
   protected readonly isManager = this.auth.isManager;
-  protected readonly agencies = EXECUTING_AGENCIES;
+  protected readonly agencies = signal<string[]>([]);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -73,6 +74,7 @@ export class Projects {
   protected readonly subPrograms = signal<SubProgramLookup[]>([]);
   protected readonly markazList = signal<MarkazLookup[]>([]);
   protected readonly priorities = signal<Lookup[]>([]);
+  protected readonly projectLevels = signal<Lookup[]>([]);
 
   // ===== مؤشرات =====
   protected readonly kpiTotal = computed(() => this.subs().length);
@@ -244,6 +246,8 @@ export class Projects {
     this.lookups.getSubPrograms().subscribe((d) => this.subPrograms.set(d));
     this.lookups.getMarkaz().subscribe((d) => this.markazList.set(d));
     this.lookups.getPriorities().subscribe((d) => this.priorities.set(d));
+    this.lookups.getProjectLevels().subscribe((d) => this.projectLevels.set(d));
+    this.agenciesService.getAll().subscribe((d) => this.agencies.set(d.map((a) => a.agencyName)));
   }
 
   protected clearFilters(): void {

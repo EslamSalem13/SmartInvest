@@ -78,13 +78,14 @@
       </div>
       <div class="fld"><label>المستوى</label>
         <select [ngModel]="fLevel()" (ngModelChange)="fLevel.set($event)">
-          <option value="">الكل</option><option value="محلي">محلي</option><option value="مشترك">مشترك</option>
+          <option value="">الكل</option>
+          @for (l of projectLevels(); track l.id) { <option [value]="l.name">{{ l.name }}</option> }
         </select>
       </div>
       <div class="fld"><label>جهة التنفيذ</label>
         <select [ngModel]="fAgency()" (ngModelChange)="fAgency.set($event)">
           <option value="">الكل</option>
-          @for (a of agencies; track a) { <option [value]="a">{{ a }}</option> }
+          @for (a of agencies(); track a) { <option [value]="a">{{ a }}</option> }
         </select>
       </div>
       <div class="fld"><label>المركز</label>

@@ -133,16 +133,6 @@ export interface MainProjectDetailBase {
   executingAgency: string;
 }
 
-/** قائمة جهات التنفيذ الثابتة */
-export const EXECUTING_AGENCIES = [
-  'الإدارة المالية',
-  'الوحدة المحلية شبين',
-  'الوحدة المحلية لمدينة قويسنا',
-  'شركة الكهرباء',
-  'شركة المنوفية لصيانة الآليات',
-  'شركة مياه الشرب',
-];
-
 export interface CreateSubProject {
   mainProjectId: number;
   code?: string | null;

@@ -30,9 +30,10 @@ public class ProcurementService : IProcurementService
     // الواجهة العامة
     // ------------------------------------------------------------------
 
-    public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
     {
         return await _context.SubProjects.AsNoTracking()
+            .Where(s => financialYearId == null || s.FinancialYears.Any(y => y.FinancialYearId == financialYearId))
             .OrderBy(s => s.SubProjectId)
             .Select(s => new ProcurementSubProjectListItemDto
             {
