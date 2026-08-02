@@ -118,6 +118,7 @@ export class Projects {
 
     const rows: MainWithSubs[] = [];
     for (const m of mains) {
+      if (!subsByMain.has(m.id)) continue;
       if (!this.matchesMainFilters(m)) continue;
 
       let mySubs = (subsByMain.get(m.id) ?? []).filter((s) => this.matchesSubFilters(s));
@@ -138,21 +139,21 @@ export class Projects {
     return rows;
   });
 
-  // ===== الطي والفتح (accordion) للمشروع الرئيسي =====
-  protected readonly expandedProjects = signal<Set<number>>(new Set());
+  // ===== الطي والفتح (accordion) للمشروع الرئيسي - مفتوح افتراضيًا =====
+  protected readonly collapsedProjects = signal<Set<number>>(new Set());
 
   protected toggleProject(projectId: number): void {
-    const next = new Set(this.expandedProjects());
+    const next = new Set(this.collapsedProjects());
     if (next.has(projectId)) {
       next.delete(projectId);
     } else {
       next.add(projectId);
     }
-    this.expandedProjects.set(next);
+    this.collapsedProjects.set(next);
   }
 
   protected isProjectExpanded(projectId: number): boolean {
-    return this.expandedProjects().has(projectId);
+    return !this.collapsedProjects().has(projectId);
   }
 
   // ===== pagination على المشاريع الرئيسية =====
@@ -182,7 +183,6 @@ export class Projects {
   protected readonly showSubForm = signal(false);
   protected readonly subEdit = signal<SubProjectListItem | null>(null);
   protected readonly subLocked = signal<LockedParent | null>(null);
-  protected readonly addMenuOpen = signal(false);
   protected readonly showImportWizard = signal(false);
 
   constructor() {
@@ -261,10 +261,8 @@ export class Projects {
   }
 
   // ===== modals actions =====
-  protected toggleAddMenu(): void { this.addMenuOpen.set(!this.addMenuOpen()); }
-  protected openAddMain(): void { this.addMenuOpen.set(false); this.mainEdit.set(null); this.showMainForm.set(true); }
   protected openEditMain(m: MainProjectListItem): void { this.mainEdit.set(m); this.showMainForm.set(true); }
-  protected openAddSub(): void { this.addMenuOpen.set(false); this.subEdit.set(null); this.subLocked.set(null); this.showSubForm.set(true); }
+  protected openAddSub(): void { this.subEdit.set(null); this.subLocked.set(null); this.showSubForm.set(true); }
   protected openAddSubFor(m: MainProjectListItem): void {
     this.subEdit.set(null);
     this.subLocked.set({ id: m.id, code: m.code, name: m.name });
@@ -273,7 +271,7 @@ export class Projects {
   protected openEditSub(s: SubProjectListItem): void { this.subEdit.set(s); this.subLocked.set(null); this.showSubForm.set(true); }
   protected closeModals(): void { this.showMainForm.set(false); this.showSubForm.set(false); }
   protected onSaved(): void { this.closeModals(); this.load(); }
-  protected openImportExcel(): void { this.addMenuOpen.set(false); this.showImportWizard.set(true); }
+  protected openImportExcel(): void { this.showImportWizard.set(true); }
   protected closeImportWizard(): void { this.showImportWizard.set(false); }
   protected onImportSaved(): void { this.showImportWizard.set(false); this.load(); }
 

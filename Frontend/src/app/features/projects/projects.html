@@ -20,20 +20,14 @@
       الخطط الاستثمارية
     </a>
     <div class="grow"></div>
-    <div class="menu-wrap">
-      <button class="si-btn primary" (click)="toggleAddMenu()">
-        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
-        إضافة مشروع
-        <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
-      </button>
-      @if (addMenuOpen()) {
-        <div class="menu">
-          <button (click)="openAddMain()"><span class="mi main">◆</span> مشروع رئيسي</button>
-          <button (click)="openAddSub()"><span class="mi sub">◆</span> مشروع فرعي</button>
-          <button (click)="openImportExcel()"><span class="mi import">◆</span> استيراد من Excel</button>
-        </div>
-      }
-    </div>
+    <button class="si-btn" (click)="openImportExcel()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" /></svg>
+      استيراد من Excel
+    </button>
+    <button class="si-btn primary" (click)="openAddSub()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+      إضافة مشروع
+    </button>
   </div>
 
   <!-- المؤشرات -->
