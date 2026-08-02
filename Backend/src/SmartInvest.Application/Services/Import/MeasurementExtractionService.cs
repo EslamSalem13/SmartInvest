@@ -81,7 +81,7 @@ public class MeasurementExtractionService : IMeasurementExtractionService
         }
 
         // Guarantee every input row appears exactly once, even if the model dropped one.
-        var byRowIndex = parsed.ToDictionary(r => r.RowIndex);
+        var byRowIndex = parsed.GroupBy(r => r.RowIndex).ToDictionary(g => g.Key, g => g.First());
         return batch.Select(r => byRowIndex.TryGetValue(r.RowIndex, out var found)
                 ? new RowMeasurementPreviewDto { RowIndex = r.RowIndex, SubProjectName = r.SubProjectName, Measurements = found.Measurements }
                 : new RowMeasurementPreviewDto { RowIndex = r.RowIndex, SubProjectName = r.SubProjectName })
