@@ -155,7 +155,7 @@ public class ExcelImportParser : IExcelImportParser
 
         // No row matched all 13 deterministically. Only worth an AI call if the best candidate
         // row is clearly the header row with a few typos, not a completely different sheet.
-        if (bestRowNumber == -1 || bestMatches.Count < ExpectedHeaders.Length / 2)
+        if (bestRowNumber == -1 || bestMatches.Count <= ExpectedHeaders.Length / 2)
         {
             return null;
         }
@@ -169,7 +169,8 @@ public class ExcelImportParser : IExcelImportParser
 
         foreach (var (text, columnNumber) in bestUnmatchedCells)
         {
-            if (aiMapping.TryGetValue(text, out var canonicalHeader) && canonicalHeader != null && !bestMatches.ContainsKey(canonicalHeader))
+            if (aiMapping.TryGetValue(text, out var canonicalHeader) && canonicalHeader != null
+                && stillUnmapped.Contains(canonicalHeader) && !bestMatches.ContainsKey(canonicalHeader))
             {
                 bestMatches[canonicalHeader] = (columnNumber, bestRowNumber);
             }
