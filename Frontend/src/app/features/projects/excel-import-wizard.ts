@@ -6,6 +6,7 @@ import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { ProjectsService } from '../../core/services/projects.service';
 import {
+  ExtractedMeasurement,
   ImportCommit,
   ImportCommitResult,
   ImportPreviewResult,
@@ -13,6 +14,7 @@ import {
   ImportRowResolution,
   Lookup,
   MainProjectCodeResolution,
+  RowMeasurementPreview,
 } from '../../core/models/project.models';
 
 type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
@@ -126,6 +128,27 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
               @if (preview()?.mode === 'Approved') {
                 <div class="si-fld"><label>تاريخ الاعتماد <span class="req">*</span></label><input type="date" [ngModel]="approvalDate()" (ngModelChange)="approvalDate.set($event)" /></div>
               }
+              @if (preview()?.rowMeasurements && preview()!.rowMeasurements.length > 0) {
+                <div class="si-fld full">
+                  <label>القياسات المستخرَجة من أسماء المشروعات الفرعية (راجعها قبل التأكيد)</label>
+                  @for (rowPreview of preview()!.rowMeasurements; track rowPreview.rowIndex) {
+                    @if (measurementsForRow(rowPreview.rowIndex).length > 0 || true) {
+                      <div class="recon-row" style="flex-direction:column; align-items:stretch;">
+                        <span class="recon-name">{{ rowPreview.subProjectName }}</span>
+                        @for (m of measurementsForRow(rowPreview.rowIndex); track $index) {
+                          <div style="display:flex; gap:6px; margin-top:4px;">
+                            <input type="text" [ngModel]="m.name" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'name', $event)" placeholder="اسم القياس" style="width:120px" />
+                            <input type="number" [ngModel]="m.value" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'value', $event)" placeholder="القيمة" style="width:90px" />
+                            <input type="text" [ngModel]="m.unit" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'unit', $event)" placeholder="الوحدة" style="width:140px" />
+                            <button type="button" class="si-btn" (click)="removeMeasurement(rowPreview.rowIndex, $index)">حذف</button>
+                          </div>
+                        }
+                        <button type="button" class="si-btn" style="align-self:flex-start; margin-top:4px;" (click)="addMeasurement(rowPreview.rowIndex)">+ إضافة قياس</button>
+                      </div>
+                    }
+                  }
+                </div>
+              }
             }
 
             @if (step() === 'result' && result(); as r) {
@@ -206,6 +229,7 @@ export class ExcelImportWizard {
   };
   private readonly codeResolutions = new Map<string, MainProjectCodeResolution>();
   private readonly rowResolutions = new Map<number, ImportRowResolution>();
+  private readonly measurementResolutions = new Map<number, ExtractedMeasurement[]>();
 
   private wasOpen = false;
   private requestToken = 0;
@@ -299,6 +323,32 @@ export class ExcelImportWizard {
     return [...this.rowResolutions.values()].filter((r) => !r.createNew).length;
   }
 
+  protected measurementsForRow(rowIndex: number): ExtractedMeasurement[] {
+    return this.measurementResolutions.get(rowIndex) ?? [];
+  }
+
+  protected updateMeasurement(rowIndex: number, index: number, field: keyof ExtractedMeasurement, value: string): void {
+    const list = [...this.measurementsForRow(rowIndex)];
+    const updated = { ...list[index] };
+    if (field === 'value') {
+      updated.value = Number(value) || 0;
+    } else {
+      (updated[field] as string) = value;
+    }
+    list[index] = updated;
+    this.measurementResolutions.set(rowIndex, list);
+  }
+
+  protected removeMeasurement(rowIndex: number, index: number): void {
+    const list = this.measurementsForRow(rowIndex).filter((_, i) => i !== index);
+    this.measurementResolutions.set(rowIndex, list);
+  }
+
+  protected addMeasurement(rowIndex: number): void {
+    const list = [...this.measurementsForRow(rowIndex), { name: '', value: 0, unit: '' }];
+    this.measurementResolutions.set(rowIndex, list);
+  }
+
   protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.selectedFile.set(input.files?.[0] ?? null);
@@ -316,6 +366,11 @@ export class ExcelImportWizard {
         if (token !== this.requestToken) return;
         this.uploading.set(false);
         this.preview.set(result);
+
+        this.measurementResolutions.clear();
+        for (const rowPreview of result.rowMeasurements) {
+          this.measurementResolutions.set(rowPreview.rowIndex, [...rowPreview.measurements]);
+        }
 
         for (const map of Object.values(this.resolutions)) map.clear();
         this.codeResolutions.clear();
@@ -466,7 +521,7 @@ export class ExcelImportWizard {
       accountingUnitResolutions: [...this.resolutions['accountingUnit'].values()],
       mainProjectCodeResolutions: [...this.codeResolutions.values()],
       rowResolutions: [...this.rowResolutions.values()],
-      measurementResolutions: [],
+      measurementResolutions: [...this.measurementResolutions.entries()].map(([rowIndex, measurements]) => ({ rowIndex, measurements })),
     };
 
     this.importService.commit(dto).subscribe({
@@ -506,5 +561,6 @@ export class ExcelImportWizard {
     for (const map of Object.values(this.resolutions)) map.clear();
     this.codeResolutions.clear();
     this.rowResolutions.clear();
+    this.measurementResolutions.clear();
   }
 }
