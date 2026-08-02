@@ -4,5 +4,5 @@ namespace SmartInvest.Application.Interfaces;
 
 public interface IExcelImportParser
 {
-    ParsedImportFile Parse(Stream fileStream);
+    Task<ParsedImportFile> ParseAsync(Stream fileStream, CancellationToken cancellationToken = default);
 }

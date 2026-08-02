@@ -29,7 +29,7 @@ public class ImportService : IImportService
 
     public async Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, CancellationToken cancellationToken = default)
     {
-        var file = _parser.Parse(fileStream);
+        var file = await _parser.ParseAsync(fileStream, cancellationToken);
         var importId = _sessionStore.Save(file);
 
         var result = new ImportPreviewResultDto

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using SmartInvest.Application.Common.Exceptions;
@@ -23,29 +24,27 @@ public class ExcelImportParser : IExcelImportParser
     private static readonly Dictionary<string, string> NormalizedToExpectedHeader =
         ExpectedHeaders.ToDictionary(Normalize, h => h);
 
+    private readonly IAiGatewayClient _aiGatewayClient;
+
+    public ExcelImportParser(IAiGatewayClient aiGatewayClient)
+    {
+        _aiGatewayClient = aiGatewayClient;
+    }
+
     private static string Normalize(string text) => ArabicDiacritics.Replace(text, string.Empty).Trim();
 
-    public ParsedImportFile Parse(Stream fileStream)
+    public async Task<ParsedImportFile> ParseAsync(Stream fileStream, CancellationToken cancellationToken = default)
     {
         using var workbook = new XLWorkbook(fileStream);
         var worksheet = workbook.Worksheets.First();
 
-        var headerRowNumber = FindHeaderRow(worksheet);
-        if (headerRowNumber == -1)
+        var columnIndexByHeader = await FindColumnsAsync(worksheet, cancellationToken);
+        if (columnIndexByHeader == null)
         {
             throw new BusinessRuleException("تعذّر التعرف على أعمدة الملف — تأكد من رفع ملف الخطة الصحيح");
         }
 
-        var columnIndexByHeader = new Dictionary<string, int>();
-        var headerRow = worksheet.Row(headerRowNumber);
-        foreach (var cell in headerRow.CellsUsed())
-        {
-            var normalized = Normalize(cell.GetString());
-            if (NormalizedToExpectedHeader.TryGetValue(normalized, out var canonicalHeader) && !columnIndexByHeader.ContainsKey(canonicalHeader))
-            {
-                columnIndexByHeader[canonicalHeader] = cell.Address.ColumnNumber;
-            }
-        }
+        var headerRowNumber = columnIndexByHeader.Values.Min(c => c.RowNumber);
 
         var rows = new List<ParsedImportRow>();
         var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? headerRowNumber;
@@ -58,8 +57,10 @@ public class ExcelImportParser : IExcelImportParser
                 continue;
             }
 
-            var mainProjectName = GetText(row, columnIndexByHeader, "المشروع الرئيسى");
-            var subProjectName = GetText(row, columnIndexByHeader, "المشروع الفرعى");
+            var columnIndex = columnIndexByHeader.ToDictionary(kv => kv.Key, kv => kv.Value.ColumnNumber);
+
+            var mainProjectName = GetText(row, columnIndex, "المشروع الرئيسى");
+            var subProjectName = GetText(row, columnIndex, "المشروع الفرعى");
             if (string.IsNullOrWhiteSpace(mainProjectName) && string.IsNullOrWhiteSpace(subProjectName))
             {
                 continue;
@@ -68,19 +69,19 @@ public class ExcelImportParser : IExcelImportParser
             rows.Add(new ParsedImportRow
             {
                 RowIndex = rowNumber,
-                MainProgramName = GetText(row, columnIndexByHeader, "البرنامج الرئيسي"),
-                SubProgramName = GetText(row, columnIndexByHeader, "البرنامج الفرعي"),
-                MainProjectCode = GetText(row, columnIndexByHeader, "كود المشروع الرئيسى"),
+                MainProgramName = GetText(row, columnIndex, "البرنامج الرئيسي"),
+                SubProgramName = GetText(row, columnIndex, "البرنامج الفرعي"),
+                MainProjectCode = GetText(row, columnIndex, "كود المشروع الرئيسى"),
                 MainProjectName = mainProjectName,
-                ProjectLevelName = GetText(row, columnIndexByHeader, "مستوى المشروع"),
-                ExecutiveAgencyName = GetText(row, columnIndexByHeader, "الجهة المنفذة"),
-                MarkazName = GetText(row, columnIndexByHeader, "المركز"),
-                SubProjectCode = GetText(row, columnIndexByHeader, "كود المشروع"),
+                ProjectLevelName = GetText(row, columnIndex, "مستوى المشروع"),
+                ExecutiveAgencyName = GetText(row, columnIndex, "الجهة المنفذة"),
+                MarkazName = GetText(row, columnIndex, "المركز"),
+                SubProjectCode = GetText(row, columnIndex, "كود المشروع"),
                 SubProjectName = subProjectName,
-                ComponentTypeName = GetText(row, columnIndexByHeader, "المكوّن العيني"),
-                BankFunding = GetDecimal(row, columnIndexByHeader, "بنك"),
-                SelfFunding = GetDecimal(row, columnIndexByHeader, "ذاتي"),
-                AccountingUnitName = GetText(row, columnIndexByHeader, "الوحدة الحسابية"),
+                ComponentTypeName = GetText(row, columnIndex, "المكوّن العيني"),
+                BankFunding = GetDecimal(row, columnIndex, "بنك"),
+                SelfFunding = GetDecimal(row, columnIndex, "ذاتي"),
+                AccountingUnitName = GetText(row, columnIndex, "الوحدة الحسابية"),
             });
         }
 
@@ -108,19 +109,120 @@ public class ExcelImportParser : IExcelImportParser
         return new ParsedImportFile { Mode = mode, Rows = rows };
     }
 
-    private static int FindHeaderRow(IXLWorksheet worksheet)
+    /// <summary>
+    /// Returns canonical header name -> (column, row) for every one of the 13 expected headers,
+    /// or null if they can't all be resolved (deterministically or via the AI fallback).
+    /// </summary>
+    private async Task<Dictionary<string, (int ColumnNumber, int RowNumber)>?> FindColumnsAsync(IXLWorksheet worksheet, CancellationToken cancellationToken)
     {
         var lastRowToScan = Math.Min(10, worksheet.LastRowUsed()?.RowNumber() ?? 1);
+
+        var bestRowNumber = -1;
+        var bestMatches = new Dictionary<string, (int ColumnNumber, int RowNumber)>();
+        var bestUnmatchedCells = new List<(string Text, int ColumnNumber)>();
+
         for (var rowNumber = 1; rowNumber <= lastRowToScan; rowNumber++)
         {
-            var normalizedTexts = worksheet.Row(rowNumber).CellsUsed().Select(c => Normalize(c.GetString())).ToHashSet();
-            if (NormalizedToExpectedHeader.Keys.All(normalizedTexts.Contains))
+            var matches = new Dictionary<string, (int ColumnNumber, int RowNumber)>();
+            var unmatchedCells = new List<(string Text, int ColumnNumber)>();
+
+            foreach (var cell in worksheet.Row(rowNumber).CellsUsed())
             {
-                return rowNumber;
+                var text = cell.GetString();
+                var normalized = Normalize(text);
+                if (NormalizedToExpectedHeader.TryGetValue(normalized, out var canonicalHeader))
+                {
+                    matches.TryAdd(canonicalHeader, (cell.Address.ColumnNumber, rowNumber));
+                }
+                else if (!string.IsNullOrWhiteSpace(text))
+                {
+                    unmatchedCells.Add((text.Trim(), cell.Address.ColumnNumber));
+                }
+            }
+
+            if (matches.Count == ExpectedHeaders.Length)
+            {
+                return matches;
+            }
+
+            if (matches.Count > bestMatches.Count)
+            {
+                bestRowNumber = rowNumber;
+                bestMatches = matches;
+                bestUnmatchedCells = unmatchedCells;
             }
         }
 
-        return -1;
+        // No row matched all 13 deterministically. Only worth an AI call if the best candidate
+        // row is clearly the header row with a few typos, not a completely different sheet.
+        if (bestRowNumber == -1 || bestMatches.Count < ExpectedHeaders.Length / 2)
+        {
+            return null;
+        }
+
+        var stillUnmapped = ExpectedHeaders.Where(h => !bestMatches.ContainsKey(h)).ToList();
+        var aiMapping = await ResolveHeadersWithAiAsync(bestUnmatchedCells.Select(c => c.Text).ToList(), stillUnmapped, cancellationToken);
+        if (aiMapping == null)
+        {
+            return null;
+        }
+
+        foreach (var (text, columnNumber) in bestUnmatchedCells)
+        {
+            if (aiMapping.TryGetValue(text, out var canonicalHeader) && canonicalHeader != null && !bestMatches.ContainsKey(canonicalHeader))
+            {
+                bestMatches[canonicalHeader] = (columnNumber, bestRowNumber);
+            }
+        }
+
+        return bestMatches.Count == ExpectedHeaders.Length ? bestMatches : null;
+    }
+
+    private async Task<Dictionary<string, string?>?> ResolveHeadersWithAiAsync(List<string> unmatchedCellTexts, List<string> unmappedCanonicalHeaders, CancellationToken cancellationToken)
+    {
+        const string systemPrompt = """
+            أنت تُطابق أسماء أعمدة ملف بيانات مشروعات حكومية بصيغة عربية.
+            سيُعطى لك مصفوفة JSON من نصوص أعمدة فعلية، ومصفوفة JSON من أسماء الأعمدة القياسية المحتملة
+            (قد يختلف النص الفعلي عن القياسي بخطأ إملائي أو تشكيل ناقص أو زائد فقط).
+            أعد فقط كائن JSON يربط كل نص عمود فعلي بأفضل عمود قياسي مطابق له، أو null إن لم يوجد تطابق معقول.
+            لا تُضف أي نص أو تعليق آخر ولا صيغة Markdown - أعد JSON خام فقط.
+            """;
+
+        var userMessage = JsonSerializer.Serialize(new { actualHeaders = unmatchedCellTexts, canonicalHeaders = unmappedCanonicalHeaders });
+
+        string outputText;
+        try
+        {
+            outputText = await _aiGatewayClient.CompleteAsync(systemPrompt, userMessage, 500, cancellationToken);
+        }
+        catch (BusinessRuleException)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string?>>(StripMarkdownFences(outputText));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string StripMarkdownFences(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.StartsWith("```"))
+        {
+            var firstNewline = trimmed.IndexOf('\n');
+            var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
+            if (firstNewline > 0 && lastFence > firstNewline)
+            {
+                trimmed = trimmed[(firstNewline + 1)..lastFence].Trim();
+            }
+        }
+        return trimmed;
     }
 
     private static string GetText(IXLRow row, Dictionary<string, int> columnIndexByHeader, string header)
