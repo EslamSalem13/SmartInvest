@@ -46,12 +46,27 @@ public class ApprovedImportPreviewDto
     public List<UnresolvedImportRowDto> UnresolvedRows { get; set; } = new();
 }
 
+public class ExtractedMeasurementDto
+{
+    public string Name { get; set; } = string.Empty;
+    public decimal Value { get; set; }
+    public string Unit { get; set; } = string.Empty;
+}
+
+public class RowMeasurementPreviewDto
+{
+    public int RowIndex { get; set; }
+    public string SubProjectName { get; set; } = string.Empty;
+    public List<ExtractedMeasurementDto> Measurements { get; set; } = new();
+}
+
 public class ImportPreviewResultDto
 {
     public string ImportId { get; set; } = string.Empty;
     public string Mode { get; set; } = string.Empty;
     public SuggestedImportPreviewDto? Suggested { get; set; }
     public ApprovedImportPreviewDto? Approved { get; set; }
+    public List<RowMeasurementPreviewDto> RowMeasurements { get; set; } = new();
 }
 
 public class ImportResolutionDto

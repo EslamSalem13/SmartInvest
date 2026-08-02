@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSingleton<ImportSessionStore>();
         services.AddScoped<IExcelImportParser, ExcelImportParser>();
+        services.AddScoped<IMeasurementExtractionService, MeasurementExtractionService>();
         services.AddScoped<SmartInvest.Application.Services.Import.SuggestedPlanImportService>();
         services.AddScoped<SmartInvest.Application.Services.Import.ApprovedPlanImportService>();
         services.AddScoped<IImportService, ImportService>();

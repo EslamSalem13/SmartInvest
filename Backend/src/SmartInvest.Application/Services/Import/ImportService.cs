@@ -12,19 +12,22 @@ public class ImportService : IImportService
     private readonly SuggestedPlanImportService _suggestedService;
     private readonly ApprovedPlanImportService _approvedService;
     private readonly ICurrentUserService _currentUser;
+    private readonly IMeasurementExtractionService _measurementExtractionService;
 
     public ImportService(
         IExcelImportParser parser,
         ImportSessionStore sessionStore,
         SuggestedPlanImportService suggestedService,
         ApprovedPlanImportService approvedService,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IMeasurementExtractionService measurementExtractionService)
     {
         _parser = parser;
         _sessionStore = sessionStore;
         _suggestedService = suggestedService;
         _approvedService = approvedService;
         _currentUser = currentUser;
+        _measurementExtractionService = measurementExtractionService;
     }
 
     public async Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, CancellationToken cancellationToken = default)
@@ -46,6 +49,8 @@ public class ImportService : IImportService
         {
             result.Approved = await _approvedService.PreviewAsync(file, cancellationToken);
         }
+
+        result.RowMeasurements = await _measurementExtractionService.ExtractAsync(file.Rows, cancellationToken);
 
         return result;
     }
