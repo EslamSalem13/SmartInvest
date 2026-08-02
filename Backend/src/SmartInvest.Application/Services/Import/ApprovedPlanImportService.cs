@@ -223,9 +223,16 @@ public class ApprovedPlanImportService
                 var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
                 if (measurementResolution != null)
                 {
-                    var subProgramId = mainProject?.SubProgramId
-                        ?? (await _mainProjectRepository.GetByIdAsync((await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken))!.MainProjectId, cancellationToken))!.SubProgramId;
-                    await _measurementResolutionService.RecordMeasurementsAsync(subProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                    try
+                    {
+                        var subProgramId = mainProject?.SubProgramId
+                            ?? (await _mainProjectRepository.GetByIdAsync((await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken))!.MainProjectId, cancellationToken))!.SubProgramId;
+                        await _measurementResolutionService.RecordMeasurementsAsync(subProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                    }
+                    catch (Exception measurementEx)
+                    {
+                        result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر تسجيل القياسات: {measurementEx.Message}" });
+                    }
                 }
 
                 approvedSubProjectIds.Add(subProjectId);

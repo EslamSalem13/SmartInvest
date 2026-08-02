@@ -252,7 +252,14 @@ public class SuggestedPlanImportService
                     var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
                     if (measurementResolution != null)
                     {
-                        await _measurementResolutionService.RecordMeasurementsAsync(subProject.SubProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                        try
+                        {
+                            await _measurementResolutionService.RecordMeasurementsAsync(subProject.SubProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                        }
+                        catch (Exception measurementEx)
+                        {
+                            result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر تسجيل القياسات: {measurementEx.Message}" });
+                        }
                     }
 
                     result.SubProjectsCreated++;
