@@ -132,20 +132,18 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 <div class="si-fld full">
                   <label>القياسات المستخرَجة من أسماء المشروعات الفرعية (راجعها قبل التأكيد)</label>
                   @for (rowPreview of preview()!.rowMeasurements; track rowPreview.rowIndex) {
-                    @if (measurementsForRow(rowPreview.rowIndex).length > 0 || true) {
-                      <div class="recon-row" style="flex-direction:column; align-items:stretch;">
-                        <span class="recon-name">{{ rowPreview.subProjectName }}</span>
-                        @for (m of measurementsForRow(rowPreview.rowIndex); track $index) {
-                          <div style="display:flex; gap:6px; margin-top:4px;">
-                            <input type="text" [ngModel]="m.name" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'name', $event)" placeholder="اسم القياس" style="width:120px" />
-                            <input type="number" [ngModel]="m.value" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'value', $event)" placeholder="القيمة" style="width:90px" />
-                            <input type="text" [ngModel]="m.unit" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'unit', $event)" placeholder="الوحدة" style="width:140px" />
-                            <button type="button" class="si-btn" (click)="removeMeasurement(rowPreview.rowIndex, $index)">حذف</button>
-                          </div>
-                        }
-                        <button type="button" class="si-btn" style="align-self:flex-start; margin-top:4px;" (click)="addMeasurement(rowPreview.rowIndex)">+ إضافة قياس</button>
-                      </div>
-                    }
+                    <div class="recon-row" style="flex-direction:column; align-items:stretch;">
+                      <span class="recon-name">{{ rowPreview.subProjectName }}</span>
+                      @for (m of measurementsForRow(rowPreview.rowIndex); track $index) {
+                        <div style="display:flex; gap:6px; margin-top:4px;">
+                          <input type="text" [ngModel]="m.name" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'name', $event)" placeholder="اسم القياس" style="width:120px" />
+                          <input type="number" [ngModel]="m.value" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'value', $event)" placeholder="القيمة" style="width:90px" />
+                          <input type="text" [ngModel]="m.unit" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'unit', $event)" placeholder="الوحدة" style="width:140px" />
+                          <button type="button" class="si-btn" (click)="removeMeasurement(rowPreview.rowIndex, $index)">حذف</button>
+                        </div>
+                      }
+                      <button type="button" class="si-btn" style="align-self:flex-start; margin-top:4px;" (click)="addMeasurement(rowPreview.rowIndex)">+ إضافة قياس</button>
+                    </div>
                   }
                 </div>
               }

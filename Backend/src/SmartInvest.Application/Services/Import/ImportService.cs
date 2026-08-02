@@ -65,6 +65,14 @@ public class ImportService : IImportService
             throw new ForbiddenAccessException("اعتماد المشروعات عن طريق الاستيراد يتطلب صلاحية مدير التخطيط");
         }
 
+        if (_currentUser.Role != Roles.PlanningManager)
+        {
+            // Recording AI-extracted measurements mutates global Measurement/Unit lookup records
+            // (via MeasurementResolutionService), which is a PlanningManager-only capability.
+            // A PlanningEmployee's commit must still succeed — just without auto-recorded measurements.
+            dto.MeasurementResolutions = new List<RowMeasurementResolutionDto>();
+        }
+
         var result = file.Mode == ImportMode.Suggested
             ? await _suggestedService.CommitAsync(file, dto, cancellationToken)
             : await _approvedService.CommitAsync(file, dto, cancellationToken);

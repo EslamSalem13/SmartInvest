@@ -30,7 +30,7 @@ public static class DependencyInjection
         services.AddHttpClient<IAiGatewayClient, AiGatewayClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
-        });
+        }).RedactLoggedHeaders(["Authorization"]);
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

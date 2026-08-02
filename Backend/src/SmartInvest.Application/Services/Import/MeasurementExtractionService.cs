@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using SmartInvest.Application.Common.Ai;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
 
@@ -8,6 +10,11 @@ namespace SmartInvest.Application.Services.Import;
 public class MeasurementExtractionService : IMeasurementExtractionService
 {
     private const int BatchSize = 15;
+
+    // A generous multiple of realistic real-world files (which run ~88 rows). Guards against a
+    // compressed .xlsx smuggling far more than 15×N rows worth of short text past the 10MB
+    // upload-size limit and exhausting the shared AI gateway budget in one preview.
+    private const int MaxRowsForExtraction = 300;
 
     private const string SystemPrompt = """
         أنت تستخرج الكميات القابلة للقياس من أسماء مشروعات بنية تحتية حكومية بصيغة عربية.
@@ -25,19 +32,29 @@ public class MeasurementExtractionService : IMeasurementExtractionService
         """;
 
     private readonly IAiGatewayClient _aiGatewayClient;
+    private readonly ILogger<MeasurementExtractionService> _logger;
 
-    public MeasurementExtractionService(IAiGatewayClient aiGatewayClient)
+    public MeasurementExtractionService(IAiGatewayClient aiGatewayClient, ILogger<MeasurementExtractionService> logger)
     {
         _aiGatewayClient = aiGatewayClient;
+        _logger = logger;
     }
 
     private record RowInput([property: JsonPropertyName("rowIndex")] int RowIndex, [property: JsonPropertyName("subProjectName")] string SubProjectName);
 
     public async Task<List<RowMeasurementPreviewDto>> ExtractAsync(List<ParsedImportRow> rows, CancellationToken cancellationToken = default)
     {
-        var result = new List<RowMeasurementPreviewDto>();
+        if (rows.Count > MaxRowsForExtraction)
+        {
+            _logger.LogWarning("Skipping AI measurement extraction: {RowCount} rows exceeds the cap of {MaxRows}", rows.Count, MaxRowsForExtraction);
+            return rows.Select(r => new RowMeasurementPreviewDto { RowIndex = r.RowIndex, SubProjectName = r.SubProjectName }).ToList();
+        }
 
-        foreach (var batch in rows.Chunk(BatchSize))
+        var result = new List<RowMeasurementPreviewDto>();
+        var batches = rows.Chunk(BatchSize).ToList();
+        _logger.LogInformation("Issuing {BatchCount} AI measurement-extraction batch(es) for {RowCount} row(s)", batches.Count, rows.Count);
+
+        foreach (var batch in batches)
         {
             var batchResult = await ExtractBatchAsync(batch, cancellationToken);
             result.AddRange(batchResult);
@@ -58,25 +75,29 @@ public class MeasurementExtractionService : IMeasurementExtractionService
         {
             outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 2000, cancellationToken);
         }
-        catch (Exception)
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             // Degraded mode per spec §6: a failed batch just yields empty measurement lists,
-            // it does not fail the import.
+            // it does not fail the import. Caller-initiated cancellation is excluded so it can
+            // propagate normally instead of being masked as a degraded result.
+            LogDegraded(batch, "gateway call failed");
             return fallback;
         }
 
         List<RowMeasurementPreviewDto>? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize<List<RowMeasurementPreviewDto>>(StripMarkdownFences(outputText), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            parsed = JsonSerializer.Deserialize<List<RowMeasurementPreviewDto>>(AiResponseParsing.StripMarkdownFences(outputText), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch (JsonException)
         {
+            LogDegraded(batch, "response JSON parse failure");
             return fallback;
         }
 
         if (parsed == null)
         {
+            LogDegraded(batch, "response deserialized to null");
             return fallback;
         }
 
@@ -88,18 +109,15 @@ public class MeasurementExtractionService : IMeasurementExtractionService
             .ToList();
     }
 
-    private static string StripMarkdownFences(string text)
+    private void LogDegraded(ParsedImportRow[] batch, string reason)
     {
-        var trimmed = text.Trim();
-        if (trimmed.StartsWith("```"))
+        if (batch.Length == 0)
         {
-            var firstNewline = trimmed.IndexOf('\n');
-            var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-            if (firstNewline > 0 && lastFence > firstNewline)
-            {
-                trimmed = trimmed[(firstNewline + 1)..lastFence].Trim();
-            }
+            return;
         }
-        return trimmed;
+
+        var minRow = batch.Min(r => r.RowIndex);
+        var maxRow = batch.Max(r => r.RowIndex);
+        _logger.LogWarning("Measurement extraction batch (rows {MinRow}-{MaxRow}) fell back to degraded mode: {Reason}", minRow, maxRow, reason);
     }
 }

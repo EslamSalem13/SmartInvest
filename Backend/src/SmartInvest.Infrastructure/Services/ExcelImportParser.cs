@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
+using Microsoft.Extensions.Logging;
+using SmartInvest.Application.Common.Ai;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Application.Services.Import;
@@ -25,10 +27,12 @@ public class ExcelImportParser : IExcelImportParser
         ExpectedHeaders.ToDictionary(Normalize, h => h);
 
     private readonly IAiGatewayClient _aiGatewayClient;
+    private readonly ILogger<ExcelImportParser> _logger;
 
-    public ExcelImportParser(IAiGatewayClient aiGatewayClient)
+    public ExcelImportParser(IAiGatewayClient aiGatewayClient, ILogger<ExcelImportParser> logger)
     {
         _aiGatewayClient = aiGatewayClient;
+        _logger = logger;
     }
 
     private static string Normalize(string text) => ArabicDiacritics.Replace(text, string.Empty).Trim();
@@ -161,9 +165,11 @@ public class ExcelImportParser : IExcelImportParser
         }
 
         var stillUnmapped = ExpectedHeaders.Where(h => !bestMatches.ContainsKey(h)).ToList();
+        _logger.LogWarning("Header row not fully recognized deterministically ({MatchedCount}/{ExpectedCount}) — falling back to AI header matching", bestMatches.Count, ExpectedHeaders.Length);
         var aiMapping = await ResolveHeadersWithAiAsync(bestUnmatchedCells.Select(c => c.Text).ToList(), stillUnmapped, cancellationToken);
         if (aiMapping == null)
         {
+            _logger.LogWarning("AI header fallback failed to resolve the remaining columns");
             return null;
         }
 
@@ -176,7 +182,9 @@ public class ExcelImportParser : IExcelImportParser
             }
         }
 
-        return bestMatches.Count == ExpectedHeaders.Length ? bestMatches : null;
+        var succeeded = bestMatches.Count == ExpectedHeaders.Length;
+        _logger.LogWarning("AI header fallback {Outcome}", succeeded ? "succeeded" : "did not resolve all expected headers");
+        return succeeded ? bestMatches : null;
     }
 
     private async Task<Dictionary<string, string?>?> ResolveHeadersWithAiAsync(List<string> unmatchedCellTexts, List<string> unmappedCanonicalHeaders, CancellationToken cancellationToken)
@@ -203,27 +211,12 @@ public class ExcelImportParser : IExcelImportParser
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, string?>>(StripMarkdownFences(outputText));
+            return JsonSerializer.Deserialize<Dictionary<string, string?>>(AiResponseParsing.StripMarkdownFences(outputText));
         }
         catch (JsonException)
         {
             return null;
         }
-    }
-
-    private static string StripMarkdownFences(string text)
-    {
-        var trimmed = text.Trim();
-        if (trimmed.StartsWith("```"))
-        {
-            var firstNewline = trimmed.IndexOf('\n');
-            var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-            if (firstNewline > 0 && lastFence > firstNewline)
-            {
-                trimmed = trimmed[(firstNewline + 1)..lastFence].Trim();
-            }
-        }
-        return trimmed;
     }
 
     private static string GetText(IXLRow row, Dictionary<string, int> columnIndexByHeader, string header)

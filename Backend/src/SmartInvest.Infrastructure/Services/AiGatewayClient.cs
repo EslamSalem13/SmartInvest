@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SmartInvest.Application.Common.Ai;
 using SmartInvest.Application.Common.Exceptions;
@@ -13,11 +14,13 @@ public class AiGatewayClient : IAiGatewayClient
 {
     private readonly HttpClient _httpClient;
     private readonly AiGatewayOptions _options;
+    private readonly ILogger<AiGatewayClient> _logger;
 
-    public AiGatewayClient(HttpClient httpClient, IOptions<AiGatewayOptions> options)
+    public AiGatewayClient(HttpClient httpClient, IOptions<AiGatewayOptions> options, ILogger<AiGatewayClient> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _logger = logger;
     }
 
     private record ChatMessage([property: JsonPropertyName("role")] string Role, [property: JsonPropertyName("content")] string Content);
@@ -34,6 +37,7 @@ public class AiGatewayClient : IAiGatewayClient
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
+            _logger.LogWarning("AI gateway call skipped: API key is not configured");
             throw new BusinessRuleException("مفتاح خدمة الذكاء الاصطناعي غير مُهيأ");
         }
 
@@ -52,13 +56,14 @@ public class AiGatewayClient : IAiGatewayClient
         }
         catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
         {
+            _logger.LogWarning(ex, "AI gateway call failed to connect or timed out");
             throw new BusinessRuleException($"تعذّر الاتصال بخدمة الذكاء الاصطناعي: {ex.Message}");
         }
 
         if (!httpResponse.IsSuccessStatusCode)
         {
-            var body = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-            throw new BusinessRuleException($"فشل طلب الذكاء الاصطناعي ({(int)httpResponse.StatusCode}): {body}");
+            _logger.LogWarning("AI gateway call failed: {StatusCode}", httpResponse.StatusCode);
+            throw new BusinessRuleException($"فشل طلب الذكاء الاصطناعي (رمز الحالة: {(int)httpResponse.StatusCode})");
         }
 
         ChatResponse? parsed;
@@ -68,7 +73,13 @@ public class AiGatewayClient : IAiGatewayClient
         }
         catch (JsonException ex)
         {
+            _logger.LogWarning(ex, "AI gateway response JSON parse failure");
             throw new BusinessRuleException($"تعذّر قراءة رد خدمة الذكاء الاصطناعي: {ex.Message}");
+        }
+
+        if (parsed?.OutputText == null)
+        {
+            _logger.LogWarning("AI gateway response was empty");
         }
 
         return parsed?.OutputText ?? throw new BusinessRuleException("رد خدمة الذكاء الاصطناعي فارغ");
