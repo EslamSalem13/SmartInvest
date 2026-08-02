@@ -126,6 +126,7 @@ public class ImportCommitResultDto
     public int SubProjectsCreated { get; set; }
     public int SubProjectsApproved { get; set; }
     public int SubProjectsCreatedAndApproved { get; set; }
+    public int SubProjectsAlreadyLinked { get; set; }
     public List<ImportRowFailureDto> Failed { get; set; } = new();
     public int PlanId { get; set; }
     public string PlanName { get; set; } = string.Empty;

@@ -7,7 +7,6 @@
 
         public int MainProjectId { get; set; }
         public virtual MainProject MainProject { get; set; }
-        [MaxLength(250)]
         public string SubProjectName { get; set; } = string.Empty;
 
         [ForeignKey("ProjectLevel")]

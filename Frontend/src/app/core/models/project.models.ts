@@ -504,6 +504,7 @@ export interface ImportCommitResult {
   subProjectsCreated: number;
   subProjectsApproved: number;
   subProjectsCreatedAndApproved: number;
+  subProjectsAlreadyLinked: number;
   failed: ImportRowFailure[];
   planId: number;
   planName: string;

@@ -21,6 +21,7 @@ public class ApprovedPlanImportService
     private readonly IGenericRepository<ComponentType> _componentTypeRepository;
     private readonly IGenericRepository<AccountingUnit> _accountingUnitRepository;
     private readonly IGenericRepository<ExecutiveAgency> _agencyRepository;
+    private readonly IGenericRepository<SubProjectFinancialYear> _financialYearLinkRepository;
     private readonly ISubProjectService _subProjectService;
     private readonly IPlanRepo _planRepo;
     private readonly IPlanService _planService;
@@ -40,6 +41,7 @@ public class ApprovedPlanImportService
         IGenericRepository<ComponentType> componentTypeRepository,
         IGenericRepository<AccountingUnit> accountingUnitRepository,
         IGenericRepository<ExecutiveAgency> agencyRepository,
+        IGenericRepository<SubProjectFinancialYear> financialYearLinkRepository,
         ISubProjectService subProjectService,
         IPlanRepo planRepo,
         IPlanService planService,
@@ -58,6 +60,7 @@ public class ApprovedPlanImportService
         _componentTypeRepository = componentTypeRepository;
         _accountingUnitRepository = accountingUnitRepository;
         _agencyRepository = agencyRepository;
+        _financialYearLinkRepository = financialYearLinkRepository;
         _subProjectService = subProjectService;
         _planRepo = planRepo;
         _planService = planService;
@@ -65,7 +68,7 @@ public class ApprovedPlanImportService
         _measurementResolutionService = measurementResolutionService;
     }
 
-    private record MatchResult(int? SubProjectId, int? MainProjectId);
+    private record MatchResult(int? SubProjectId, int? MainProjectId, bool IsApproved);
 
     public async Task<ApprovedImportPreviewDto> PreviewAsync(ParsedImportFile file, CancellationToken cancellationToken)
     {
@@ -156,15 +159,35 @@ public class ApprovedPlanImportService
 
                 if (match.SubProjectId.HasValue)
                 {
-                    await _subProjectService.ApproveAsync(match.SubProjectId.Value, new ApproveSubProjectDto { Code = row.SubProjectCode.Trim() }, cancellationToken);
+                    // Re-importing a file whose rows are already approved (e.g. running the same
+                    // approved plan a second time) should be a no-op for those rows, not a hard
+                    // failure - ApproveAsync itself rejects re-approving an already-approved
+                    // sub-project, and previously nothing here checked for that before calling it.
+                    if (!match.IsApproved)
+                    {
+                        await _subProjectService.ApproveAsync(match.SubProjectId.Value, new ApproveSubProjectDto { Code = row.SubProjectCode.Trim() }, cancellationToken);
+                        result.SubProjectsApproved++;
+                    }
+                    else
+                    {
+                        result.SubProjectsAlreadyLinked++;
+                    }
                     subProjectId = match.SubProjectId.Value;
-                    result.SubProjectsApproved++;
                 }
                 else if (rowResolutionByIndex.TryGetValue(row.RowIndex, out var resolution) && !resolution.CreateNew && resolution.ExistingSubProjectId.HasValue)
                 {
-                    await _subProjectService.ApproveAsync(resolution.ExistingSubProjectId.Value, new ApproveSubProjectDto { Code = row.SubProjectCode.Trim() }, cancellationToken);
+                    var existingSubProject = await _subProjectRepository.GetByIdAsync(resolution.ExistingSubProjectId.Value, cancellationToken)
+                        ?? throw new NotFoundException($"المشروع الفرعي رقم {resolution.ExistingSubProjectId.Value} غير موجود");
+                    if (!existingSubProject.IsApproved)
+                    {
+                        await _subProjectService.ApproveAsync(resolution.ExistingSubProjectId.Value, new ApproveSubProjectDto { Code = row.SubProjectCode.Trim() }, cancellationToken);
+                        result.SubProjectsApproved++;
+                    }
+                    else
+                    {
+                        result.SubProjectsAlreadyLinked++;
+                    }
                     subProjectId = resolution.ExistingSubProjectId.Value;
-                    result.SubProjectsApproved++;
                 }
                 else if (rowResolutionByIndex.TryGetValue(row.RowIndex, out var createResolution) && createResolution.CreateNew)
                 {
@@ -179,7 +202,7 @@ public class ApprovedPlanImportService
                         mainProject = new MainProject
                         {
                             MainProjectName = row.MainProjectName.Trim(),
-                            MainProjectCode = null,
+                            MainProjectCode = string.IsNullOrWhiteSpace(row.MainProjectCode) ? null : row.MainProjectCode.Trim(),
                             ExecutingAgency = string.Empty,
                             SubProgramId = subProgramIdByName.TryGetValue(row.SubProgramName.Trim(), out var resolvedSubProgramId)
                                 ? resolvedSubProgramId
@@ -192,6 +215,10 @@ public class ApprovedPlanImportService
                         result.MainProjectsCreated++;
                     }
 
+                    var resolvedProjectLevelId = await ResolveOrCreateProjectLevelIdAsync(row.ProjectLevelName, projectLevelIdByName, unspecifiedProjectLevelId, cancellationToken);
+                    var resolvedComponentTypeId = await ResolveOrCreateComponentTypeIdAsync(row.ComponentTypeName, componentTypeIdByName, unspecifiedComponentTypeId, cancellationToken);
+                    var resolvedAccountingUnitId = await ResolveOrCreateAccountingUnitIdAsync(row.AccountingUnitName, accountingUnitIdByName, unspecifiedAccountingUnitId, cancellationToken);
+
                     subProject = new SubProject
                     {
                         MainProjectId = mainProject.MainProjectId,
@@ -199,9 +226,9 @@ public class ApprovedPlanImportService
                         SubProjectCode = row.SubProjectCode.Trim(),
                         IsApproved = true,
                         ApprovedAt = approvalDate,
-                        ProjectLevelId = projectLevelIdByName.TryGetValue(row.ProjectLevelName.Trim(), out var resolvedProjectLevelId) ? resolvedProjectLevelId : unspecifiedProjectLevelId,
-                        ComponentTypeId = componentTypeIdByName.TryGetValue(row.ComponentTypeName.Trim(), out var resolvedComponentTypeId) ? resolvedComponentTypeId : unspecifiedComponentTypeId,
-                        AccountingUnitId = accountingUnitIdByName.TryGetValue(row.AccountingUnitName.Trim(), out var resolvedAccountingUnitId) ? resolvedAccountingUnitId : unspecifiedAccountingUnitId,
+                        ProjectLevelId = resolvedProjectLevelId,
+                        ComponentTypeId = resolvedComponentTypeId,
+                        AccountingUnitId = resolvedAccountingUnitId,
                         ExecutiveAgencyId = agencyIdByName.TryGetValue(row.ExecutiveAgencyName.Trim(), out var resolvedAgencyId) ? resolvedAgencyId : null,
                         ProjectNature = string.Empty,
                         MarkazId = markazIdByName.TryGetValue(row.MarkazName.Trim(), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
@@ -218,6 +245,28 @@ public class ApprovedPlanImportService
                 else
                 {
                     throw new BusinessRuleException("الصف غير محلول ولم يتم تحديد إجراء له");
+                }
+
+                // Match/reuse in this file is by name only, not scoped to the financial year being
+                // imported (a real project can legitimately span multiple years' plans) - so a
+                // matched or reused sub-project isn't automatically linked to THIS year. Without
+                // this, an approved import into a new financial year could report success while
+                // linking nothing that year's Projects page can actually find.
+                try
+                {
+                    var alreadyLinkedToYear = await _financialYearLinkRepository.FindAsync(
+                        x => x.SubProjectId == subProjectId && x.FinancialYearId == dto.FinancialYearId, cancellationToken);
+                    if (alreadyLinkedToYear.Count == 0)
+                    {
+                        await _financialYearLinkRepository.AddAsync(
+                            new SubProjectFinancialYear { SubProjectId = subProjectId, FinancialYearId = dto.FinancialYearId },
+                            cancellationToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                catch (Exception linkEx)
+                {
+                    result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر ربطه بالسنة المالية: {linkEx.Message}" });
                 }
 
                 var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
@@ -315,8 +364,68 @@ public class ApprovedPlanImportService
         result.PlanId = resultPlan.PlanId;
         result.PlanName = resultPlan.PlanName;
         result.PlanStatus = resultPlan.PlanStatus.ToString();
-
         return result;
+    }
+
+    /// <summary>
+    /// يبحث عن مستوى مشروع بنفس الاسم، وإن لم يوجد ينشئه بدلًا من الرجوع لـ«غير محدد» -
+    /// القيمة في الملف حقيقية، فليست حالة تستحق الإسقاط الصامت.
+    /// </summary>
+    private async Task<int> ResolveOrCreateProjectLevelIdAsync(string rawName, Dictionary<string, int> idByName, int fallbackId, CancellationToken cancellationToken)
+    {
+        var name = rawName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return fallbackId;
+        }
+        if (idByName.TryGetValue(name, out var existingId))
+        {
+            return existingId;
+        }
+
+        var created = new ProjectLevel { Name = name };
+        await _projectLevelRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        idByName[name] = created.Id;
+        return created.Id;
+    }
+
+    private async Task<int> ResolveOrCreateComponentTypeIdAsync(string rawName, Dictionary<string, int> idByName, int fallbackId, CancellationToken cancellationToken)
+    {
+        var name = rawName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return fallbackId;
+        }
+        if (idByName.TryGetValue(name, out var existingId))
+        {
+            return existingId;
+        }
+
+        var created = new ComponentType { Name = name };
+        await _componentTypeRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        idByName[name] = created.Id;
+        return created.Id;
+    }
+
+    private async Task<int> ResolveOrCreateAccountingUnitIdAsync(string rawName, Dictionary<string, int> idByName, int fallbackId, CancellationToken cancellationToken)
+    {
+        var name = rawName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return fallbackId;
+        }
+        if (idByName.TryGetValue(name, out var existingId))
+        {
+            return existingId;
+        }
+
+        var created = new AccountingUnit { Name = name };
+        await _accountingUnitRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        idByName[name] = created.Id;
+        return created.Id;
     }
 
     private async Task<MatchResult> MatchRowAsync(ParsedImportRow row, CancellationToken cancellationToken)
@@ -324,15 +433,15 @@ public class ApprovedPlanImportService
         var mainProjects = await _mainProjectRepository.FindByNameAsync(row.MainProjectName, cancellationToken);
         if (mainProjects.Count != 1)
         {
-            return new MatchResult(null, null);
+            return new MatchResult(null, null, false);
         }
 
         var subProjects = await _subProjectRepository.FindByNameWithinMainProjectAsync(row.SubProjectName, mainProjects[0].MainProjectId, cancellationToken);
         if (subProjects.Count != 1)
         {
-            return new MatchResult(null, mainProjects[0].MainProjectId);
+            return new MatchResult(null, mainProjects[0].MainProjectId, false);
         }
 
-        return new MatchResult(subProjects[0].SubProjectId, mainProjects[0].MainProjectId);
+        return new MatchResult(subProjects[0].SubProjectId, mainProjects[0].MainProjectId, subProjects[0].IsApproved);
     }
 }

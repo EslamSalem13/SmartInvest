@@ -5,6 +5,7 @@ import { ImportService } from '../../core/services/import.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { ProjectsService } from '../../core/services/projects.service';
+import { MeasurementsService } from '../../core/services/measurements.service';
 import {
   ExtractedMeasurement,
   ImportCommit,
@@ -134,17 +135,52 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                   @for (rowPreview of preview()!.rowMeasurements; track rowPreview.rowIndex) {
                     <div class="recon-row" style="flex-direction:column; align-items:stretch;">
                       <span class="recon-name">{{ rowPreview.subProjectName }}</span>
-                      @for (m of measurementsForRow(rowPreview.rowIndex); track $index) {
-                        <div style="display:flex; gap:6px; margin-top:4px;">
-                          <input type="text" [ngModel]="m.name" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'name', $event)" placeholder="اسم القياس" style="width:120px" />
-                          <input type="number" [ngModel]="m.value" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'value', $event)" placeholder="القيمة" style="width:90px" />
-                          <input type="text" [ngModel]="m.unit" (ngModelChange)="updateMeasurement(rowPreview.rowIndex, $index, 'unit', $event)" placeholder="الوحدة" style="width:140px" />
-                          <button type="button" class="si-btn" (click)="removeMeasurement(rowPreview.rowIndex, $index)">حذف</button>
-                        </div>
-                      }
-                      <button type="button" class="si-btn" style="align-self:flex-start; margin-top:4px;" (click)="addMeasurement(rowPreview.rowIndex)">+ إضافة قياس</button>
+                      <div class="measure-rows">
+                        @for (m of measurementsForRow(rowPreview.rowIndex); track $index; let i = $index) {
+                          <div class="measure-row">
+                            <div class="si-fld">
+                              <label>اسم القياس</label>
+                              <input
+                                list="import-measurement-names-list"
+                                [ngModel]="m.name"
+                                (ngModelChange)="updateMeasurement(rowPreview.rowIndex, i, 'name', $event)"
+                                placeholder="مثال: عدد"
+                              />
+                            </div>
+                            <div class="si-fld">
+                              <label>القيمة</label>
+                              <input
+                                type="number"
+                                [ngModel]="m.value"
+                                (ngModelChange)="updateMeasurement(rowPreview.rowIndex, i, 'value', $event)"
+                                placeholder="مثال: 3"
+                              />
+                            </div>
+                            <div class="si-fld">
+                              <label>الوحدة</label>
+                              <input
+                                list="import-measurement-units-list"
+                                [ngModel]="m.unit"
+                                (ngModelChange)="updateMeasurement(rowPreview.rowIndex, i, 'unit', $event)"
+                                placeholder="مثال: سيارة 50 طن"
+                              />
+                            </div>
+                            <button type="button" class="si-x sm" (click)="removeMeasurement(rowPreview.rowIndex, i)" aria-label="حذف القياس">×</button>
+                          </div>
+                        }
+                        <button type="button" class="si-btn" (click)="addMeasurement(rowPreview.rowIndex)">
+                          <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+                          إضافة قياس
+                        </button>
+                      </div>
                     </div>
                   }
+                  <datalist id="import-measurement-names-list">
+                    @for (n of allMeasurementNames(); track n) { <option [value]="n"></option> }
+                  </datalist>
+                  <datalist id="import-measurement-units-list">
+                    @for (n of allUnitNames(); track n) { <option [value]="n"></option> }
+                  </datalist>
                 </div>
               }
             }
@@ -155,6 +191,9 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 <p>مشروعات رئيسية: {{ r.mainProjectsCreated }} — مشروعات فرعية: {{ r.subProjectsCreated }}</p>
               } @else {
                 <p>معتمدة: {{ r.subProjectsApproved }} — جديدة ومعتمدة: {{ r.subProjectsCreatedAndApproved }}</p>
+                @if (r.subProjectsAlreadyLinked > 0) {
+                  <p class="hint">{{ r.subProjectsAlreadyLinked }} مشروع كان معتمدًا بالفعل من قبل — تم ربطه بهذه السنة المالية دون الحاجة لاعتماد جديد.</p>
+                }
               }
               @if (r.failed.length > 0) {
                 <div class="si-err">
@@ -195,6 +234,10 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
     .recon-name { font-weight: 700; }
     .recon-count { color: var(--muted); font-size: 12px; }
     .recon-choice { display: flex; align-items: center; gap: 5px; font-size: 12.5px; }
+    .measure-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; width: 100%; }
+    .measure-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+    .measure-row .si-fld { margin: 0; }
+    .si-x.sm { width: 32px; height: 32px; flex: 0 0 auto; }
   `],
 })
 export class ExcelImportWizard {
@@ -202,6 +245,7 @@ export class ExcelImportWizard {
   private readonly lookupsService = inject(LookupsService);
   private readonly agenciesService = inject(AgenciesService);
   private readonly projectsService = inject(ProjectsService);
+  private readonly measurementsService = inject(MeasurementsService);
 
   readonly open = input(false);
   readonly financialYearId = input.required<number | null>();
@@ -220,6 +264,8 @@ export class ExcelImportWizard {
   protected readonly optionsLoading = signal(false);
   protected readonly subProjectOptions = signal<Lookup[]>([]);
   protected readonly subProjectOptionsLoading = signal(false);
+  protected readonly allMeasurementNames = signal<string[]>([]);
+  protected readonly allUnitNames = signal<string[]>([]);
 
   private readonly resolutions: Record<string, Map<string, ImportResolution>> = {
     markaz: new Map(), mainProgram: new Map(), subProgram: new Map(), agency: new Map(),
@@ -560,5 +606,16 @@ export class ExcelImportWizard {
     this.codeResolutions.clear();
     this.rowResolutions.clear();
     this.measurementResolutions.clear();
+
+    forkJoin({
+      measurements: this.measurementsService.getAll(),
+      units: this.lookupsService.getUnits(),
+    }).subscribe({
+      next: ({ measurements, units }) => {
+        this.allMeasurementNames.set(measurements.map((m) => m.name));
+        this.allUnitNames.set(units.map((u) => u.name));
+      },
+      error: () => {},
+    });
   }
 }

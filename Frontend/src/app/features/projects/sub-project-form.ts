@@ -212,8 +212,16 @@ interface MeasurementRow {
               }
             </div>
 
-            @if (effectiveSubProgramId() != null) {
-              <div class="si-step"><span class="n">4</span><h4>القياسات المخصصة</h4></div>
+            <div class="si-step"><span class="n">4</span><h4>القياسات المخصصة</h4></div>
+            @if (effectiveSubProgramId() == null) {
+              <p class="hint">
+                @if (!locked() && !edit() && createMode() === 'new') {
+                  اختر البرنامج الفرعي أعلاه أولًا لإضافة القياسات المخصصة.
+                } @else {
+                  اختر المشروع الرئيسي أعلاه أولًا لإضافة القياسات المخصصة.
+                }
+              </p>
+            } @else {
               <div class="measure-rows">
                 @for (row of measurementRows(); track $index; let i = $index) {
                   <div class="measure-row">
