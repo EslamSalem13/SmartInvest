@@ -442,11 +442,29 @@ export interface ApprovedImportPreview {
   unresolvedRows: UnresolvedImportRow[];
 }
 
+export interface ExtractedMeasurement {
+  name: string;
+  value: number;
+  unit: string;
+}
+
+export interface RowMeasurementPreview {
+  rowIndex: number;
+  subProjectName: string;
+  measurements: ExtractedMeasurement[];
+}
+
+export interface RowMeasurementResolution {
+  rowIndex: number;
+  measurements: ExtractedMeasurement[];
+}
+
 export interface ImportPreviewResult {
   importId: string;
   mode: 'Suggested' | 'Approved';
   suggested: SuggestedImportPreview | null;
   approved: ApprovedImportPreview | null;
+  rowMeasurements: RowMeasurementPreview[];
 }
 
 export interface ImportResolution {
@@ -480,6 +498,7 @@ export interface ImportCommit {
   accountingUnitResolutions: ImportResolution[];
   mainProjectCodeResolutions: MainProjectCodeResolution[];
   rowResolutions: ImportRowResolution[];
+  measurementResolutions: RowMeasurementResolution[];
 }
 
 export interface ImportRowFailure {

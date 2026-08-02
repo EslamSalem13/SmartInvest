@@ -466,6 +466,7 @@ export class ExcelImportWizard {
       accountingUnitResolutions: [...this.resolutions['accountingUnit'].values()],
       mainProjectCodeResolutions: [...this.codeResolutions.values()],
       rowResolutions: [...this.rowResolutions.values()],
+      measurementResolutions: [],
     };
 
     this.importService.commit(dto).subscribe({
