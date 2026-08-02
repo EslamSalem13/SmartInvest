@@ -25,6 +25,7 @@ public class ApprovedPlanImportService
     private readonly IPlanRepo _planRepo;
     private readonly IPlanService _planService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMeasurementResolutionService _measurementResolutionService;
 
     public ApprovedPlanImportService(
         IMainProjectRepository mainProjectRepository,
@@ -42,7 +43,8 @@ public class ApprovedPlanImportService
         ISubProjectService subProjectService,
         IPlanRepo planRepo,
         IPlanService planService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMeasurementResolutionService measurementResolutionService)
     {
         _mainProjectRepository = mainProjectRepository;
         _subProjectRepository = subProjectRepository;
@@ -60,6 +62,7 @@ public class ApprovedPlanImportService
         _planRepo = planRepo;
         _planService = planService;
         _unitOfWork = unitOfWork;
+        _measurementResolutionService = measurementResolutionService;
     }
 
     private record MatchResult(int? SubProjectId, int? MainProjectId);
@@ -215,6 +218,14 @@ public class ApprovedPlanImportService
                 else
                 {
                     throw new BusinessRuleException("الصف غير محلول ولم يتم تحديد إجراء له");
+                }
+
+                var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
+                if (measurementResolution != null)
+                {
+                    var subProgramId = mainProject?.SubProgramId
+                        ?? (await _mainProjectRepository.GetByIdAsync((await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken))!.MainProjectId, cancellationToken))!.SubProgramId;
+                    await _measurementResolutionService.RecordMeasurementsAsync(subProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
                 }
 
                 approvedSubProjectIds.Add(subProjectId);

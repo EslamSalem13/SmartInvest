@@ -90,6 +90,12 @@ public class ImportRowResolutionDto
     public int? ExistingSubProjectId { get; set; }
 }
 
+public class RowMeasurementResolutionDto
+{
+    public int RowIndex { get; set; }
+    public List<ExtractedMeasurementDto> Measurements { get; set; } = new();
+}
+
 public class ImportCommitDto
 {
     public string ImportId { get; set; } = string.Empty;
@@ -104,6 +110,7 @@ public class ImportCommitDto
     public List<ImportResolutionDto> AccountingUnitResolutions { get; set; } = new();
     public List<MainProjectCodeResolutionDto> MainProjectCodeResolutions { get; set; } = new();
     public List<ImportRowResolutionDto> RowResolutions { get; set; } = new();
+    public List<RowMeasurementResolutionDto> MeasurementResolutions { get; set; } = new();
 }
 
 public class ImportRowFailureDto

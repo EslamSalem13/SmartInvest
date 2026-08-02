@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IMeasurementRepository, MeasurementRepository>();
         services.AddScoped<IMeasurementService, MeasurementService>();
+        services.AddScoped<IMeasurementResolutionService, MeasurementResolutionService>();
 
         // Financial Management (دورة التعاقدات)
         services.AddScoped<IProcurementService, Services.ProcurementService>();

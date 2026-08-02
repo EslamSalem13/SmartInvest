@@ -27,6 +27,7 @@ public class SuggestedPlanImportService
     private readonly ISubProjectRepository _subProjectRepository;
     private readonly IPlanRepo _planRepo;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMeasurementResolutionService _measurementResolutionService;
 
     public SuggestedPlanImportService(
         IGenericRepository<Markaz> markazRepository,
@@ -46,7 +47,8 @@ public class SuggestedPlanImportService
         IMainProjectRepository mainProjectRepository,
         ISubProjectRepository subProjectRepository,
         IPlanRepo planRepo,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMeasurementResolutionService measurementResolutionService)
     {
         _markazRepository = markazRepository;
         _governorateRepository = governorateRepository;
@@ -66,6 +68,7 @@ public class SuggestedPlanImportService
         _subProjectRepository = subProjectRepository;
         _planRepo = planRepo;
         _unitOfWork = unitOfWork;
+        _measurementResolutionService = measurementResolutionService;
     }
 
     public async Task<SuggestedImportPreviewDto> PreviewAsync(ParsedImportFile file, CancellationToken cancellationToken)
@@ -245,6 +248,13 @@ public class SuggestedPlanImportService
                     await _subProjectRepository.AddAsync(subProject, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                     createdSubProjects.Add(subProject);
+
+                    var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
+                    if (measurementResolution != null)
+                    {
+                        await _measurementResolutionService.RecordMeasurementsAsync(subProject.SubProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                    }
+
                     result.SubProjectsCreated++;
                 }
                 catch (Exception ex)
