@@ -8,6 +8,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { MeasurementsService } from '../../core/services/measurements.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
+  ExecutiveAgencyProfile,
   FinancialYear,
   Lookup,
   MainProjectListItem,
@@ -118,13 +119,6 @@ interface MeasurementRow {
                   <input [ngModel]="newMainName()" (ngModelChange)="newMainName.set($event)" placeholder="مثال: تطوير شبكة الطرق الداخلية بشبين الكوم" />
                 </div>
                 <div class="si-fld full">
-                  <label>جهة التنفيذ <span class="req">*</span></label>
-                  <select [ngModel]="newMainAgency()" (ngModelChange)="newMainAgency.set($event)">
-                    <option value="">— اختر —</option>
-                    @for (a of agencies(); track a) { <option [value]="a">{{ a }}</option> }
-                  </select>
-                </div>
-                <div class="si-fld full">
                   <label>كود المشروع الرئيسي (اختياري)</label>
                   <input [ngModel]="newMainCode()" (ngModelChange)="newMainCode.set($event)" placeholder="P-2627-XXX" />
                   <div class="hint">إدخال كود يعتمد المشروع تلقائيًا فور الحفظ؛ تركه فارغًا يبقيه بانتظار الاعتماد.</div>
@@ -183,6 +177,13 @@ interface MeasurementRow {
                 <select [ngModel]="statusId()" (ngModelChange)="statusId.set($event)">
                   <option [ngValue]="null">— اختر —</option>
                   @for (st of statuses(); track st.id) { <option [ngValue]="st.id">{{ st.name }}</option> }
+                </select>
+              </div>
+              <div class="si-fld">
+                <label>جهة التنفيذ</label>
+                <select [ngModel]="executiveAgencyId()" (ngModelChange)="executiveAgencyId.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  @for (a of executiveAgencies(); track a.id) { <option [ngValue]="a.id">{{ a.agencyName }}</option> }
                 </select>
               </div>
               <div class="si-fld">
@@ -323,7 +324,7 @@ export class SubProjectForm {
   protected readonly accountingUnits = signal<Lookup[]>([]);
   protected readonly mainPrograms = signal<Lookup[]>([]);
   protected readonly subPrograms = signal<SubProgramLookup[]>([]);
-  protected readonly agencies = signal<string[]>([]);
+  protected readonly executiveAgencies = signal<ExecutiveAgencyProfile[]>([]);
   protected readonly allUnits = signal<Lookup[]>([]);
 
   protected readonly financialYears = signal<FinancialYear[]>([]);
@@ -342,6 +343,8 @@ export class SubProjectForm {
   protected readonly bankFunding = signal<number>(0);
   protected readonly selfFunding = signal<number>(0);
   protected readonly description = signal('');
+  protected readonly executiveAgencyId = signal<number | null>(null);
+  private originalExecutiveAgencyId: number | null = null;
 
   // ===== وضع الإضافة: لمشروع قائم / مشروع جديد بالكامل =====
   protected readonly createMode = signal<'existing' | 'new'>('existing');
@@ -360,7 +363,6 @@ export class SubProjectForm {
   protected readonly newMainProgramId = signal<number | null>(null);
   protected readonly newMainSubProgramId = signal<number | null>(null);
   protected readonly newMainName = signal('');
-  protected readonly newMainAgency = signal('');
   protected readonly newMainCode = signal('');
   protected readonly filteredNewMainSubPrograms = computed(() => {
     const pid = this.newMainProgramId();
@@ -436,7 +438,7 @@ export class SubProjectForm {
         this.financialYears.set(financialYears);
         this.mainPrograms.set(mainPrograms);
         this.subPrograms.set(subPrograms);
-        this.agencies.set(agencies.map((a) => a.agencyName));
+        this.executiveAgencies.set(agencies);
         this.allUnits.set(units);
         this.lookupsLoaded = true;
         done();
@@ -475,6 +477,8 @@ export class SubProjectForm {
           this.bankFunding.set(d.bankFunding);
           this.selfFunding.set(d.selfFunding);
           this.description.set(d.description ?? '');
+          this.executiveAgencyId.set(d.executiveAgencyId);
+          this.originalExecutiveAgencyId = d.executiveAgencyId;
           const subProgramId = this.subProgramIdForMain(d.mainProjectId);
           if (subProgramId != null) this.loadApplicableMeasurementsForSubProgram(subProgramId, e.id);
         },
@@ -508,7 +512,6 @@ export class SubProjectForm {
       this.newMainProgramId.set(null);
       this.newMainSubProgramId.set(null);
       this.newMainName.set('');
-      this.newMainAgency.set('');
       this.newMainCode.set('');
     }
   }
@@ -605,6 +608,8 @@ export class SubProjectForm {
     this.bankFunding.set(0);
     this.selfFunding.set(0);
     this.description.set('');
+    this.executiveAgencyId.set(null);
+    this.originalExecutiveAgencyId = null;
     this.checkedYearIds.set(new Set());
     this.originalYearIds = new Set<number>();
     this.applicableMeasurements.set([]);
@@ -615,7 +620,6 @@ export class SubProjectForm {
     this.newMainProgramId.set(null);
     this.newMainSubProgramId.set(null);
     this.newMainName.set('');
-    this.newMainAgency.set('');
     this.newMainCode.set('');
   }
 
@@ -644,7 +648,6 @@ export class SubProjectForm {
     if (creatingNewMain) {
       if (this.newMainSubProgramId() == null) { this.error.set('برجاء اختيار البرنامج الفرعي'); return; }
       if (!this.newMainName().trim()) { this.error.set('برجاء إدخال اسم المشروع الرئيسي'); return; }
-      if (!this.newMainAgency()) { this.error.set('برجاء اختيار جهة التنفيذ'); return; }
     } else if (!this.edit() && this.mainProjectId() == null) {
       this.error.set('برجاء اختيار المشروع الرئيسي');
       return;
@@ -665,7 +668,7 @@ export class SubProjectForm {
         .createMainProject({
           code: this.newMainCode().trim() || null,
           name: this.newMainName().trim(),
-          executingAgency: this.newMainAgency(),
+          executingAgency: '',
           subProgramId: this.newMainSubProgramId()!,
         })
         .subscribe({
@@ -706,11 +709,27 @@ export class SubProjectForm {
     req.subscribe({
       next: (result) => {
         const subProjectId = editing ? editing.id : result.id;
-        this.syncFinancialYears(subProjectId);
+        this.syncExecutiveAgency(subProjectId);
       },
       error: (err) => {
         this.saving.set(false);
         this.error.set(err?.error?.message ?? 'تعذّر حفظ المشروع الفرعي');
+      },
+    });
+  }
+
+  private syncExecutiveAgency(subProjectId: number): void {
+    const agencyId = this.executiveAgencyId();
+    if (agencyId == null || agencyId === this.originalExecutiveAgencyId) {
+      this.syncFinancialYears(subProjectId);
+      return;
+    }
+
+    this.projectsService.assignExecutiveAgency(subProjectId, agencyId).subscribe({
+      next: () => this.syncFinancialYears(subProjectId),
+      error: (err) => {
+        this.saving.set(false);
+        this.error.set(err?.error?.message ?? 'تعذّر تعيين جهة التنفيذ');
       },
     });
   }

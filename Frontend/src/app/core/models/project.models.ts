@@ -101,6 +101,8 @@ export interface SubProjectDetail {
   bankFunding: number;
   selfFunding: number;
   totalCost: number;
+  executiveAgencyId: number | null;
+  executiveAgencyName: string | null;
 }
 
 export interface MainProjectDetail {

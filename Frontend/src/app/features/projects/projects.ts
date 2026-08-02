@@ -88,6 +88,7 @@ export class Projects {
     if (this.approvalFilter() === 'approved' && !s.isApproved) return false;
     if (this.approvalFilter() === 'pending' && s.isApproved) return false;
     if (this.fLevel() && s.projectLevelName !== this.fLevel()) return false;
+    if (this.fAgency() && s.executiveAgencyName !== this.fAgency()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
     if (this.fFunding() === 'bank' && s.bankFunding <= 0) return false;
@@ -98,7 +99,6 @@ export class Projects {
   private matchesMainFilters(m: MainProjectListItem): boolean {
     if (this.fMainProgram() && m.mainProgramName !== this.fMainProgram()) return false;
     if (this.fSubProgram() && m.subProgramName !== this.fSubProgram()) return false;
-    if (this.fAgency() && m.executingAgency !== this.fAgency()) return false;
     return true;
   }
 

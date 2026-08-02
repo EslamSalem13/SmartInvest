@@ -3,7 +3,6 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
-import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
 
@@ -46,13 +45,6 @@ import { Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models
                 <input [ngModel]="name()" (ngModelChange)="name.set($event)" placeholder="مثال: تطوير شبكة الطرق الداخلية بشبين الكوم" />
               </div>
               <div class="si-fld full">
-                <label>جهة التنفيذ <span class="req">*</span></label>
-                <select [ngModel]="executingAgency()" (ngModelChange)="executingAgency.set($event)">
-                  <option value="">— اختر —</option>
-                  @for (a of agencies(); track a) { <option [value]="a">{{ a }}</option> }
-                </select>
-              </div>
-              <div class="si-fld full">
                 <label>كود المشروع الرئيسي (اختياري)</label>
                 <input [ngModel]="code()" (ngModelChange)="code.set($event)" placeholder="P-2627-XXX" />
                 <div class="hint">إدخال كود يعتمد المشروع تلقائيًا فور الحفظ؛ تركه فارغًا يبقيه بانتظار الاعتماد. يجب أن يكون الكود فريدًا.</div>
@@ -78,7 +70,6 @@ import { Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models
 export class MainProjectForm {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
-  private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
@@ -95,10 +86,10 @@ export class MainProjectForm {
   protected readonly subProgramId = signal<number | null>(null);
   protected readonly code = signal('');
   protected readonly name = signal('');
-  protected readonly executingAgency = signal('');
+  /** لم تعد جهة التنفيذ خاصية للمشروع الرئيسي - تُحفظ هنا فقط لعدم فقد قيمة موجودة مسبقًا عند التعديل. */
+  private readonly executingAgency = signal('');
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly agencies = signal<string[]>([]);
 
   protected readonly filteredSubPrograms = computed(() => {
     const pid = this.programId();
@@ -142,12 +133,10 @@ export class MainProjectForm {
     forkJoin({
       programs: this.lookups.getMainPrograms(),
       subs: this.lookups.getSubPrograms(),
-      agencies: this.agenciesService.getAll(),
     }).subscribe({
-      next: ({ programs, subs, agencies }) => {
+      next: ({ programs, subs }) => {
         this.programs.set(programs);
         this.subPrograms.set(subs);
-        this.agencies.set(agencies.map((a) => a.agencyName));
         this.lookupsLoaded = true;
         done();
       },
@@ -179,10 +168,6 @@ export class MainProjectForm {
 
     if (!this.name().trim() || this.subProgramId() == null) {
       this.error.set('برجاء إدخال اسم المشروع واختيار البرنامج الفرعي');
-      return;
-    }
-    if (!this.executingAgency()) {
-      this.error.set('برجاء اختيار جهة التنفيذ');
       return;
     }
 
