@@ -11,6 +11,34 @@
     <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
       @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
     </select>
+    @if (canManageYears()) {
+      <button class="si-btn" (click)="openAddYear()">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+        إضافة سنة مالية
+      </button>
+    }
+    @if (canViewPlans()) {
+      <a class="si-btn" routerLink="/app/plans">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+        الخطط الاستثمارية
+      </a>
+    }
+    <div class="grow"></div>
+    @if (canCreate()) {
+      <div class="menu-wrap">
+        <button class="si-btn primary" (click)="toggleAddMenu()">
+          <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+          إضافة مشروع
+          <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+        @if (addMenuOpen()) {
+          <div class="menu">
+            <button (click)="openAddMain()"><span class="mi main">◆</span> مشروع رئيسي</button>
+            <button (click)="openAddSub()"><span class="mi sub">◆</span> مشروع فرعي</button>
+          </div>
+        }
+      </div>
+    }
     <button class="si-btn" (click)="openAddYear()">
       <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
       إضافة سنة مالية
@@ -141,11 +169,15 @@
                 <td></td>
                 <td>
                   <div class="acts">
-                    @if (isManager() && !row.main.isApproved) {
+                    @if (canApprove() && !row.main.isApproved) {
                       <button class="act approve" title="اعتماد المشروع" (click)="openMainApprovalModal(row.main, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
                     }
-                    <button class="act" title="مشروع فرعي" (click)="openAddSubFor(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg></button>
-                    <button class="act" title="تعديل" (click)="openEditMain(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                    @if (canCreate()) {
+                      <button class="act" title="مشروع فرعي" (click)="openAddSubFor(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg></button>
+                    }
+                    @if (canEdit()) {
+                      <button class="act" title="تعديل" (click)="openEditMain(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                    }
                   </div>
                 </td>
               </tr>
@@ -166,11 +198,13 @@
                     <td>{{ s.markazName }}</td>
                     <td>
                       <div class="acts">
-                        @if (isManager() && !s.isApproved) {
+                        @if (canApprove() && !s.isApproved) {
                           <button class="act approve" title="اعتماد المشروع" (click)="openSubApprovalModal(s, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
                         }
                         <a class="act" title="تفاصيل" [routerLink]="['/app/projects', s.id]" (click)="$event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg></a>
-                        <button class="act" title="تعديل" (click)="openEditSub(s); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                        @if (canEdit()) {
+                          <button class="act" title="تعديل" (click)="openEditSub(s); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                        }
                       </div>
                     </td>
                   </tr>

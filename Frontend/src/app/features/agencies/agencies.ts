@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Perm } from '../../core/models/permission.models';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AgenciesService } from '../../core/services/agencies.service';
@@ -17,7 +18,7 @@ export class Agencies {
   private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canManage = computed(() => this.auth.has(Perm.AgenciesManage));
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

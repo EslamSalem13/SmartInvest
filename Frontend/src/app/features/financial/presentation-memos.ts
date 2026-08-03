@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Perm } from '../../core/models/permission.models';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -89,7 +90,7 @@ export class PresentationMemos implements OnInit {
     const role = this.auth.role();
     return role === Roles.PlanningManager || role === Roles.PlanningEmployee;
   });
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canManage = computed(() => this.auth.has(Perm.MemosManage));
 
   ngOnInit(): void {
     this.reload();

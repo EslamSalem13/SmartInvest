@@ -86,11 +86,11 @@
                       }
                     } @else {
                       <span class="si-note-inline">المذكرة مكتملة — للقراءة فقط.</span>
-                      @if (isManager()) {
+                      @if (canManage()) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="reopen()">إعادة فتح</button>
                       }
                     }
-                    @if (isManager() && memoDetail()!.currentVersionNumber === 0) {
+                    @if (canManage() && memoDetail()!.currentVersionNumber === 0) {
                       <button class="si-btn sm danger" (click)="deleteMemo(memo)">حذف</button>
                     }
                   </div>

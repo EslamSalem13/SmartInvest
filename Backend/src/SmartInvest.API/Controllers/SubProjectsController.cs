@@ -9,7 +9,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/subprojects")]
-[Authorize]
+[HasPermission(Permissions.ProjectsView)]
 public class SubProjectsController : ControllerBase
 {
     private readonly ISubProjectService _subProjectService;
@@ -51,6 +51,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPost]
+    [HasPermission(Permissions.ProjectsCreate)]
     public async Task<ActionResult<SubProjectDetailDto>> Create(CreateSubProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _subProjectService.CreateAsync(dto, cancellationToken);
@@ -58,13 +59,14 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [HasPermission(Permissions.ProjectsEdit)]
     public async Task<ActionResult<SubProjectDetailDto>> Update(int id, UpdateSubProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _subProjectService.UpdateAsync(id, dto, cancellationToken);
         return Ok(result);
     }
     [HttpPut("{id:int}/executive-agency")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [HasPermission(Permissions.ProjectsEdit)]
     public async Task<ActionResult<SubProjectDetailDto>> AssignExecutiveAgency(
         int id,
         AssignExecutiveAgencyDto dto,
@@ -79,7 +81,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}/approve")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [HasPermission(Permissions.ProjectsApprove)]
     public async Task<ActionResult<SubProjectDetailDto>> Approve(
         int id,
         ApproveSubProjectDto dto,
@@ -94,7 +96,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [HasPermission(Permissions.ProjectsDelete)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _subProjectService.DeleteAsync(id, cancellationToken);

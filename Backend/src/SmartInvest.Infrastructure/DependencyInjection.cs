@@ -39,7 +39,7 @@ public static class DependencyInjection
                 options.Password.RequireNonAlphanumeric = false;
                 options.User.RequireUniqueEmail = true;
             })
-            .AddRoles<IdentityRole>()
+            .AddRoles<ApplicationRole>()
             .AddEntityFrameworkStores<AppDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();
@@ -61,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectSpecificationService, ProjectSpecificationService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IFinancialYearService, FinancialYearService>();
         services.AddScoped<ISubProjectFinancialYearService, SubProjectFinancialYearService>();
         services.AddScoped<IPlanService, PlanService>();

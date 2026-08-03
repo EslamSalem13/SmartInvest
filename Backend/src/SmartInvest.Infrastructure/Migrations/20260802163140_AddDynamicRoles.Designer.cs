@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartInvest.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802163140_AddDynamicRoles")]
+    partial class AddDynamicRoles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -128,23 +131,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.AccountingUnit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("AccountingUnits");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.Announcement", b =>
                 {
                     b.Property<int>("Id")
@@ -251,23 +237,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasKey("AuditLogId");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.ComponentType", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ComponentTypes");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
@@ -614,7 +583,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.HasKey("MainProjectId");
 
-                    b.HasIndex("MainProjectCode");
+                    b.HasIndex("MainProjectCode")
+                        .IsUnique()
+                        .HasFilter("[MainProjectCode] IS NOT NULL");
 
                     b.HasIndex("SubProgramId");
 
@@ -641,69 +612,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasIndex("GovernorateId");
 
                     b.ToTable("Markaz");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.Measurement", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Measurements");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementSubProgram", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MeasurementId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SubProgramId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeasurementId");
-
-                    b.HasIndex("SubProgramId");
-
-                    b.ToTable("MeasurementSubProgram");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementUnit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MeasurementId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeasurementId");
-
-                    b.HasIndex("UnitId");
-
-                    b.ToTable("MeasurementUnit");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>
@@ -1059,23 +967,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.ToTable("ProjectFollowUp");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectLevel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ProjectLevels");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.ProjectPriority", b =>
                 {
                     b.Property<int>("Id")
@@ -1170,8 +1061,9 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubProjectId"));
 
-                    b.Property<int>("AccountingUnitId")
-                        .HasColumnType("int");
+                    b.Property<string>("AccountingUnit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ApprovalCancellationReason")
                         .HasMaxLength(1000)
@@ -1186,8 +1078,9 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<decimal>("BankFunding")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ComponentTypeId")
-                        .HasColumnType("int");
+                    b.Property<string>("ComponentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EconomicImpact")
                         .HasColumnType("nvarchar(max)");
@@ -1225,8 +1118,9 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<string>("ProjectGoal")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ProjectLevelId")
-                        .HasColumnType("int");
+                    b.Property<string>("ProjectLevel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectNature")
                         .IsRequired()
@@ -1247,27 +1141,24 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<string>("SubProjectName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("SubProjectId");
 
-                    b.HasIndex("AccountingUnitId");
-
-                    b.HasIndex("ComponentTypeId");
-
                     b.HasIndex("ExecutiveAgencyId");
+
+                    b.HasIndex("MainProjectId");
 
                     b.HasIndex("MarkazId");
 
                     b.HasIndex("PriorityId");
 
-                    b.HasIndex("ProjectLevelId");
-
                     b.HasIndex("StatusId");
 
                     b.HasIndex("SubProjectCode");
 
-                    b.HasIndex("MainProjectId", "SubProjectName")
+                    b.HasIndex("SubProjectName")
                         .IsUnique();
 
                     b.ToTable("SubProjects");
@@ -1295,37 +1186,6 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SubProjectFinancialYear");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectMeasurementValue", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("MeasurementId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SubProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Value")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeasurementId");
-
-                    b.HasIndex("SubProjectId");
-
-                    b.HasIndex("UnitId");
-
-                    b.ToTable("SubProjectMeasurementValue");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluation", b =>
@@ -1464,23 +1324,6 @@ namespace SmartInvest.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("TenderDocumentVersions");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.Unit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Units");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.Village", b =>
@@ -2050,44 +1893,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Governorate");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementSubProgram", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.Measurement", "Measurement")
-                        .WithMany("MeasurementSubPrograms")
-                        .HasForeignKey("MeasurementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartInvest.Domain.Entities.SubProgram", "SubProgram")
-                        .WithMany()
-                        .HasForeignKey("SubProgramId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Measurement");
-
-                    b.Navigation("SubProgram");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.MeasurementUnit", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.Measurement", "Measurement")
-                        .WithMany("MeasurementUnits")
-                        .HasForeignKey("MeasurementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartInvest.Domain.Entities.Unit", "Unit")
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Measurement");
-
-                    b.Navigation("Unit");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
@@ -2330,18 +2135,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProject", b =>
                 {
-                    b.HasOne("SmartInvest.Domain.Entities.AccountingUnit", "AccountingUnit")
-                        .WithMany()
-                        .HasForeignKey("AccountingUnitId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SmartInvest.Domain.Entities.ComponentType", "ComponentType")
-                        .WithMany()
-                        .HasForeignKey("ComponentTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SmartInvest.Domain.Entities.ExecutiveAgency", "ExecutiveAgency")
                         .WithMany()
                         .HasForeignKey("ExecutiveAgencyId")
@@ -2365,21 +2158,11 @@ namespace SmartInvest.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("SmartInvest.Domain.Entities.ProjectLevel", "ProjectLevel")
-                        .WithMany()
-                        .HasForeignKey("ProjectLevelId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("SmartInvest.Domain.Entities.ProjectStatus", "Status")
                         .WithMany("SubProjects")
                         .HasForeignKey("StatusId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("AccountingUnit");
-
-                    b.Navigation("ComponentType");
 
                     b.Navigation("ExecutiveAgency");
 
@@ -2388,8 +2171,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Markaz");
 
                     b.Navigation("Priority");
-
-                    b.Navigation("ProjectLevel");
 
                     b.Navigation("Status");
                 });
@@ -2411,33 +2192,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("FinancialYear");
 
                     b.Navigation("SubProject");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectMeasurementValue", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.Measurement", "Measurement")
-                        .WithMany("Values")
-                        .HasForeignKey("MeasurementId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
-                        .WithMany()
-                        .HasForeignKey("SubProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SmartInvest.Domain.Entities.Unit", "Unit")
-                        .WithMany()
-                        .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Measurement");
-
-                    b.Navigation("SubProject");
-
-                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.TechnicalEvaluation", b =>
@@ -2697,15 +2451,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("SubProjects");
 
                     b.Navigation("Villages");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.Measurement", b =>
-                {
-                    b.Navigation("MeasurementSubPrograms");
-
-                    b.Navigation("MeasurementUnits");
-
-                    b.Navigation("Values");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.OpeningEnvelopes", b =>

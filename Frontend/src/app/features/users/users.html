@@ -15,7 +15,7 @@
     <div class="kpi"><span class="lab">إجمالي المستخدمين</span><b class="val tnum">{{ total() }}</b></div>
     <div class="kpi ok"><span class="lab">النشطين</span><b class="val tnum">{{ activeCount() }}</b></div>
     <div class="kpi bad"><span class="lab">المعطّلين</span><b class="val tnum">{{ inactiveCount() }}</b></div>
-    <div class="kpi gold"><span class="lab">مديرو التخطيط</span><b class="val tnum">{{ managerCount() }}</b></div>
+    <div class="kpi gold"><span class="lab">الأدوار المستخدمة</span><b class="val tnum">{{ rolesCount() }}</b></div>
   </div>
 
   <!-- الأدوات -->
@@ -56,15 +56,13 @@
               <tr>
                 <td>
                   <div class="user">
-                    <div class="av" [class.mgr]="u.role === Roles.PlanningManager">{{ initial(u.fullName) }}</div>
+                    <div class="av">{{ initial(u.fullName) }}</div>
                     <div><b>{{ u.fullName }}</b><div class="uname">{{ u.userName }}</div></div>
                   </div>
                 </td>
                 <td>{{ u.email }}</td>
                 <td>
-                  <span class="badge" [class.mgr]="u.role === Roles.PlanningManager">
-                    {{ u.role === Roles.PlanningManager ? '👑' : '👤' }} {{ roleLabel(u.role) }}
-                  </span>
+                  <span class="badge">{{ roleLabel(u) }}</span>
                 </td>
                 <td><span class="pill" [class.ok]="u.isActive">{{ u.isActive ? 'نشط' : 'غير نشط' }}</span></td>
                 <td class="tnum">{{ u.createdAt | date: 'yyyy/MM/dd' }}</td>
@@ -118,11 +116,11 @@
             <div class="si-fld"><label>رقم الهاتف</label><input [ngModel]="fPhone()" (ngModelChange)="fPhone.set($event)" placeholder="01XXXXXXXXX" /></div>
             <div class="si-fld"><label>الدور الوظيفي <span class="req">*</span></label>
               <select [ngModel]="fRole()" (ngModelChange)="fRole.set($event)">
-                <option [value]="Roles.PlanningEmployee">موظف تخطيط</option>
-                @if (isSuperAdmin()) {
-                  <option [value]="Roles.PlanningManager">مدير التخطيط</option>
+                @for (role of assignableRoles(); track role.id) {
+                  <option [value]="role.name">{{ role.displayName }}</option>
                 }
               </select>
+              <div class="hint">الأدوار وصلاحياتها تُدار من صفحة «الأدوار والصلاحيات»</div>
             </div>
             <div class="si-fld"><label>كلمة المرور <span class="req">*</span></label><input type="password" [ngModel]="fPassword()" (ngModelChange)="fPassword.set($event)" placeholder="••••••••" /></div>
             <div class="si-fld"><label>تأكيد كلمة المرور <span class="req">*</span></label><input type="password" [ngModel]="fConfirm()" (ngModelChange)="fConfirm.set($event)" placeholder="••••••••" /></div>

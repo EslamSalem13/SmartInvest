@@ -14,6 +14,9 @@ public class UserDto
 
     public string Role { get; set; } = string.Empty;
 
+    /// <summary>الاسم المعروض للدور بالعربية.</summary>
+    public string RoleDisplayName { get; set; } = string.Empty;
+
     public bool IsActive { get; set; }
 
     public bool HasAvatar { get; set; }

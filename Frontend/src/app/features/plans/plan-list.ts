@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { Perm } from '../../core/models/permission.models';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -22,7 +23,7 @@ export class PlanList {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canManage = computed(() => this.auth.has(Perm.PlansManage));
 
   // ===== السنة المالية =====
   protected readonly financialYears = signal<FinancialYear[]>([]);
@@ -108,7 +109,7 @@ export class PlanList {
     if (!this.selectedYearId() || this.generating()) return;
     this.addPlanError.set(null);
     this.newPlanType.set(
-      this.hasSuggestedForSelectedYear() && this.isManager() ? 'Approved' : 'Suggested',
+      this.hasSuggestedForSelectedYear() && this.canManage() ? 'Approved' : 'Suggested',
     );
     this.newPlanApprovalDate.set(this.maxApprovalDate());
     this.showAddPlanForm.set(true);
