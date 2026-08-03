@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[HasPermission(Permissions.UsersView)]
+[Authorize(Roles = Roles.PlanningManager)]
 public class UsersController : ControllerBase
 {
     private readonly IIdentityService _identityService;
@@ -26,7 +26,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.UsersManage)]
     public async Task<ActionResult<UserDto>> CreateEmployee(CreateEmployeeDto dto, CancellationToken cancellationToken)
     {
         var user = await _identityService.CreateEmployeeAsync(dto, cancellationToken);
@@ -34,7 +33,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}/reset-password")]
-    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> ResetPassword(string id, ResetPasswordDto dto, CancellationToken cancellationToken)
     {
         await _identityService.ResetPasswordAsync(id, dto.NewPassword, cancellationToken);
@@ -42,7 +40,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}/activate")]
-    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> Activate(string id, CancellationToken cancellationToken)
     {
         await _identityService.SetActiveStatusAsync(id, true, cancellationToken);
@@ -50,7 +47,6 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id}/deactivate")]
-    [HasPermission(Permissions.UsersManage)]
     public async Task<IActionResult> Deactivate(string id, CancellationToken cancellationToken)
     {
         await _identityService.SetActiveStatusAsync(id, false, cancellationToken);

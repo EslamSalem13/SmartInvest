@@ -21,6 +21,7 @@ export class SubProjectDetails {
   private readonly specsService = inject(SpecificationsService);
   private readonly auth = inject(AuthService);
 
+  protected readonly isManager = this.auth.isManager;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

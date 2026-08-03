@@ -33,7 +33,7 @@ public class FinancialYearsController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.FinancialYearsManage)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<FinancialYearDto>> Create(CreateFinancialYearDto dto, CancellationToken cancellationToken)
     {
         var result = await _financialYearService.CreateAsync(dto, cancellationToken);
@@ -41,7 +41,7 @@ public class FinancialYearsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.FinancialYearsManage)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<FinancialYearDto>> Update(int id, UpdateFinancialYearDto dto, CancellationToken cancellationToken)
     {
         var result = await _financialYearService.UpdateAsync(id, dto, cancellationToken);
@@ -49,7 +49,7 @@ public class FinancialYearsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.FinancialYearsManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _financialYearService.DeleteAsync(id, cancellationToken);

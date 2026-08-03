@@ -1,5 +1,4 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { Perm } from '../../core/models/permission.models';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, Observable } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
@@ -276,7 +275,7 @@ interface MeasurementRow {
             <button class="si-btn primary" [disabled]="saving()" (click)="submit()">
               @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { {{ edit() ? 'حفظ التعديلات' : 'إضافة المشروع' }} }
             </button>
-            @if (edit() && canDelete()) {
+            @if (edit() && isManager()) {
               <button class="si-btn danger" type="button" [disabled]="saving()" (click)="onDelete()">حذف المشروع</button>
             }
             <button class="si-btn" (click)="close.emit()">إلغاء</button>
@@ -314,7 +313,7 @@ export class SubProjectForm {
   private readonly measurementsService = inject(MeasurementsService);
   private readonly auth = inject(AuthService);
 
-  protected readonly canDelete = computed(() => this.auth.has(Perm.ProjectsDelete));
+  protected readonly isManager = this.auth.isManager;
 
   readonly open = input(false);
   readonly edit = input<SubProjectListItem | null>(null);

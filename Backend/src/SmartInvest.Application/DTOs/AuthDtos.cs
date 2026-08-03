@@ -21,11 +21,6 @@ public class AuthResultDto
 
     public string Role { get; set; } = string.Empty;
 
-    /// <summary>الاسم المعروض للدور بالعربية.</summary>
-    public string RoleDisplayName { get; set; } = string.Empty;
-
-    public List<string> Permissions { get; set; } = [];
-
     public bool HasAvatar { get; set; }
 }
 

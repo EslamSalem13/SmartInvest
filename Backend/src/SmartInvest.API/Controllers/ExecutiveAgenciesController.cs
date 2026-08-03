@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/agencies")]
-[HasPermission(Permissions.AgenciesView)]
+[Authorize(Roles = Roles.PlanningStaff)]
 public class ExecutiveAgenciesController : ControllerBase
 {
     private readonly IExecutiveAgencyService _agencyService;
@@ -33,7 +33,7 @@ public class ExecutiveAgenciesController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.AgenciesManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ExecutiveAgencyDto>> Create(CreateExecutiveAgencyDto dto, CancellationToken cancellationToken)
     {
         var result = await _agencyService.CreateAsync(dto, cancellationToken);
@@ -41,7 +41,7 @@ public class ExecutiveAgenciesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.AgenciesManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ExecutiveAgencyDto>> Update(int id, UpdateExecutiveAgencyDto dto, CancellationToken cancellationToken)
     {
         var result = await _agencyService.UpdateAsync(id, dto, cancellationToken);
@@ -49,7 +49,7 @@ public class ExecutiveAgenciesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.AgenciesManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _agencyService.DeleteAsync(id, cancellationToken);

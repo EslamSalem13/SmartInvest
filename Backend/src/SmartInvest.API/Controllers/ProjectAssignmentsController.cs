@@ -19,7 +19,7 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpGet]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<IReadOnlyList<ProjectAssignmentDto>>> GetAll(int subProjectId, CancellationToken cancellationToken)
     {
         var result = await _assignmentService.GetBySubProjectAsync(subProjectId, cancellationToken);
@@ -27,7 +27,7 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProjectAssignmentDto>> Create(int subProjectId, CreateProjectAssignmentDto dto, CancellationToken cancellationToken)
     {
         var result = await _assignmentService.CreateAsync(subProjectId, dto, cancellationToken);
@@ -35,7 +35,7 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProjectAssignmentDto>> Update(int subProjectId, int id, UpdateProjectAssignmentDto dto, CancellationToken cancellationToken)
     {
         var result = await _assignmentService.UpdateGeneralAsync(subProjectId, id, dto, cancellationToken);
@@ -43,7 +43,7 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.ProjectsDelete)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int subProjectId, int id, CancellationToken cancellationToken)
     {
         await _assignmentService.DeleteAsync(subProjectId, id, cancellationToken);

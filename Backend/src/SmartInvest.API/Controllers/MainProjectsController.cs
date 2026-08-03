@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/mainprojects")]
-[HasPermission(Permissions.ProjectsView)]
+[Authorize]
 public class MainProjectsController : ControllerBase
 {
     private readonly IMainProjectService _mainProjectService;
@@ -33,7 +33,6 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.ProjectsCreate)]
     public async Task<ActionResult<MainProjectDetailDto>> Create(CreateMainProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _mainProjectService.CreateAsync(dto, cancellationToken);
@@ -41,7 +40,6 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.ProjectsEdit)]
     public async Task<ActionResult<MainProjectDetailDto>> Update(int id, UpdateMainProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _mainProjectService.UpdateAsync(id, dto, cancellationToken);
@@ -49,7 +47,7 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.ProjectsDelete)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _mainProjectService.DeleteAsync(id, cancellationToken);

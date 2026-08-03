@@ -9,7 +9,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/audit-logs")]
-[HasPermission(Permissions.ProjectsView)]
+[Authorize(Roles = Roles.PlanningManager)]
 public class AuditLogsController : ControllerBase
 {
     private readonly IGenericRepository<SmartInvest.Domain.Entities.AuditLog> _auditLogRepository;

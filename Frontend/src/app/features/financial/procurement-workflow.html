@@ -89,7 +89,7 @@
                       }
                     } @else {
                       <span class="si-note-inline">المرحلة مكتملة — الإصدارات للقراءة فقط.</span>
-                      @if (canComplete()) {
+                      @if (isManager()) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="reopen()">إعادة فتح</button>
                       }
                     }

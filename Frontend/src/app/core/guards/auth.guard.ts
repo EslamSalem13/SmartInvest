@@ -13,8 +13,7 @@ export const authGuard: CanActivateFn = () => {
   return router.createUrlTree(['/']);
 };
 
-/** يسمح بالدخول للصفحة فقط لو الدور يملك هذه الصلاحية. */
-export const permissionGuard = (permission: string): CanActivateFn => {
+export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
   return () => {
     const auth = inject(AuthService);
     const router = inject(Router);
@@ -23,11 +22,12 @@ export const permissionGuard = (permission: string): CanActivateFn => {
       return router.createUrlTree(['/']);
     }
 
-    if (auth.has(permission)) {
+    const role = auth.role();
+    if (role && allowedRoles.includes(role)) {
       return true;
     }
 
-    return router.createUrlTree([auth.homeRoute()]);
+    return router.createUrlTree([auth.homeRouteForRole(role)]);
   };
 };
 
@@ -36,7 +36,7 @@ export const guestGuard: CanActivateFn = () => {
   const router = inject(Router);
 
   if (auth.isAuthenticated()) {
-    return router.createUrlTree([auth.homeRoute()]);
+    return router.createUrlTree([auth.homeRouteForRole(auth.role())]);
   }
 
   return true;

@@ -1,5 +1,4 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Perm } from '../../core/models/permission.models';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -38,12 +37,6 @@ export class Projects {
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
 
-  protected readonly canApprove = computed(() => this.auth.has(Perm.ProjectsApprove));
-  protected readonly canCreate = computed(() => this.auth.has(Perm.ProjectsCreate));
-  protected readonly canEdit = computed(() => this.auth.has(Perm.ProjectsEdit));
-  protected readonly canViewPlans = computed(() => this.auth.has(Perm.PlansView));
-  protected readonly canManageYears = computed(() => this.auth.has(Perm.FinancialYearsManage));
-  protected readonly agencies = EXECUTING_AGENCIES;
   protected readonly isManager = this.auth.isManager;
   protected readonly agencies = signal<string[]>([]);
 

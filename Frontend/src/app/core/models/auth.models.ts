@@ -18,8 +18,6 @@ export interface AuthResult {
   fullName: string;
   email: string;
   role: string;
-  roleDisplayName: string;
-  permissions: string[];
   hasAvatar: boolean;
 }
 
@@ -28,7 +26,5 @@ export interface CurrentUser {
   fullName: string;
   email: string;
   role: string;
-  roleDisplayName: string;
-  permissions: string[];
   hasAvatar: boolean;
 }

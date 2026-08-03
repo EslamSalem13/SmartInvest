@@ -15,7 +15,7 @@ namespace SmartInvest.API.Controllers;
 /// المراحل: tender-document / announcement / opening-envelopes / technical-evaluation / financial-evaluation / contract-award.
 /// </summary>
 [ApiController]
-[HasPermission(Permissions.FinancialView)]
+[Authorize]
 public class ProcurementController : ControllerBase
 {
     private readonly IProcurementService _procurementService;
@@ -49,7 +49,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>رفع إصدار جديد — multipart/form-data: حقل لكل ملف باسم مفتاح الخانة + حقل notes اختياري.</summary>
     [HttpPost("api/subprojects/{subProjectId:int}/procurement/{stage}/versions")]
-    [HasPermission(Permissions.FinancialUpload)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProcurementVersionDto>> UploadVersion(
         int subProjectId,
         string stage,
@@ -84,7 +84,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>إكمال المرحلة رسميًا.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/complete")]
-    [HasPermission(Permissions.FinancialComplete)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> Complete(int subProjectId, string stage, CancellationToken cancellationToken)
     {
         await _procurementService.SetCompletionAsync(subProjectId, ParseStage(stage), true, cancellationToken);
@@ -93,7 +93,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>إعادة فتح مرحلة مكتملة — مدير التخطيط فقط.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/reopen")]
-    [HasPermission(Permissions.FinancialComplete)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Reopen(int subProjectId, string stage, CancellationToken cancellationToken)
     {
         await _procurementService.SetCompletionAsync(subProjectId, ParseStage(stage), false, cancellationToken);
@@ -102,7 +102,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>تأكيد/إلغاء تأكيد صرف الدفعة المقدمة 25% — خاص بمرحلة العقد والترسية.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/advance-payment")]
-    [HasPermission(Permissions.FinancialUpload)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> SetAdvancePaymentDone(int subProjectId, SetAdvancePaymentDoneDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetAdvancePaymentDoneAsync(subProjectId, dto.Done, cancellationToken);

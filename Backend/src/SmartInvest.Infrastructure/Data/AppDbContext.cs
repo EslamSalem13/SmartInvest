@@ -6,7 +6,7 @@ using SmartInvest.Infrastructure.Identity;
 
 namespace SmartInvest.Infrastructure.Data;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+public class AppDbContext : IdentityDbContext<ApplicationUser>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {

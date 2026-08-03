@@ -26,7 +26,7 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ContractTypeDto>> Create(CreateContractTypeDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractTypeService.CreateAsync(dto, cancellationToken);
@@ -34,7 +34,7 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ContractTypeDto>> Update(int id, UpdateContractTypeDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractTypeService.UpdateAsync(id, dto, cancellationToken);
@@ -42,7 +42,7 @@ public class ContractTypesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.ProjectsDelete)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _contractTypeService.DeleteAsync(id, cancellationToken);

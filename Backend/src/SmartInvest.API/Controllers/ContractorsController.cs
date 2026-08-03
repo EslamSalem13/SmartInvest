@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/contractors")]
-[HasPermission(Permissions.ContractorsView)]
+[Authorize(Roles = Roles.PlanningStaff)]
 public class ContractorsController : ControllerBase
 {
     private readonly IContractorService _contractorService;
@@ -33,7 +33,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.ContractorsManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ContractorDto>> Create(CreateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.CreateAsync(dto, cancellationToken);
@@ -41,7 +41,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [HasPermission(Permissions.ContractorsManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ContractorDto>> Update(int id, UpdateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.UpdateAsync(id, dto, cancellationToken);
@@ -49,7 +49,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [HasPermission(Permissions.ContractorsManage)]
+    [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _contractorService.DeleteAsync(id, cancellationToken);

@@ -26,7 +26,7 @@ public class SubProjectFinancialYearsController : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<SubProjectFinancialYearDto>> Link(int subProjectId, LinkFinancialYearDto dto, CancellationToken cancellationToken)
     {
         var result = await _linkService.LinkAsync(subProjectId, dto.FinancialYearId, cancellationToken);
@@ -34,7 +34,7 @@ public class SubProjectFinancialYearsController : ControllerBase
     }
 
     [HttpDelete("{financialYearId:int}")]
-    [HasPermission(Permissions.ProjectsEdit)]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> Unlink(int subProjectId, int financialYearId, CancellationToken cancellationToken)
     {
         await _linkService.UnlinkAsync(subProjectId, financialYearId, cancellationToken);

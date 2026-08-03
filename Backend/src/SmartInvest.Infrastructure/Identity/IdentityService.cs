@@ -16,60 +16,14 @@ namespace SmartInvest.Infrastructure.Identity;
 public class IdentityService : IIdentityService
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly JwtSettings _jwtSettings;
     private readonly ICurrentUserService _currentUser;
 
-    public IdentityService(
-        UserManager<ApplicationUser> userManager,
-        RoleManager<ApplicationRole> roleManager,
-        IOptions<JwtSettings> jwtOptions,
-        ICurrentUserService currentUser)
+    public IdentityService(UserManager<ApplicationUser> userManager, IOptions<JwtSettings> jwtOptions, ICurrentUserService currentUser)
     {
         _userManager = userManager;
-        _roleManager = roleManager;
         _jwtSettings = jwtOptions.Value;
         _currentUser = currentUser;
-    }
-
-    /// <summary>الاسم المعروض للدور بالعربية — يقع على اسم الدور نفسه لو غير محدَّد.</summary>
-    private async Task<string> GetRoleDisplayNameAsync(string role)
-    {
-        if (string.IsNullOrEmpty(role))
-        {
-            return string.Empty;
-        }
-
-        var appRole = await _roleManager.FindByNameAsync(role);
-
-        return string.IsNullOrWhiteSpace(appRole?.DisplayName) ? role : appRole!.DisplayName;
-    }
-
-    /// <summary>صلاحيات الدور — السوبر أدمن يحصل على كل الصلاحيات.</summary>
-    private async Task<IReadOnlyList<string>> GetPermissionsForRoleAsync(string role)
-    {
-        if (role == Roles.SuperAdmin)
-        {
-            return Permissions.All.ToList();
-        }
-
-        if (string.IsNullOrEmpty(role))
-        {
-            return [];
-        }
-
-        var appRole = await _roleManager.FindByNameAsync(role);
-        if (appRole == null)
-        {
-            return [];
-        }
-
-        var claims = await _roleManager.GetClaimsAsync(appRole);
-
-        return claims
-            .Where(c => c.Type == Permissions.ClaimType)
-            .Select(c => c.Value)
-            .ToList();
     }
 
     public async Task<AuthResultDto> LoginAsync(string usernameOrEmail, string password, CancellationToken cancellationToken = default)
@@ -99,10 +53,8 @@ public class IdentityService : IIdentityService
         var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault() ?? string.Empty;
 
-        var permissions = await GetPermissionsForRoleAsync(role);
-
         var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.DurationInMinutes);
-        var token = GenerateJwtToken(user, role, permissions, expiresAt);
+        var token = GenerateJwtToken(user, role, expiresAt);
 
         var result = new AuthResultDto
         {
@@ -112,8 +64,6 @@ public class IdentityService : IIdentityService
             FullName = user.FullName,
             Email = user.Email ?? string.Empty,
             Role = role,
-            RoleDisplayName = await GetRoleDisplayNameAsync(role),
-            Permissions = permissions.ToList(),
             HasAvatar = user.AvatarContent is { Length: > 0 }
         };
 
@@ -138,15 +88,14 @@ public class IdentityService : IIdentityService
 
     public async Task<UserDto> CreateEmployeeAsync(CreateEmployeeDto dto, CancellationToken cancellationToken = default)
     {
-        // الأدوار ديناميكية: نتحقق فقط أن الدور موجود فعلًا.
-        if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
+        if (dto.Role != Roles.PlanningEmployee && dto.Role != Roles.PlanningManager)
         {
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
         }
 
-        if (dto.Role == Roles.SuperAdmin && _currentUser.Role != Roles.SuperAdmin)
+        if (dto.Role == Roles.PlanningManager && _currentUser.Role != Roles.SuperAdmin)
         {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حساب سوبر أدمن");
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حساب مدير تخطيط");
         }
 
         var user = new ApplicationUser
@@ -175,7 +124,6 @@ public class IdentityService : IIdentityService
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
             Role = dto.Role,
-            RoleDisplayName = await GetRoleDisplayNameAsync(dto.Role),
             IsActive = user.IsActive,
             HasAvatar = false,
             CreatedAt = user.CreatedAt
@@ -230,7 +178,6 @@ public class IdentityService : IIdentityService
                 Email = user.Email ?? string.Empty,
                 PhoneNumber = user.PhoneNumber,
                 Role = roles.FirstOrDefault() ?? string.Empty,
-                RoleDisplayName = await GetRoleDisplayNameAsync(roles.FirstOrDefault() ?? string.Empty),
                 IsActive = user.IsActive,
                 HasAvatar = user.AvatarContent is { Length: > 0 },
                 CreatedAt = user.CreatedAt
@@ -266,7 +213,7 @@ public class IdentityService : IIdentityService
         return new AvatarDto { Content = user.AvatarContent, ContentType = user.AvatarContentType };
     }
 
-    private string GenerateJwtToken(ApplicationUser user, string role, IReadOnlyList<string> permissions, DateTime expiresAt)
+    private string GenerateJwtToken(ApplicationUser user, string role, DateTime expiresAt)
     {
         var claims = new List<Claim>
         {
@@ -276,8 +223,6 @@ public class IdentityService : IIdentityService
             new Claim(ClaimTypes.Role, role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
-
-        claims.AddRange(permissions.Select(p => new Claim(Permissions.ClaimType, p)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
