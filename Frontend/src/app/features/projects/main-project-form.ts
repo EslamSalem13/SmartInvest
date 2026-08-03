@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Perm } from '../../core/models/permission.models';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
@@ -63,7 +64,7 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
             <button class="si-btn primary" [disabled]="saving()" (click)="submit()">
               @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { {{ edit() ? 'حفظ التعديلات' : 'إضافة المشروع الرئيسي' }} }
             </button>
-            @if (edit() && isManager()) {
+            @if (edit() && canDelete()) {
               <button class="si-btn danger" type="button" [disabled]="saving()" (click)="onDelete()">حذف المشروع</button>
             }
             <button class="si-btn" (click)="close.emit()">إلغاء</button>
@@ -79,7 +80,7 @@ export class MainProjectForm {
   private readonly lookups = inject(LookupsService);
   private readonly auth = inject(AuthService);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canDelete = computed(() => this.auth.has(Perm.ProjectsDelete));
 
   readonly open = input(false);
   readonly edit = input<MainProjectListItem | null>(null);

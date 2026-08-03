@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -58,6 +59,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationHandler, SuperAdminAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
 // ---------------------------------------------------------------------------
 // CORS (Angular client)
@@ -105,19 +108,81 @@ app.UseMiddleware<SmartInvest.API.Middleware.ExceptionHandlingMiddleware>();
 
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    string[] roles = { Roles.SuperAdmin, Roles.PlanningEmployee, Roles.PlanningManager };
-
-    foreach (var role in roles)
+    // بذور الأدوار: تُنشأ مرة واحدة، مع تعبئة الأدوار القديمة (الموجودة قبل نظام الصلاحيات)
+    // التي ليس لها اسم معروض أو صلاحيات. لا نكتب فوق دور عدّله السوبر أدمن.
+    async Task SeedRoleAsync(string name, string displayName, bool isSystem, string[] permissions)
     {
-        var exists = await roleManager.RoleExistsAsync(role);
-        if (!exists)
+        var role = await roleManager.FindByNameAsync(name);
+
+        if (role == null)
         {
-            await roleManager.CreateAsync(new IdentityRole(role));
+            role = new ApplicationRole(name) { DisplayName = displayName, IsSystem = isSystem };
+            var created = await roleManager.CreateAsync(role);
+            if (!created.Succeeded)
+            {
+                return;
+            }
+        }
+        else if (string.IsNullOrWhiteSpace(role.DisplayName))
+        {
+            // دور قديم من قبل الترقية — نعطيه الاسم المعروض ونوعه.
+            role.DisplayName = displayName;
+            role.IsSystem = isSystem;
+            await roleManager.UpdateAsync(role);
+        }
+
+        // الصلاحيات تُضاف فقط لو الدور لا يملك أي صلاحية بعد.
+        var existing = await roleManager.GetClaimsAsync(role);
+        if (existing.Any(c => c.Type == Permissions.ClaimType))
+        {
+            return;
+        }
+
+        foreach (var permission in permissions)
+        {
+            await roleManager.AddClaimAsync(role, new Claim(Permissions.ClaimType, permission));
         }
     }
+
+    // السوبر أدمن: دور نظام، يملك كل الصلاحيات ضمنيًا (لا يحتاج claims).
+    await SeedRoleAsync(Roles.SuperAdmin, "سوبر أدمن", isSystem: true, permissions: []);
+
+    // إدارة التخطيط — بدون أي صلاحيات على الإدارة المالية.
+    await SeedRoleAsync(Roles.PlanningManager, "مدير التخطيط", isSystem: false,
+    [
+        Permissions.DashboardView,
+        Permissions.ProjectsView, Permissions.ProjectsCreate, Permissions.ProjectsEdit,
+        Permissions.ProjectsDelete, Permissions.ProjectsApprove,
+        Permissions.PlansView, Permissions.PlansManage,
+        Permissions.FinancialYearsManage,
+        Permissions.ContractorsView, Permissions.ContractorsManage,
+        Permissions.AgenciesView, Permissions.AgenciesManage,
+        Permissions.UsersView, Permissions.UsersManage,
+    ]);
+
+    await SeedRoleAsync(Roles.PlanningEmployee, "موظف تخطيط", isSystem: false,
+    [
+        Permissions.ProjectsView, Permissions.ProjectsCreate, Permissions.ProjectsEdit,
+        Permissions.PlansView,
+        Permissions.ContractorsView,
+        Permissions.AgenciesView,
+    ]);
+
+    // الإدارة المالية — قسم مستقل، بدون صلاحيات التخطيط.
+    await SeedRoleAsync(Roles.FinancialManager, "مدير الإدارة المالية", isSystem: false,
+    [
+        Permissions.FinancialView, Permissions.FinancialUpload, Permissions.FinancialComplete,
+        Permissions.MemosView, Permissions.MemosManage,
+    ]);
+
+    await SeedRoleAsync(Roles.FinancialEmployee, "موظف الإدارة المالية", isSystem: false,
+    [
+        Permissions.FinancialView, Permissions.FinancialUpload,
+        Permissions.MemosView,
+    ]);
 
     const string adminEmail = "admin@gmail.com";
     var adminUser = await userManager.FindByEmailAsync(adminEmail);

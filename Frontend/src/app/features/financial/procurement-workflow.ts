@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Perm } from '../../core/models/permission.models';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -48,7 +49,7 @@ export class ProcurementWorkflow implements OnInit {
     const role = this.auth.role();
     return role === Roles.PlanningManager || role === Roles.PlanningEmployee;
   });
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canComplete = computed(() => this.auth.has(Perm.FinancialComplete));
 
   protected readonly completedCount = computed(
     () => this.overview()?.stages.filter((s) => s.isCompleted).length ?? 0,

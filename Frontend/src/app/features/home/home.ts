@@ -34,9 +34,9 @@ export class Home {
     this.auth
       .login({ usernameOrEmail: this.usernameOrEmail().trim(), password: this.password() })
       .subscribe({
-        next: (result) => {
+        next: () => {
           this.loading.set(false);
-          this.router.navigateByUrl(this.auth.homeRouteForRole(result.role));
+          this.router.navigateByUrl(this.auth.homeRoute());
         },
         error: (err) => {
           this.loading.set(false);

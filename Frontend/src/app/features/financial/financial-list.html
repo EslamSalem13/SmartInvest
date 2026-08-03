@@ -33,6 +33,49 @@
     <div class="card">
       <div class="card-head">
         <h3>المشروعات الفرعية</h3>
+
+        <!-- فلتر تقدم الطرح (اختيار متعدد) -->
+        <div class="stage-filter">
+          <button
+            class="si-btn sm"
+            [class.on]="selectedStagesCount() > 0"
+            (click)="toggleFilterPanel()"
+            [attr.aria-expanded]="filterOpen()"
+          >
+            <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 5h18M6 12h12M10 19h4" /></svg>
+            تقدم الطرح
+            @if (selectedStagesCount() > 0) {
+              <span class="sf-badge tnum">{{ selectedStagesCount() }}</span>
+            }
+            <svg class="sf-arrow" [class.rot]="filterOpen()" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+
+          @if (filterOpen()) {
+            <div class="sf-panel">
+              <div class="sf-panel-head">
+                <b>حالة الطرح</b>
+                @if (selectedStagesCount() > 0) {
+                  <button class="sf-clear" (click)="clearStageFilter()">مسح الكل</button>
+                }
+              </div>
+              @for (opt of stageOptions(); track opt.value) {
+                <label class="sf-item">
+                  <input
+                    type="checkbox"
+                    [checked]="isStageChecked(opt.value)"
+                    (change)="toggleStage(opt.value, $any($event.target).checked)"
+                  />
+                  <span class="sf-lab tnum">{{ opt.label }}</span>
+                  @if (opt.isDone) {
+                    <span class="chip ok-chip">مكتملة</span>
+                  }
+                  <span class="sf-count tnum">{{ opt.count }}</span>
+                </label>
+              }
+            </div>
+          }
+        </div>
+
         <div class="grow"></div>
         <input
           class="search"
@@ -45,18 +88,18 @@
         <table>
           <thead>
             <tr>
-              <th>المشروع الفرعي</th>
-              <th>الكود</th>
               <th>المشروع الرئيسي</th>
-              <th>مذكرة عرض</th>
+              <th>الكود</th>
+              <th>المشروع الفرعي</th>
+              <th>مذكرة العرض</th>
               <th>تقدم الطرح</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            @for (item of filtered(); track item.subProjectId) {
+            @for (item of paged(); track item.subProjectId) {
               <tr>
-                <td>{{ item.subProjectName }}</td>
+                <td>{{ item.mainProjectName }}</td>
                 <td>
                   @if (item.subProjectCode) {
                     <span class="tnum">{{ item.subProjectCode }}</span>
@@ -64,7 +107,7 @@
                     <span class="wait">بانتظار الاعتماد</span>
                   }
                 </td>
-                <td>{{ item.mainProjectName }}</td>
+                <td>{{ item.subProjectName }}</td>
                 <td>
                   @if (item.hasPresentationMemo) {
                     <span class="chip ok-chip">مرتبط</span>
@@ -85,10 +128,21 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية.</td></tr>
+              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية مطابقة.</td></tr>
             }
           </tbody>
         </table>
+      </div>
+
+      <div class="tblfoot">
+        <span class="muted">عرض {{ rangeStart() }}–{{ rangeEnd() }} من أصل {{ filtered().length }} مشروع فرعي</span>
+        <div class="pager">
+          <button (click)="goToPage(page() - 1)" [disabled]="page() === 1">‹</button>
+          @for (p of [].constructor(totalPages()); track $index) {
+            <button [class.on]="page() === $index + 1" (click)="goToPage($index + 1)">{{ $index + 1 }}</button>
+          }
+          <button (click)="goToPage(page() + 1)" [disabled]="page() === totalPages()">›</button>
+        </div>
       </div>
     </div>
   }

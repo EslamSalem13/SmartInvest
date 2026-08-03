@@ -4,7 +4,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/plans")]
-[Authorize]
+[HasPermission(Permissions.PlansView)]
 public class PlansController : ControllerBase
 {
     private readonly IPlanService planService;
@@ -111,7 +111,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpPut("{id:int}/approve")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [HasPermission(Permissions.PlansManage)]
     public async Task<IActionResult> Approve(int id, ApprovePlanDto dto)
     {
         var plan = await planService.ApproveAsync(id, dto.ApprovalDate);

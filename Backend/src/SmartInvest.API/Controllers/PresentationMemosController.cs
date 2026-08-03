@@ -11,7 +11,7 @@ namespace SmartInvest.API.Controllers;
 /// <summary>مذكرات العرض — مذكرة واحدة قد تغطي عدة مشروعات فرعية (M:N).</summary>
 [ApiController]
 [Route("api/presentation-memos")]
-[Authorize]
+[HasPermission(Permissions.MemosView)]
 public class PresentationMemosController : ControllerBase
 {
     private readonly IPresentationMemoService _memoService;
@@ -36,7 +36,7 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<ActionResult<PresentationMemoDto>> Create(CreatePresentationMemoDto dto, CancellationToken cancellationToken)
     {
         var result = await _memoService.CreateAsync(dto, cancellationToken);
@@ -44,7 +44,7 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<ActionResult<PresentationMemoDto>> Update(int id, UpdatePresentationMemoDto dto, CancellationToken cancellationToken)
     {
         var result = await _memoService.UpdateAsync(id, dto, cancellationToken);
@@ -52,7 +52,7 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _memoService.DeleteAsync(id, cancellationToken);
@@ -61,7 +61,7 @@ public class PresentationMemosController : ControllerBase
 
     /// <summary>رفع إصدار جديد — multipart/form-data: حقل file + حقل notes اختياري.</summary>
     [HttpPost("{id:int}/versions")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<ActionResult<ProcurementVersionDto>> UploadVersion(
         int id,
         IFormFile? file,
@@ -91,7 +91,7 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpPut("{id:int}/complete")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<IActionResult> Complete(int id, CancellationToken cancellationToken)
     {
         await _memoService.SetCompletionAsync(id, true, cancellationToken);
@@ -100,7 +100,7 @@ public class PresentationMemosController : ControllerBase
 
     /// <summary>إعادة فتح مذكرة مكتملة — مدير التخطيط فقط.</summary>
     [HttpPut("{id:int}/reopen")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [HasPermission(Permissions.MemosManage)]
     public async Task<IActionResult> Reopen(int id, CancellationToken cancellationToken)
     {
         await _memoService.SetCompletionAsync(id, false, cancellationToken);

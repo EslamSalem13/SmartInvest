@@ -2,8 +2,10 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { UsersService } from '../../core/services/users.service';
+import { RolesService } from '../../core/services/roles.service';
 import { AppUser } from '../../core/models/user.models';
 import { Roles } from '../../core/models/auth.models';
+import { AppRole } from '../../core/models/permission.models';
 import { AuthService } from '../../core/services/auth.service';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
@@ -16,9 +18,15 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 })
 export class Users {
   private readonly usersService = inject(UsersService);
+  private readonly rolesService = inject(RolesService);
   private readonly auth = inject(AuthService);
-  protected readonly Roles = Roles;
   protected readonly isSuperAdmin = this.auth.isSuperAdmin;
+
+  /** الأدوار المتاحة للإسناد — تُحمّل للسوبر أدمن فقط (هو صاحب صلاحية إدارة الأدوار). */
+  protected readonly roles = signal<AppRole[]>([]);
+  protected readonly assignableRoles = computed(() =>
+    this.roles().filter((r) => r.name !== Roles.SuperAdmin || this.isSuperAdmin()),
+  );
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -43,8 +51,8 @@ export class Users {
   protected readonly total = computed(() => this.users().length);
   protected readonly activeCount = computed(() => this.users().filter((u) => u.isActive).length);
   protected readonly inactiveCount = computed(() => this.users().filter((u) => !u.isActive).length);
-  protected readonly managerCount = computed(
-    () => this.users().filter((u) => u.role === Roles.PlanningManager).length,
+  protected readonly rolesCount = computed(
+    () => new Set(this.users().map((u) => u.role)).size,
   );
 
   // ===== pagination =====
@@ -76,12 +84,13 @@ export class Users {
   protected readonly fPhone = signal('');
   protected readonly fPassword = signal('');
   protected readonly fConfirm = signal('');
-  protected readonly fRole = signal<string>(Roles.PlanningEmployee);
+  protected readonly fRole = signal<string>('');
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
 
   constructor() {
     this.load();
+    this.loadRoles();
     effect(() => {
       this.search();
       this.statusFilter();
@@ -104,19 +113,20 @@ export class Users {
     });
   }
 
+  private loadRoles(): void {
+    this.rolesService.getRoles().subscribe({
+      next: (data) => this.roles.set(data),
+      error: () => this.roles.set([]),
+    });
+  }
+
   protected initial(name: string): string {
     return name?.trim()?.charAt(0) ?? '؟';
   }
 
-  protected roleLabel(role: string): string {
-    switch (role) {
-      case Roles.SuperAdmin:
-        return 'سوبر أدمن';
-      case Roles.PlanningManager:
-        return 'مدير التخطيط';
-      default:
-        return 'موظف تخطيط';
-    }
+  /** الاسم المعروض للدور — يأتي من الـ API، ونرجع لاسم الدور لو غير متاح. */
+  protected roleLabel(user: AppUser): string {
+    return user.roleDisplayName?.trim() || user.role;
   }
 
   protected toggleActive(u: AppUser): void {
@@ -146,7 +156,7 @@ export class Users {
     this.fPhone.set('');
     this.fPassword.set('');
     this.fConfirm.set('');
-    this.fRole.set(Roles.PlanningEmployee);
+    this.fRole.set(this.assignableRoles()[0]?.name ?? '');
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -169,6 +179,10 @@ export class Users {
     }
     if (this.fPassword() !== this.fConfirm()) {
       this.formError.set('كلمة المرور وتأكيدها غير متطابقين');
+      return;
+    }
+    if (!this.fRole()) {
+      this.formError.set('برجاء اختيار الدور الوظيفي');
       return;
     }
 

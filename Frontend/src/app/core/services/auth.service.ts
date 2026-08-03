@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResult, CurrentUser, LoginRequest, Roles } from '../models/auth.models';
+import { Perm } from '../models/permission.models';
 
 const TOKEN_KEY = 'smartinvest_token';
 const USER_KEY = 'smartinvest_user';
@@ -19,9 +20,16 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly role = computed(() => this._user()?.role ?? null);
   readonly isSuperAdmin = computed(() => this._user()?.role === Roles.SuperAdmin);
-  readonly isManager = computed(
-    () => this._user()?.role === Roles.PlanningManager || this.isSuperAdmin(),
-  );
+  readonly permissions = computed(() => this._user()?.permissions ?? []);
+
+  /** هل يملك المستخدم هذه الصلاحية؟ السوبر أدمن يملك كل شيء. */
+  has(permission: string): boolean {
+    return this.isSuperAdmin() || this.permissions().includes(permission);
+  }
+
+  hasAny(...permissions: string[]): boolean {
+    return this.isSuperAdmin() || permissions.some((p) => this.permissions().includes(p));
+  }
 
   constructor() {
     if (this._user()?.hasAvatar) {
@@ -46,12 +54,21 @@ export class AuthService {
     return localStorage.getItem(TOKEN_KEY);
   }
 
-  /** المسار الافتراضي بعد تسجيل الدخول حسب الدور */
-  homeRouteForRole(role: string | null): string {
-    if (role === Roles.PlanningManager || role === Roles.SuperAdmin) {
-      return '/app/dashboard';
-    }
-    return '/app/projects';
+  /** أول صفحة يستطيع المستخدم فتحها فعلًا حسب صلاحياته. */
+  homeRoute(): string {
+    const landing: [string, string][] = [
+      [Perm.DashboardView, '/app/dashboard'],
+      [Perm.ProjectsView, '/app/projects'],
+      [Perm.FinancialView, '/app/financial'],
+      [Perm.MemosView, '/app/financial/memos'],
+      [Perm.PlansView, '/app/plans'],
+      [Perm.ContractorsView, '/app/contractors'],
+      [Perm.AgenciesView, '/app/agencies'],
+      [Perm.UsersView, '/app/users'],
+      [Perm.RolesManage, '/app/roles'],
+    ];
+
+    return landing.find(([permission]) => this.has(permission))?.[1] ?? '/app/no-access';
   }
 
   uploadAvatar(file: File): Observable<void> {
@@ -100,6 +117,8 @@ export class AuthService {
       fullName: result.fullName,
       email: result.email,
       role: result.role,
+      roleDisplayName: result.roleDisplayName ?? '',
+      permissions: result.permissions ?? [],
       hasAvatar: result.hasAvatar,
     };
     localStorage.setItem(TOKEN_KEY, result.token);
@@ -118,7 +137,10 @@ export class AuthService {
       return null;
     }
     try {
-      return JSON.parse(raw) as CurrentUser;
+      const user = JSON.parse(raw) as CurrentUser;
+      // جلسات قديمة محفوظة قبل نظام الصلاحيات
+      user.permissions ??= [];
+      return user;
     } catch {
       return null;
     }

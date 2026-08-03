@@ -1,0 +1,144 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>الأدوار والصلاحيات</h1>
+      <p>أنشئ أدوارًا وحدّد الصفحات والأقسام التي يستطيع كل دور الوصول إليها</p>
+    </div>
+    <button class="si-btn primary" (click)="openCreate()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+      دور جديد
+    </button>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><span class="lab">إجمالي الأدوار</span><b class="val tnum">{{ total() }}</b></div>
+    <div class="kpi ok"><span class="lab">أدوار مُخصّصة</span><b class="val tnum">{{ customCount() }}</b></div>
+    <div class="kpi gold"><span class="lab">مستخدمون مرتبطون</span><b class="val tnum">{{ assignedUsers() }}</b></div>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري تحميل الأدوار…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }} <button class="si-btn" (click)="load()">إعادة المحاولة</button></div>
+  } @else {
+    <div class="card">
+      <div class="card-head">
+        <h3>قائمة الأدوار</h3>
+        <span class="pill-count">{{ total() }} دور</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الدور</th><th>النوع</th><th>عدد الصلاحيات</th><th>المستخدمون</th><th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (role of roles(); track role.id) {
+              <tr>
+                <td class="rname">{{ role.displayName }}</td>
+                <td>
+                  @if (role.isSystem) {
+                    <span class="pill sys">دور نظام</span>
+                  } @else {
+                    <span class="pill">دور مُخصّص</span>
+                  }
+                </td>
+                <td class="tnum">{{ role.permissionCount }}</td>
+                <td class="tnum">{{ role.userCount }}</td>
+                <td>
+                  <div class="acts">
+                    @if (!role.isSystem) {
+                      <button class="act" title="تعديل الصلاحيات" (click)="openEdit(role)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      </button>
+                      <button class="act danger" title="حذف الدور" (click)="remove(role)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                      </button>
+                    } @else {
+                      <span class="muted locked">غير قابل للتعديل</span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="empty">لا توجد أدوار بعد.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- نافذة إنشاء/تعديل دور -->
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()">
+        <div class="si-modal-head">
+          <div class="grow">
+            <h3>{{ editing() ? 'تعديل الدور' : 'دور جديد' }}</h3>
+            <p>حدّد اسم الدور ثم اختر الصفحات والأقسام المسموح بها</p>
+          </div>
+          <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
+        </div>
+
+        <div class="si-modal-body">
+          @if (formError()) { <div class="si-err">{{ formError() }}</div> }
+
+          <div class="si-fld">
+            <label>اسم الدور <span class="req">*</span></label>
+            <input
+              [ngModel]="fDisplayName()"
+              (ngModelChange)="fDisplayName.set($event)"
+              placeholder="مثال: مدير الإدارة المالية"
+            />
+            <div class="hint">الاسم الذي سيظهر عند إسناد الدور للمستخدمين</div>
+          </div>
+
+          <div class="perm-head">
+            <b>الصفحات والأقسام</b>
+            <span class="muted">فعّل الصفحة أولًا ثم اختر أقسامها</span>
+          </div>
+
+          <div class="perm-groups">
+            @for (group of catalog(); track group.key) {
+              <div class="perm-group" [class.on]="isPageEnabled(group)">
+                <label class="pg-head">
+                  <input
+                    type="checkbox"
+                    [checked]="isPageEnabled(group)"
+                    (change)="togglePage(group, $any($event.target).checked)"
+                  />
+                  <span class="pg-title">{{ group.label }}</span>
+                  <span class="pg-count">{{ groupSelectedCount(group) }}/{{ group.items.length }}</span>
+                </label>
+
+                @if (isPageEnabled(group) && sectionItems(group).length > 0) {
+                  <div class="pg-items">
+                    @for (item of sectionItems(group); track item.key) {
+                      <label class="pg-item">
+                        <input
+                          type="checkbox"
+                          [checked]="isChecked(item.key)"
+                          (change)="togglePermission(item.key, $any($event.target).checked)"
+                        />
+                        {{ item.label }}
+                      </label>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="saving()" (click)="submitForm()">
+            @if (saving()) { جاري الحفظ… } @else { حفظ الدور }
+          </button>
+          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

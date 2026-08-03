@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, roleGuard } from './core/guards/auth.guard';
-import { Roles } from './core/models/auth.models';
+import { authGuard, guestGuard, permissionGuard } from './core/guards/auth.guard';
+import { Perm } from './core/models/permission.models';
 
 export const routes: Routes = [
   {
@@ -18,17 +18,19 @@ export const routes: Routes = [
       { path: '', redirectTo: 'projects', pathMatch: 'full' },
       {
         path: 'dashboard',
-        canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
+        canActivate: [permissionGuard(Perm.DashboardView)],
         loadComponent: () =>
           import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
         path: 'projects',
+        canActivate: [permissionGuard(Perm.ProjectsView)],
         loadComponent: () =>
           import('./features/projects/projects').then((m) => m.Projects),
       },
       {
         path: 'projects/:id',
+        canActivate: [permissionGuard(Perm.ProjectsView)],
         loadComponent: () =>
           import('./features/projects/details/sub-project-details').then(
             (m) => m.SubProjectDetails,
@@ -36,45 +38,64 @@ export const routes: Routes = [
       },
       {
         path: 'plans',
+        canActivate: [permissionGuard(Perm.PlansView)],
         loadComponent: () =>
           import('./features/plans/plan-list').then((m) => m.PlanList),
       },
       {
         path: 'plans/:id',
+        canActivate: [permissionGuard(Perm.PlansView)],
         loadComponent: () =>
           import('./features/plans/plan-print').then((m) => m.PlanPrint),
       },
       // ===== الإدارة المالية (قسم مستقل — مراحل الطرح) =====
       {
         path: 'financial',
+        canActivate: [permissionGuard(Perm.FinancialView)],
         loadComponent: () =>
           import('./features/financial/financial-list').then((m) => m.FinancialList),
       },
       {
         path: 'financial/memos',
+        canActivate: [permissionGuard(Perm.MemosView)],
         loadComponent: () =>
           import('./features/financial/presentation-memos').then((m) => m.PresentationMemos),
       },
       {
         path: 'financial/:id',
+        canActivate: [permissionGuard(Perm.FinancialView)],
         loadComponent: () =>
           import('./features/financial/procurement-workflow').then((m) => m.ProcurementWorkflow),
       },
       {
         path: 'users',
-        canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
+        canActivate: [permissionGuard(Perm.UsersView)],
         loadComponent: () =>
           import('./features/users/users').then((m) => m.Users),
       },
+      // ===== الأدوار والصلاحيات (السوبر أدمن) =====
+      {
+        path: 'roles',
+        canActivate: [permissionGuard(Perm.RolesManage)],
+        loadComponent: () =>
+          import('./features/roles/roles').then((m) => m.RolesPage),
+      },
       {
         path: 'contractors',
+        canActivate: [permissionGuard(Perm.ContractorsView)],
         loadComponent: () =>
           import('./features/contractors/contractors').then((m) => m.Contractors),
       },
       {
         path: 'agencies',
+        canActivate: [permissionGuard(Perm.AgenciesView)],
         loadComponent: () =>
           import('./features/agencies/agencies').then((m) => m.Agencies),
+      },
+      {
+        path: 'no-access',
+        loadComponent: () =>
+          import('./features/no-access/no-access').then((m) => m.NoAccess),
       },
     ],
   },
