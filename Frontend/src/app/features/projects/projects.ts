@@ -5,10 +5,10 @@ import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
+import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import {
-  EXECUTING_AGENCIES,
   FinancialYear,
   Lookup,
   MainProjectListItem,
@@ -18,6 +18,7 @@ import {
 } from '../../core/models/project.models';
 import { MainProjectForm } from './main-project-form';
 import { SubProjectForm, LockedParent } from './sub-project-form';
+import { ExcelImportWizard } from './excel-import-wizard';
 
 interface MainWithSubs {
   main: MainProjectListItem;
@@ -26,13 +27,14 @@ interface MainWithSubs {
 
 @Component({
   selector: 'app-projects',
-  imports: [FormsModule, RouterLink, MainProjectForm, SubProjectForm],
+  imports: [FormsModule, RouterLink, MainProjectForm, SubProjectForm, ExcelImportWizard],
   templateUrl: './projects.html',
   styleUrl: './projects.css',
 })
 export class Projects {
   private readonly projectsService = inject(ProjectsService);
   private readonly lookups = inject(LookupsService);
+  private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
 
@@ -42,6 +44,8 @@ export class Projects {
   protected readonly canViewPlans = computed(() => this.auth.has(Perm.PlansView));
   protected readonly canManageYears = computed(() => this.auth.has(Perm.FinancialYearsManage));
   protected readonly agencies = EXECUTING_AGENCIES;
+  protected readonly isManager = this.auth.isManager;
+  protected readonly agencies = signal<string[]>([]);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -77,6 +81,7 @@ export class Projects {
   protected readonly subPrograms = signal<SubProgramLookup[]>([]);
   protected readonly markazList = signal<MarkazLookup[]>([]);
   protected readonly priorities = signal<Lookup[]>([]);
+  protected readonly projectLevels = signal<Lookup[]>([]);
 
   // ===== مؤشرات =====
   protected readonly kpiTotal = computed(() => this.subs().length);
@@ -89,7 +94,8 @@ export class Projects {
   private matchesSubFilters(s: SubProjectListItem): boolean {
     if (this.approvalFilter() === 'approved' && !s.isApproved) return false;
     if (this.approvalFilter() === 'pending' && s.isApproved) return false;
-    if (this.fLevel() && s.projectLevel !== this.fLevel()) return false;
+    if (this.fLevel() && s.projectLevelName !== this.fLevel()) return false;
+    if (this.fAgency() && s.executiveAgencyName !== this.fAgency()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
     if (this.fFunding() === 'bank' && s.bankFunding <= 0) return false;
@@ -100,7 +106,6 @@ export class Projects {
   private matchesMainFilters(m: MainProjectListItem): boolean {
     if (this.fMainProgram() && m.mainProgramName !== this.fMainProgram()) return false;
     if (this.fSubProgram() && m.subProgramName !== this.fSubProgram()) return false;
-    if (this.fAgency() && m.executingAgency !== this.fAgency()) return false;
     return true;
   }
 
@@ -120,6 +125,7 @@ export class Projects {
 
     const rows: MainWithSubs[] = [];
     for (const m of mains) {
+      if (!subsByMain.has(m.id)) continue;
       if (!this.matchesMainFilters(m)) continue;
 
       let mySubs = (subsByMain.get(m.id) ?? []).filter((s) => this.matchesSubFilters(s));
@@ -140,21 +146,21 @@ export class Projects {
     return rows;
   });
 
-  // ===== الطي والفتح (accordion) للمشروع الرئيسي =====
-  protected readonly expandedProjects = signal<Set<number>>(new Set());
+  // ===== الطي والفتح (accordion) للمشروع الرئيسي - مفتوح افتراضيًا =====
+  protected readonly collapsedProjects = signal<Set<number>>(new Set());
 
   protected toggleProject(projectId: number): void {
-    const next = new Set(this.expandedProjects());
+    const next = new Set(this.collapsedProjects());
     if (next.has(projectId)) {
       next.delete(projectId);
     } else {
       next.add(projectId);
     }
-    this.expandedProjects.set(next);
+    this.collapsedProjects.set(next);
   }
 
   protected isProjectExpanded(projectId: number): boolean {
-    return this.expandedProjects().has(projectId);
+    return !this.collapsedProjects().has(projectId);
   }
 
   // ===== pagination على المشاريع الرئيسية =====
@@ -184,7 +190,7 @@ export class Projects {
   protected readonly showSubForm = signal(false);
   protected readonly subEdit = signal<SubProjectListItem | null>(null);
   protected readonly subLocked = signal<LockedParent | null>(null);
-  protected readonly addMenuOpen = signal(false);
+  protected readonly showImportWizard = signal(false);
 
   constructor() {
     this.loadFinancialYears();
@@ -247,6 +253,8 @@ export class Projects {
     this.lookups.getSubPrograms().subscribe((d) => this.subPrograms.set(d));
     this.lookups.getMarkaz().subscribe((d) => this.markazList.set(d));
     this.lookups.getPriorities().subscribe((d) => this.priorities.set(d));
+    this.lookups.getProjectLevels().subscribe((d) => this.projectLevels.set(d));
+    this.agenciesService.getAll().subscribe((d) => this.agencies.set(d.map((a) => a.agencyName)));
   }
 
   protected clearFilters(): void {
@@ -260,10 +268,8 @@ export class Projects {
   }
 
   // ===== modals actions =====
-  protected toggleAddMenu(): void { this.addMenuOpen.set(!this.addMenuOpen()); }
-  protected openAddMain(): void { this.addMenuOpen.set(false); this.mainEdit.set(null); this.showMainForm.set(true); }
   protected openEditMain(m: MainProjectListItem): void { this.mainEdit.set(m); this.showMainForm.set(true); }
-  protected openAddSub(): void { this.addMenuOpen.set(false); this.subEdit.set(null); this.subLocked.set(null); this.showSubForm.set(true); }
+  protected openAddSub(): void { this.subEdit.set(null); this.subLocked.set(null); this.showSubForm.set(true); }
   protected openAddSubFor(m: MainProjectListItem): void {
     this.subEdit.set(null);
     this.subLocked.set({ id: m.id, code: m.code, name: m.name });
@@ -272,6 +278,9 @@ export class Projects {
   protected openEditSub(s: SubProjectListItem): void { this.subEdit.set(s); this.subLocked.set(null); this.showSubForm.set(true); }
   protected closeModals(): void { this.showMainForm.set(false); this.showSubForm.set(false); }
   protected onSaved(): void { this.closeModals(); this.load(); }
+  protected openImportExcel(): void { this.showImportWizard.set(true); }
+  protected closeImportWizard(): void { this.showImportWizard.set(false); }
+  protected onImportSaved(): void { this.showImportWizard.set(false); this.load(); }
 
   protected deleteMain(m: MainProjectListItem): void {
     if (!confirm(`تأكيد حذف المشروع الرئيسي «${m.name}»؟`)) return;

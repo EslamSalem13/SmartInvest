@@ -1,0 +1,14 @@
+<app-settings-lookup-table
+  #lookupTable
+  [title]="activeTabDef().label"
+  [addLabel]="activeTabDef().addLabel"
+  [hasParent]="activeTabDef().hasParent"
+  [parentLabel]="activeTabDef().parentLabel"
+  [parentOptions]="parentOptions()"
+  [items]="items()"
+  [loading]="loading()"
+  [error]="error()"
+  [isManager]="isManager()"
+  (save)="onSave($event)"
+  (remove)="onDelete($event)"
+/>

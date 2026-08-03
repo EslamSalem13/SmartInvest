@@ -68,5 +68,13 @@ public class LookupMappingProfile : Profile
             .ForMember(
                 dest => dest.MarkazId,
                 opt => opt.MapFrom(src => src.MarkazId));
+
+        CreateMap<ComponentType, LookupDto>();
+
+        CreateMap<ProjectLevel, LookupDto>();
+
+        CreateMap<AccountingUnit, LookupDto>();
+
+        CreateMap<Unit, LookupDto>();
     }
 }

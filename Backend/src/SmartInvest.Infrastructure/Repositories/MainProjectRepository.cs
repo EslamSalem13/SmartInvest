@@ -26,18 +26,16 @@ public class MainProjectRepository : GenericRepository<MainProject>, IMainProjec
             .Include(x => x.SubProgram).ThenInclude(sp => sp.MainProgram)
             .Include(x => x.SubProjects).ThenInclude(sp => sp.Priority)
             .Include(x => x.SubProjects).ThenInclude(sp => sp.Status)
+            .Include(x => x.SubProjects).ThenInclude(sp => sp.ProjectLevel)
+            .Include(x => x.SubProjects).ThenInclude(sp => sp.ComponentType)
             .FirstOrDefaultAsync(x => x.MainProjectId == id, cancellationToken);
     }
 
-    public async Task<bool> CodeExistsAsync(string? code, int? excludeId = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<MainProject>> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(code))
-        {
-            return false;
-        }
-
-        return await DbSet.AnyAsync(x =>
-            x.MainProjectCode == code && (excludeId == null || x.MainProjectId != excludeId),
-            cancellationToken);
+        var trimmed = name.Trim();
+        return await DbSet
+            .Where(x => x.MainProjectName == trimmed)
+            .ToListAsync(cancellationToken);
     }
 }

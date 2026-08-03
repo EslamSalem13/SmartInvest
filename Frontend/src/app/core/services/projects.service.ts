@@ -99,4 +99,8 @@ export class ProjectsService {
   unlinkFinancialYear(subProjectId: number, financialYearId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/subprojects/${subProjectId}/financial-years/${financialYearId}`);
   }
+
+  assignExecutiveAgency(subProjectId: number, executiveAgencyId: number): Observable<SubProjectDetail> {
+    return this.http.put<SubProjectDetail>(`${this.base}/subprojects/${subProjectId}/executive-agency`, { executiveAgencyId });
+  }
 }

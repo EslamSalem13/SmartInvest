@@ -53,7 +53,19 @@ public class SubProjectMappingProfile : Profile
                 opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null))
             .ForMember(
                 dest => dest.ContractorName,
-                opt => opt.MapFrom(src => GetLatestContractorName(src)));
+                opt => opt.MapFrom(src => GetLatestContractorName(src)))
+            .ForMember(
+                dest => dest.ProjectLevelId,
+                opt => opt.MapFrom(src => src.ProjectLevelId))
+            .ForMember(
+                dest => dest.ProjectLevelName,
+                opt => opt.MapFrom(src => src.ProjectLevel.Name))
+            .ForMember(
+                dest => dest.ComponentTypeId,
+                opt => opt.MapFrom(src => src.ComponentTypeId))
+            .ForMember(
+                dest => dest.ComponentTypeName,
+                opt => opt.MapFrom(src => src.ComponentType.Name));
 
         CreateMap<SubProject, SubProjectDetailDto>()
             .ForMember(
@@ -109,7 +121,25 @@ public class SubProjectMappingProfile : Profile
                 opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null))
             .ForMember(
                 dest => dest.Specifications,
-                opt => opt.MapFrom(src => src.ProjectSpecifications));
+                opt => opt.MapFrom(src => src.ProjectSpecifications))
+            .ForMember(
+                dest => dest.ProjectLevelId,
+                opt => opt.MapFrom(src => src.ProjectLevelId))
+            .ForMember(
+                dest => dest.ProjectLevelName,
+                opt => opt.MapFrom(src => src.ProjectLevel.Name))
+            .ForMember(
+                dest => dest.ComponentTypeId,
+                opt => opt.MapFrom(src => src.ComponentTypeId))
+            .ForMember(
+                dest => dest.ComponentTypeName,
+                opt => opt.MapFrom(src => src.ComponentType.Name))
+            .ForMember(
+                dest => dest.AccountingUnitId,
+                opt => opt.MapFrom(src => src.AccountingUnitId))
+            .ForMember(
+                dest => dest.AccountingUnitName,
+                opt => opt.MapFrom(src => src.AccountingUnit.Name));
 
         CreateMap<CreateSubProjectDto, SubProject>()
             .ForMember(

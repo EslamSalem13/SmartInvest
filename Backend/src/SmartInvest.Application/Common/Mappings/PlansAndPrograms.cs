@@ -16,15 +16,23 @@ namespace SmartInvest.Application.Common.Mappings
             CreateMap<Plan, AddAndEditPlanInfoDto>()
             .ReverseMap();
 
-            CreateMap<SubProject, AddNewProjectDto >()
-           .ReverseMap();
+            CreateMap<SubProject, AddNewProjectDto>()
+           .ForMember(
+               dest => dest.ProjectLevelName,
+               opt => opt.MapFrom(src => src.ProjectLevel.Name))
+           .ForMember(
+               dest => dest.ComponentTypeName,
+               opt => opt.MapFrom(src => src.ComponentType.Name))
+           .ForMember(
+               dest => dest.AccountingUnitName,
+               opt => opt.MapFrom(src => src.AccountingUnit.Name));
             CreateMap<Plan, PlanWithoutProjectsDto>()
            .ForMember(d => d.FinancialYearName, o => o.MapFrom(s => s.FinancialYear!.Name))
            .ReverseMap();
 
              CreateMap<SubProject, ProjectInfoDto>()
-            .ForMember(des => des.ExecutiveAgencyName, opt => opt.MapFrom(src => src.ExecutiveAgency!.AgencyName))
-            .ReverseMap();
+            .ForMember(des => des.ExecutiveAgencyName, opt => opt.MapFrom(src => src.ExecutiveAgency != null ? src.ExecutiveAgency.AgencyName : null))
+            .ForMember(des => des.ProjectLevel, opt => opt.MapFrom(src => src.ProjectLevel != null ? src.ProjectLevel.Name : string.Empty));
             #endregion
 
             #region   MainPrograms & SubPrograms

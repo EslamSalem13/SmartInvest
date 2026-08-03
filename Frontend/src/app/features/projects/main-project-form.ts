@@ -5,7 +5,7 @@ import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { AuthService } from '../../core/services/auth.service';
-import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
+import { Lookup, MainProjectListItem, SubProgramLookup } from '../../core/models/project.models';
 
 @Component({
   selector: 'app-main-project-form',
@@ -44,13 +44,6 @@ import { EXECUTING_AGENCIES, Lookup, MainProjectListItem, SubProgramLookup } fro
               <div class="si-fld full">
                 <label>اسم المشروع الرئيسي <span class="req">*</span></label>
                 <input [ngModel]="name()" (ngModelChange)="name.set($event)" placeholder="مثال: تطوير شبكة الطرق الداخلية بشبين الكوم" />
-              </div>
-              <div class="si-fld full">
-                <label>جهة التنفيذ <span class="req">*</span></label>
-                <select [ngModel]="executingAgency()" (ngModelChange)="executingAgency.set($event)">
-                  <option value="">— اختر —</option>
-                  @for (a of agencies; track a) { <option [value]="a">{{ a }}</option> }
-                </select>
               </div>
               <div class="si-fld full">
                 <label>كود المشروع الرئيسي (اختياري)</label>
@@ -94,10 +87,10 @@ export class MainProjectForm {
   protected readonly subProgramId = signal<number | null>(null);
   protected readonly code = signal('');
   protected readonly name = signal('');
-  protected readonly executingAgency = signal('');
+  /** لم تعد جهة التنفيذ خاصية للمشروع الرئيسي - تُحفظ هنا فقط لعدم فقد قيمة موجودة مسبقًا عند التعديل. */
+  private readonly executingAgency = signal('');
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly agencies = EXECUTING_AGENCIES;
 
   protected readonly filteredSubPrograms = computed(() => {
     const pid = this.programId();
@@ -138,7 +131,10 @@ export class MainProjectForm {
       done();
       return;
     }
-    forkJoin({ programs: this.lookups.getMainPrograms(), subs: this.lookups.getSubPrograms() }).subscribe({
+    forkJoin({
+      programs: this.lookups.getMainPrograms(),
+      subs: this.lookups.getSubPrograms(),
+    }).subscribe({
       next: ({ programs, subs }) => {
         this.programs.set(programs);
         this.subPrograms.set(subs);
@@ -173,10 +169,6 @@ export class MainProjectForm {
 
     if (!this.name().trim() || this.subProgramId() == null) {
       this.error.set('برجاء إدخال اسم المشروع واختيار البرنامج الفرعي');
-      return;
-    }
-    if (!this.executingAgency()) {
-      this.error.set('برجاء اختيار جهة التنفيذ');
       return;
     }
 

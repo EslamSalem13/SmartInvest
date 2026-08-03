@@ -1,0 +1,16 @@
+.page { padding: 24px 28px; }
+.page-head { margin-bottom: 20px; }
+.page-head h1 { font-size: 22px; }
+.page-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--green-700);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+.back:hover { text-decoration: underline; }

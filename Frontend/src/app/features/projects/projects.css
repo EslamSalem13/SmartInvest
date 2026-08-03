@@ -18,14 +18,6 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .seg button.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; box-shadow: var(--shadow-xs); }
 .seg.small button { padding: 8px 13px; }
 
-.menu-wrap { position: relative; }
-.menu { position: absolute; inset-inline-start: 0; top: calc(100% + 8px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px; min-width: 190px; z-index: 40; animation: si-pop .16s var(--ease); }
-.menu button { display: flex; gap: 10px; align-items: center; width: 100%; border: 0; background: transparent; padding: 11px 12px; border-radius: 9px; text-align: start; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--ink); }
-.menu button:hover { background: var(--surface-2); }
-.menu .mi { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 11px; }
-.menu .mi.main { background: var(--green-700); color: #fff; }
-.menu .mi.sub { background: var(--gold); color: #2A2107; }
-
 /* المؤشرات */
 .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
 @media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, 1fr); } }

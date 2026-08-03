@@ -7,11 +7,20 @@
 
         public int MainProjectId { get; set; }
         public virtual MainProject MainProject { get; set; }
-        [MaxLength(250)]
         public string SubProjectName { get; set; } = string.Empty;
-        public string ProjectLevel { get; set; } = string.Empty;
-        public string ComponentType { get; set; } = string.Empty;
-        public string AccountingUnit { get; set; } = string.Empty;
+
+        [ForeignKey("ProjectLevel")]
+        public int ProjectLevelId { get; set; }
+        public virtual ProjectLevel ProjectLevel { get; set; }
+
+        [ForeignKey("ComponentType")]
+        public int ComponentTypeId { get; set; }
+        public virtual ComponentType ComponentType { get; set; }
+
+        [ForeignKey("AccountingUnit")]
+        public int AccountingUnitId { get; set; }
+        public virtual AccountingUnit AccountingUnit { get; set; }
+
         [NotMapped]
         public decimal TotalCost => BankFunding + SelfFunding; 
         public string ProjectNature { get; set; } = string.Empty;

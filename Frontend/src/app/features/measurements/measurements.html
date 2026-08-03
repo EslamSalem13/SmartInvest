@@ -1,0 +1,142 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>القياسات المخصصة</h1>
+      <p>تعريف قياسات مثل الارتفاع أو المسافة وربطها بالبرامج الفرعية ووحدات القياس</p>
+    </div>
+    @if (isManager()) {
+      <button class="si-btn gold" (click)="openAdd()">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+        إضافة قياس جديد
+      </button>
+    }
+  </header>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg viewBox="0 0 24 24" width="17" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+      <input placeholder="البحث بالاسم…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري تحميل القياسات…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }} <button class="si-btn" (click)="load()">إعادة المحاولة</button></div>
+  } @else if (filtered().length === 0) {
+    <div class="state">لا توجد قياسات مطابقة.</div>
+  } @else {
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم القياس</th>
+              <th>الوحدات</th>
+              <th>البرامج الفرعية المرتبطة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of filtered(); track m.id) {
+              <tr>
+                <td><b>{{ m.name }}</b></td>
+                <td>
+                  @if (m.unitNames.length === 0) {
+                    <span class="muted">غير محدد</span>
+                  } @else {
+                    <div class="chips">
+                      @for (name of m.unitNames; track name) { <span class="chip">{{ name }}</span> }
+                    </div>
+                  }
+                </td>
+                <td>
+                  @if (m.subProgramNames.length === 0) {
+                    <span class="muted">غير مرتبط</span>
+                  } @else {
+                    <div class="chips">
+                      @for (name of m.subProgramNames; track name) { <span class="chip">{{ name }}</span> }
+                    </div>
+                  }
+                </td>
+                <td>
+                  @if (isManager()) {
+                    <div class="acts">
+                      <button class="act" title="تعديل" (click)="openEdit(m)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                      <button class="act danger" title="حذف" (click)="deleteMeasurement(m)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(640px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>{{ editing() ? 'تعديل قياس' : 'إضافة قياس جديد' }}</h3></div>
+          <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (formError()) { <div class="si-err">{{ formError() }}</div> }
+          <div class="si-grid">
+            <div class="si-fld full"><label>اسم القياس <span class="req">*</span></label><input [ngModel]="fName()" (ngModelChange)="fName.set($event)" placeholder="مثال: الارتفاع" /></div>
+
+            <div class="si-fld full">
+              <label>وحدات القياس</label>
+              <div class="picker">
+                @for (u of units(); track u.id) {
+                  <label class="pick-chk">
+                    <input type="checkbox" [checked]="fUnitIds().has(u.id)" (change)="toggleUnit(u.id)" />
+                    {{ u.name }}
+                  </label>
+                } @empty {
+                  <p class="hint">لا توجد وحدات قياس بعد — أضفها من الإعدادات أولًا.</p>
+                }
+              </div>
+            </div>
+
+            <div class="si-fld full">
+              <label>البرامج الفرعية المرتبطة</label>
+              <div class="picker groups">
+                @for (g of mainProgramGroups(); track g.id) {
+                  <div class="group">
+                    <button type="button" class="group-head" (click)="toggleMainProgramExpanded(g.id)">
+                      <svg class="chevron" [class.open]="expandedMainProgramIds().has(g.id)" viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
+                      {{ g.name }}
+                    </button>
+                    @if (expandedMainProgramIds().has(g.id)) {
+                      <div class="group-body">
+                        @for (sp of g.subPrograms; track sp.id) {
+                          <label class="pick-chk">
+                            <input type="checkbox" [checked]="fSubProgramIds().has(sp.id)" (change)="toggleSubProgram(sp.id)" />
+                            {{ sp.name }}
+                          </label>
+                        } @empty {
+                          <p class="hint">لا توجد برامج فرعية ضمن هذا البرنامج.</p>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @empty {
+                  <p class="hint">لا توجد برامج رئيسية بعد.</p>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="saving()" (click)="submitForm()">
+            @if (saving()) { جاري الحفظ… } @else { {{ editing() ? 'حفظ التعديلات' : 'إضافة القياس' }} }
+          </button>
+          <button class="si-btn" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

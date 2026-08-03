@@ -89,8 +89,96 @@ export const routes: Routes = [
       {
         path: 'agencies',
         canActivate: [permissionGuard(Perm.AgenciesView)],
+        path: 'settings',
         loadComponent: () =>
-          import('./features/agencies/agencies').then((m) => m.Agencies),
+          import('./features/settings/settings').then((m) => m.Settings),
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./features/settings/settings-index').then((m) => m.SettingsIndex),
+          },
+          {
+            path: 'main-programs',
+            data: { tab: 'mainProgram' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'sub-programs',
+            data: { tab: 'subProgram' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'governorates',
+            data: { tab: 'governorate' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'markaz',
+            data: { tab: 'markaz' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'villages',
+            data: { tab: 'village' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'priorities',
+            data: { tab: 'priority' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'statuses',
+            data: { tab: 'status' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'component-types',
+            data: { tab: 'componentType' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'project-levels',
+            data: { tab: 'projectLevel' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'accounting-units',
+            data: { tab: 'accountingUnit' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'contract-types',
+            data: { tab: 'contractType' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'units',
+            data: { tab: 'unit' },
+            loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
+          },
+          {
+            path: 'users',
+            canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
+            loadComponent: () =>
+              import('./features/users/users').then((m) => m.Users),
+          },
+          {
+            path: 'contractors',
+            loadComponent: () =>
+              import('./features/contractors/contractors').then((m) => m.Contractors),
+          },
+          {
+            path: 'agencies',
+            loadComponent: () =>
+              import('./features/agencies/agencies').then((m) => m.Agencies),
+          },
+          {
+            path: 'measurements',
+            loadComponent: () =>
+              import('./features/measurements/measurements').then((m) => m.Measurements),
+          },
+        ],
       },
       {
         path: 'no-access',

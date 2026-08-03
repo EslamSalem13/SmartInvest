@@ -51,10 +51,10 @@
           <div class="sec-title"><span class="i">ⓘ</span> نظرة عامة على المشروع</div>
           <div class="info-grid">
             <div class="row"><span>المشروع الرئيسي</span><b>{{ project()!.mainProjectName }}</b></div>
-            <div class="row"><span>المستوى</span><b>{{ project()!.projectLevel }}</b></div>
+            <div class="row"><span>المستوى</span><b>{{ project()!.projectLevelName }}</b></div>
             <div class="row"><span>المركز</span><b>{{ project()!.markazName }}</b></div>
             <div class="row"><span>المحافظة</span><b>{{ project()!.governorateName }}</b></div>
-            <div class="row"><span>المكوّن العيني</span><b>{{ project()!.componentType || '—' }}</b></div>
+            <div class="row"><span>المكوّن العيني</span><b>{{ project()!.componentTypeName || '—' }}</b></div>
             <div class="row"><span>حالة المشروع</span><b>{{ project()!.statusName }}</b></div>
           </div>
           @if (project()!.description) {

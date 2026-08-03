@@ -9,7 +9,7 @@ namespace SmartInvest.Application.Interfaces;
 /// </summary>
 public interface IProcurementService
 {
-    Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default);
 
     Task<ProcurementOverviewDto> GetOverviewAsync(int subProjectId, CancellationToken cancellationToken = default);
 

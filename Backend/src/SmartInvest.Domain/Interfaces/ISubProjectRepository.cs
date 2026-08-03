@@ -10,7 +10,9 @@ public interface ISubProjectRepository : IGenericRepository<SubProject>
 
     Task<bool> CodeExistsAsync(string code, int? excludeId = null, CancellationToken cancellationToken = default);
 
-    Task<bool> NameExistsAsync(string name, int? excludeId = null, CancellationToken cancellationToken = default);
+    Task<bool> NameExistsAsync(string name, int mainProjectId, int? excludeId = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SubProject>> GetByExecutiveAgencyAsync(int executiveAgencyId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SubProject>> FindByNameWithinMainProjectAsync(string name, int mainProjectId, CancellationToken cancellationToken = default);
 }

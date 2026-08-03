@@ -39,6 +39,23 @@
         }
       </div>
     }
+    <button class="si-btn" (click)="openAddYear()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+      إضافة سنة مالية
+    </button>
+    <a class="si-btn" routerLink="/app/plans">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" /></svg>
+      الخطط الاستثمارية
+    </a>
+    <div class="grow"></div>
+    <button class="si-btn" (click)="openImportExcel()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" /></svg>
+      استيراد من Excel
+    </button>
+    <button class="si-btn primary" (click)="openAddSub()">
+      <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+      إضافة مشروع
+    </button>
   </div>
 
   <!-- المؤشرات -->
@@ -83,13 +100,14 @@
       </div>
       <div class="fld"><label>المستوى</label>
         <select [ngModel]="fLevel()" (ngModelChange)="fLevel.set($event)">
-          <option value="">الكل</option><option value="محلي">محلي</option><option value="مشترك">مشترك</option>
+          <option value="">الكل</option>
+          @for (l of projectLevels(); track l.id) { <option [value]="l.name">{{ l.name }}</option> }
         </select>
       </div>
       <div class="fld"><label>جهة التنفيذ</label>
         <select [ngModel]="fAgency()" (ngModelChange)="fAgency.set($event)">
           <option value="">الكل</option>
-          @for (a of agencies; track a) { <option [value]="a">{{ a }}</option> }
+          @for (a of agencies(); track a) { <option [value]="a">{{ a }}</option> }
         </select>
       </div>
       <div class="fld"><label>المركز</label>
@@ -212,6 +230,7 @@
   <!-- Modals -->
   <app-main-project-form [open]="showMainForm()" [edit]="mainEdit()" (close)="closeModals()" (saved)="onSaved()" (delete)="deleteMain(mainEdit()!)" />
   <app-sub-project-form [open]="showSubForm()" [edit]="subEdit()" [locked]="subLocked()" [mains]="mains()" [defaultYearId]="selectedYearId()" (close)="closeModals()" (saved)="onSaved()" (delete)="deleteSub(subEdit()!)" />
+  <app-excel-import-wizard [open]="showImportWizard()" [financialYearId]="selectedYearId()" (close)="closeImportWizard()" (saved)="onImportSaved()" />
 
   <!-- نافذة إضافة سنة مالية -->
   @if (showAddYearForm()) {

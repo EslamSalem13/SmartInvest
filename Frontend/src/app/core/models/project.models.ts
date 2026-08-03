@@ -43,8 +43,10 @@ export interface SubProjectListItem {
   mainProjectId: number;
   mainProjectCode: string;
   mainProjectName: string;
-  projectLevel: string;
-  componentType: string;
+  projectLevelId: number;
+  projectLevelName: string;
+  componentTypeId: number;
+  componentTypeName: string;
   markazId: number;
   markazName: string;
   priorityId: number;
@@ -69,9 +71,12 @@ export interface SubProjectDetail {
   name: string;
   mainProjectId: number;
   mainProjectName: string;
-  projectLevel: string;
-  componentType: string;
-  accountingUnit: string;
+  projectLevelId: number;
+  projectLevelName: string;
+  componentTypeId: number;
+  componentTypeName: string;
+  accountingUnitId: number;
+  accountingUnitName: string;
   projectNature: string;
   description: string | null;
   goal: string | null;
@@ -96,6 +101,8 @@ export interface SubProjectDetail {
   bankFunding: number;
   selfFunding: number;
   totalCost: number;
+  executiveAgencyId: number | null;
+  executiveAgencyName: string | null;
 }
 
 export interface MainProjectDetail {
@@ -128,23 +135,13 @@ export interface MainProjectDetailBase {
   executingAgency: string;
 }
 
-/** قائمة جهات التنفيذ الثابتة */
-export const EXECUTING_AGENCIES = [
-  'الإدارة المالية',
-  'الوحدة المحلية شبين',
-  'الوحدة المحلية لمدينة قويسنا',
-  'شركة الكهرباء',
-  'شركة المنوفية لصيانة الآليات',
-  'شركة مياه الشرب',
-];
-
 export interface CreateSubProject {
   mainProjectId: number;
   code?: string | null;
   name: string;
-  projectLevel: string;
-  componentType: string;
-  accountingUnit: string;
+  projectLevelId: number;
+  componentTypeId: number;
+  accountingUnitId: number;
   projectNature: string;
   markazId: number;
   priorityId: number;
@@ -224,9 +221,12 @@ export interface Plan {
 export interface PlanProjectItem {
   subProjectName: string;
   mainProjectId: number;
-  projectLevel: string;
-  componentType: string;
-  accountingUnit: string;
+  projectLevelName: string;
+  componentTypeName: string;
+  accountingUnitName: string;
+  projectLevelId: number;
+  componentTypeId: number;
+  accountingUnitId: number;
   totalCost: number;
   projectNature: string;
   greenInvestmentLink?: string | null;
@@ -334,4 +334,179 @@ export interface CreateAgency {
 
 export interface UpdateAgency extends CreateAgency {
   isActive: boolean;
+}
+
+export interface CreateNamedLookup {
+  name: string;
+}
+
+export type UpdateNamedLookup = CreateNamedLookup;
+
+export interface CreateSubProgram {
+  name: string;
+  mainProgramId: number;
+}
+
+export type UpdateSubProgram = CreateSubProgram;
+
+export interface CreateMarkaz {
+  name: string;
+  governorateId: number;
+}
+
+export type UpdateMarkaz = CreateMarkaz;
+
+export interface CreateVillage {
+  name: string;
+  markazId: number;
+}
+
+export type UpdateVillage = CreateVillage;
+
+export interface Measurement {
+  id: number;
+  name: string;
+  subProgramIds: number[];
+  subProgramNames: string[];
+  unitIds: number[];
+  unitNames: string[];
+}
+
+export interface CreateMeasurement {
+  name: string;
+  subProgramIds: number[];
+  unitIds: number[];
+}
+
+export type UpdateMeasurement = CreateMeasurement;
+
+export interface SubProjectMeasurementValue {
+  measurementId: number;
+  measurementName: string;
+  unitId: number | null;
+  unitName: string | null;
+  value: number | null;
+}
+
+export interface SetMeasurementValue {
+  measurementId: number;
+  unitId: number | null;
+  value: number | null;
+}
+
+export interface UnresolvedName {
+  name: string;
+  rowCount: number;
+}
+
+export interface MainProjectCodeConflictOption {
+  mainProjectName: string;
+  mainProgramName: string;
+}
+
+export interface MainProjectCodeConflict {
+  code: string;
+  options: MainProjectCodeConflictOption[];
+}
+
+export interface SuggestedImportPreview {
+  mainProjectCount: number;
+  subProjectCount: number;
+  unresolvedMarkaz: UnresolvedName[];
+  unresolvedMainPrograms: UnresolvedName[];
+  unresolvedSubPrograms: UnresolvedName[];
+  unresolvedAgencies: UnresolvedName[];
+  unresolvedProjectLevels: UnresolvedName[];
+  unresolvedComponentTypes: UnresolvedName[];
+  unresolvedAccountingUnits: UnresolvedName[];
+  mainProjectCodeConflicts: MainProjectCodeConflict[];
+}
+
+export interface UnresolvedImportRow {
+  rowIndex: number;
+  mainProjectName: string;
+  subProjectName: string;
+  code: string;
+}
+
+export interface ApprovedImportPreview {
+  matchedCount: number;
+  unresolvedRows: UnresolvedImportRow[];
+}
+
+export interface ExtractedMeasurement {
+  name: string;
+  value: number;
+  unit: string;
+}
+
+export interface RowMeasurementPreview {
+  rowIndex: number;
+  subProjectName: string;
+  measurements: ExtractedMeasurement[];
+}
+
+export interface RowMeasurementResolution {
+  rowIndex: number;
+  measurements: ExtractedMeasurement[];
+}
+
+export interface ImportPreviewResult {
+  importId: string;
+  mode: 'Suggested' | 'Approved';
+  suggested: SuggestedImportPreview | null;
+  approved: ApprovedImportPreview | null;
+  rowMeasurements: RowMeasurementPreview[];
+}
+
+export interface ImportResolution {
+  name: string;
+  createNew: boolean;
+  existingId: number | null;
+}
+
+export interface MainProjectCodeResolution {
+  code: string;
+  chosenMainProjectName: string;
+  chosenMainProgramName: string;
+}
+
+export interface ImportRowResolution {
+  rowIndex: number;
+  createNew: boolean;
+  existingSubProjectId: number | null;
+}
+
+export interface ImportCommit {
+  importId: string;
+  financialYearId: number;
+  approvalDate?: string | null;
+  markazResolutions: ImportResolution[];
+  mainProgramResolutions: ImportResolution[];
+  subProgramResolutions: ImportResolution[];
+  agencyResolutions: ImportResolution[];
+  projectLevelResolutions: ImportResolution[];
+  componentTypeResolutions: ImportResolution[];
+  accountingUnitResolutions: ImportResolution[];
+  mainProjectCodeResolutions: MainProjectCodeResolution[];
+  rowResolutions: ImportRowResolution[];
+  measurementResolutions: RowMeasurementResolution[];
+}
+
+export interface ImportRowFailure {
+  name: string;
+  reason: string;
+}
+
+export interface ImportCommitResult {
+  mode: 'Suggested' | 'Approved';
+  mainProjectsCreated: number;
+  subProjectsCreated: number;
+  subProjectsApproved: number;
+  subProjectsCreatedAndApproved: number;
+  subProjectsAlreadyLinked: number;
+  failed: ImportRowFailure[];
+  planId: number;
+  planName: string;
+  planStatus: string;
 }
