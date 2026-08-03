@@ -23,6 +23,9 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             .Include(x => x.ProjectLevel)
             .Include(x => x.ComponentType)
             .Include(x => x.AccountingUnit)
+            .Include(x => x.ProjectAssignments).ThenInclude(a => a.Contractor)
+            .Include(x => x.ProjectAssignments).ThenInclude(a => a.ContractType)
+            .Include(x => x.FinancialYears).ThenInclude(fy => fy.FinancialYear)
             .FirstOrDefaultAsync(x => x.SubProjectId == id, cancellationToken);
     }
 

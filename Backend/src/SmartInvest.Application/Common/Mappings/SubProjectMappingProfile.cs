@@ -87,8 +87,37 @@ public class SubProjectMappingProfile : Profile
                 dest => dest.MainProjectId,
                 opt => opt.MapFrom(src => src.MainProjectId))
             .ForMember(
+                dest => dest.MainProjectCode,
+                opt => opt.MapFrom(src => src.MainProject.MainProjectCode))
+            .ForMember(
                 dest => dest.MainProjectName,
                 opt => opt.MapFrom(src => src.MainProject.MainProjectName))
+            .ForMember(
+                dest => dest.SubProgramId,
+                opt => opt.MapFrom(src => src.MainProject.SubProgramId))
+            .ForMember(
+                dest => dest.ContractorName,
+                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractorName))
+            .ForMember(
+                dest => dest.ContractTypeName,
+                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractTypeName))
+            .ForMember(
+                dest => dest.ContractNumber,
+                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractNumber))
+            .ForMember(
+                dest => dest.ContractValue,
+                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractValue))
+            .ForMember(
+                dest => dest.FinancialYears,
+                opt => opt.MapFrom(src => src.FinancialYears.Select(fy => new SubProjectFinancialYearDto
+                {
+                    Id = fy.SubProjectFinancialYearId,
+                    FinancialYearId = fy.FinancialYearId,
+                    FinancialYearName = fy.FinancialYear.Name,
+                    StartDate = fy.FinancialYear.StartDate,
+                    EndDate = fy.FinancialYear.EndDate,
+                    IsClosed = fy.FinancialYear.IsClosed,
+                })))
             .ForMember(
                 dest => dest.MarkazId,
                 opt => opt.MapFrom(src => src.MarkazId))
@@ -176,5 +205,28 @@ public class SubProjectMappingProfile : Profile
             .First();
 
         return latestAssignment.Contractor?.ContractorName;
+    }
+
+    private static LatestAssignmentInfo GetLatestAssignment(SubProject subProject)
+    {
+        var assignment = subProject.ProjectAssignments?
+            .OrderByDescending(a => a.AssignmentDate)
+            .FirstOrDefault();
+
+        return new LatestAssignmentInfo
+        {
+            ContractorName = assignment?.Contractor?.ContractorName,
+            ContractTypeName = assignment?.ContractType?.ContractName,
+            ContractNumber = assignment?.ContractNumber,
+            ContractValue = assignment?.ContractValue,
+        };
+    }
+
+    private class LatestAssignmentInfo
+    {
+        public string? ContractorName { get; set; }
+        public string? ContractTypeName { get; set; }
+        public string? ContractNumber { get; set; }
+        public decimal? ContractValue { get; set; }
     }
 }

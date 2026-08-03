@@ -70,7 +70,9 @@ export interface SubProjectDetail {
   code: string | null;
   name: string;
   mainProjectId: number;
+  mainProjectCode: string;
   mainProjectName: string;
+  subProgramId: number;
   projectLevelId: number;
   projectLevelName: string;
   componentTypeId: number;
@@ -103,6 +105,11 @@ export interface SubProjectDetail {
   totalCost: number;
   executiveAgencyId: number | null;
   executiveAgencyName: string | null;
+  contractorName: string | null;
+  contractTypeName: string | null;
+  contractNumber: string | null;
+  contractValue: number | null;
+  financialYears: SubProjectFinancialYear[];
 }
 
 export interface MainProjectDetail {

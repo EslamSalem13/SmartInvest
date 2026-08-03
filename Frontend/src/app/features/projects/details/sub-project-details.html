@@ -19,7 +19,7 @@
     <div class="detail-head">
       <div class="grow">
         <div class="codes">
-          <span class="code-chip">الكود الرئيسي: {{ project()!.mainProjectName }}</span>
+          <span class="code-chip">الكود الرئيسي: {{ project()!.mainProjectCode || '—' }}</span>
           @if (project()!.code) {
             <span class="code-chip">الكود الفرعي: {{ project()!.code }}</span>
           }
@@ -39,9 +39,9 @@
     <!-- التابات -->
     <div class="tabs">
       <button class="tab" [class.on]="tab() === 'basic'" (click)="setTab('basic')">البيانات الأساسية</button>
-      <button class="tab" [class.on]="tab() === 'specs'" (click)="setTab('specs')">المواصفات الفنية</button>
+      <button class="tab" [class.on]="tab() === 'measurements'" (click)="setTab('measurements')">القياسات</button>
       <button class="tab" [class.on]="tab() === 'location'" (click)="setTab('location')">الموقع الجغرافي</button>
-      <button class="tab" [class.on]="tab() === 'subs'" (click)="setTab('subs')">المشاريع الفرعية</button>
+      <button class="tab" [class.on]="tab() === 'procurement'" (click)="setTab('procurement')">الطرح والعروض</button>
     </div>
 
     <!-- 1) البيانات الأساسية -->
@@ -55,6 +55,8 @@
             <div class="row"><span>المركز</span><b>{{ project()!.markazName }}</b></div>
             <div class="row"><span>المحافظة</span><b>{{ project()!.governorateName }}</b></div>
             <div class="row"><span>المكوّن العيني</span><b>{{ project()!.componentTypeName || '—' }}</b></div>
+            <div class="row"><span>الوحدة الحسابية</span><b>{{ project()!.accountingUnitName || '—' }}</b></div>
+            <div class="row"><span>طبيعة المشروع</span><b>{{ project()!.projectNature || '—' }}</b></div>
             <div class="row"><span>حالة المشروع</span><b>{{ project()!.statusName }}</b></div>
           </div>
           @if (project()!.description) {
@@ -71,6 +73,14 @@
             <div class="frow last"><span>الأولوية</span><b>{{ project()!.priorityName }}</b></div>
           </div>
 
+          @if (project()!.financialYears.length) {
+            <div class="fy-chips">
+              @for (fy of project()!.financialYears; track fy.id) {
+                <span class="fy-chip">{{ fy.financialYearName }}</span>
+              }
+            </div>
+          }
+
           @if (!project()!.isApproved && project()!.approvalCancellationReason) {
             <div class="card pad reason-card">
               <div class="sec-title reason">⚠️ سبب إلغاء الاعتماد</div>
@@ -80,37 +90,72 @@
           }
         </div>
       </div>
+
+      @if (project()!.contractorName) {
+        <div class="card pad mt-card">
+          <div class="sec-title">بيانات التعاقد</div>
+          <div class="info-grid">
+            <div class="row"><span>المقاول</span><b>{{ project()!.contractorName }}</b></div>
+            <div class="row"><span>نوع العقد</span><b>{{ project()!.contractTypeName || '—' }}</b></div>
+            <div class="row"><span>رقم العقد</span><b>{{ project()!.contractNumber || '—' }}</b></div>
+            <div class="row"><span>قيمة العقد</span><b>{{ project()!.contractValue != null ? (money(project()!.contractValue) + ' ج.م') : '—' }}</b></div>
+          </div>
+        </div>
+      }
+
+      @if (project()!.goal || project()!.socialImpact || project()!.economicImpact || project()!.environmentalImpact || project()!.greenInvestmentLink) {
+        <div class="card pad mt-card">
+          <div class="sec-title">الأثر والاستدامة</div>
+          <div class="info-grid one">
+            @if (project()!.goal) {
+              <div class="row"><span>الهدف</span><b>{{ project()!.goal }}</b></div>
+            }
+            @if (project()!.socialImpact) {
+              <div class="row"><span>الأثر الاجتماعي</span><b>{{ project()!.socialImpact }}</b></div>
+            }
+            @if (project()!.economicImpact) {
+              <div class="row"><span>الأثر الاقتصادي</span><b>{{ project()!.economicImpact }}</b></div>
+            }
+            @if (project()!.environmentalImpact) {
+              <div class="row"><span>الأثر البيئي</span><b>{{ project()!.environmentalImpact }}</b></div>
+            }
+            @if (project()!.greenInvestmentLink) {
+              <div class="row"><span>رابط الاستثمار الأخضر</span><a class="glink" [href]="project()!.greenInvestmentLink" target="_blank" rel="noopener">فتح الرابط ↗</a></div>
+            }
+          </div>
+        </div>
+      }
     }
 
-    <!-- 2) المواصفات الفنية -->
-    @if (tab() === 'specs') {
+    <!-- 2) القياسات -->
+    @if (tab() === 'measurements') {
       <div class="card">
         <div class="card-head">
-          <h3>المواصفات الفنية</h3>
+          <h3>القياسات</h3>
           <div class="grow"></div>
-          <button class="si-btn primary" (click)="openAddSpec()">
+          <button class="si-btn primary" (click)="openAddMeasurement()">
             <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
-            إضافة مواصفة
+            إضافة قياس
           </button>
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>اسم المواصفة</th><th>القيمة</th><th>الوحدة</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th>اسم القياس</th><th>القيمة</th><th>الوحدة</th><th>إجراءات</th></tr></thead>
             <tbody>
-              @for (s of specs(); track s.id) {
+              @for (v of measurementValues(); track v.measurementId) {
                 <tr>
-                  <td>{{ s.specificationName }}</td>
-                  <td class="tnum">{{ s.specificationValue }}</td>
-                  <td>{{ s.unit }}</td>
+                  <td>{{ v.measurementName }}</td>
+                  <td class="tnum">{{ v.value }}</td>
+                  <td>{{ v.unitName }}</td>
                   <td>
                     <div class="acts">
-                      <button class="act" title="تعديل" (click)="openEditSpec(s)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
-                      <button class="act danger" title="حذف" (click)="deleteSpec(s)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                      <button class="act" title="تعديل" (click)="openEditMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                      <button class="act danger" title="حذف" (click)="deleteMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
                     </div>
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="4" class="empty">لا توجد مواصفات مسجّلة بعد.</td></tr>
+                <tr><td colspan="4" class="empty">لا توجد قياسات مسجّلة بعد.</td></tr>
               }
             </tbody>
           </table>
@@ -122,11 +167,21 @@
     @if (tab() === 'location') {
       <div class="grid2">
         <div class="card pad">
-          <div class="sec-title">الموقع الجغرافي</div>
-          <div class="map">
-            <div class="pin"><div class="dot"></div>موقع المشروع</div>
-            @if (project()!.latitude != null) {
-              <div class="coords tnum">{{ project()!.latitude }} , {{ project()!.longitude }}</div>
+          <div class="sec-title">الموقع الجغرافي — اضغط على الخريطة أو اسحب العلامة لتحديد الموقع</div>
+          <div id="sub-project-map" class="map-real"></div>
+          <div class="map-actions">
+            <div class="coords tnum">
+              @if (pickedLat() != null) {
+                {{ pickedLat() }} , {{ pickedLng() }}
+              } @else {
+                لم يُحدَّد موقع بعد
+              }
+            </div>
+            <button class="si-btn primary" [disabled]="!locationChanged() || savingLocation()" (click)="saveLocation()">
+              @if (savingLocation()) { جاري الحفظ… } @else { حفظ الموقع }
+            </button>
+            @if (locationSaved() && !locationChanged()) {
+              <span class="saved-hint">تم الحفظ ✓</span>
             }
           </div>
         </div>
@@ -141,51 +196,91 @@
       </div>
     }
 
-    <!-- 4) المشاريع الفرعية الشقيقة -->
-    @if (tab() === 'subs') {
-      <div class="card">
-        <div class="card-head"><h3>المشاريع الفرعية ضمن نفس المشروع الرئيسي</h3></div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>المشروع الفرعي</th><th>الكود</th><th>إجمالي التكلفة</th><th>الحالة</th></tr></thead>
-            <tbody>
-              @for (sib of siblings(); track sib.id) {
-                <tr [class.current]="sib.id === project()!.id">
-                  <td>{{ sib.name }}</td>
-                  <td>
-                    @if (sib.code) { <span class="tnum">{{ sib.code }}</span> } @else { <span class="wait">بانتظار الاعتماد</span> }
-                  </td>
-                  <td class="tnum">{{ money(sib.totalCost) }}</td>
-                  <td>{{ sib.statusName }}</td>
-                </tr>
-              } @empty {
-                <tr><td colspan="4" class="empty">لا توجد مشاريع فرعية.</td></tr>
-              }
-            </tbody>
-          </table>
+    <!-- 4) الطرح والعروض -->
+    @if (tab() === 'procurement') {
+      @if (!procurementOverview()) {
+        <div class="state">لا توجد بيانات طرح مسجّلة بعد لهذا المشروع.</div>
+      } @else {
+        <div class="grid2">
+          <div class="card">
+            <div class="card-head"><h3>مراحل الطرح</h3></div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>المرحلة</th><th>الحالة</th></tr></thead>
+                <tbody>
+                  @for (s of procurementOverview()!.stages; track s.stage) {
+                    <tr>
+                      <td>{{ s.stageLabel }}</td>
+                      <td>
+                        @if (s.isCompleted) { <span class="st-pill ok">مكتملة ✓</span> } @else { <span class="wait">قيد التنفيذ</span> }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="2" class="empty">لا توجد مراحل مسجّلة.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>مذكرات العرض</h3></div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>المذكرة</th><th>الحالة</th></tr></thead>
+                <tbody>
+                  @for (m of procurementOverview()!.presentationMemos; track m.id) {
+                    <tr>
+                      <td>{{ m.title }}</td>
+                      <td>
+                        @if (m.isCompleted) { <span class="st-pill ok">مكتملة ✓</span> } @else { <span class="wait">قيد الإعداد</span> }
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="2" class="empty">لا توجد مذكرات مرتبطة.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-      </div>
+        <a class="si-btn primary mt-card" [routerLink]="['/app/financial', project()!.id]">فتح إدارة كاملة</a>
+      }
     }
   }
 
-  <!-- نموذج مواصفة -->
-  @if (showSpecForm()) {
-    <div class="si-overlay" (click)="closeSpecForm()">
+  <!-- نموذج قياس -->
+  @if (showMeasurementForm()) {
+    <div class="si-overlay" (click)="closeMeasurementForm()">
       <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
         <div class="si-modal-head">
-          <div class="grow"><h3>{{ editingSpecId() ? 'تعديل مواصفة' : 'إضافة مواصفة' }}</h3></div>
-          <button class="si-x" (click)="closeSpecForm()">×</button>
+          <div class="grow"><h3>{{ editingMeasurementId() ? 'تعديل قياس' : 'إضافة قياس' }}</h3></div>
+          <button class="si-x" (click)="closeMeasurementForm()">×</button>
         </div>
         <div class="si-modal-body">
           <div class="si-grid">
-            <div class="si-fld full"><label>اسم المواصفة <span class="req">*</span></label><input [ngModel]="sName()" (ngModelChange)="sName.set($event)" placeholder="مثال: طول الطريق" /></div>
-            <div class="si-fld"><label>القيمة <span class="req">*</span></label><input [ngModel]="sValue()" (ngModelChange)="sValue.set($event)" placeholder="5200" /></div>
-            <div class="si-fld"><label>الوحدة <span class="req">*</span></label><input [ngModel]="sUnit()" (ngModelChange)="sUnit.set($event)" placeholder="متر طولي" /></div>
+            <div class="si-fld full">
+              <label>اسم القياس <span class="req">*</span></label>
+              <input list="measurement-names-list" [ngModel]="mName()" (ngModelChange)="mName.set($event)" placeholder="مثال: عدد" />
+            </div>
+            <div class="si-fld">
+              <label>القيمة <span class="req">*</span></label>
+              <input type="number" [ngModel]="mValue()" (ngModelChange)="mValue.set($event)" placeholder="3" />
+            </div>
+            <div class="si-fld">
+              <label>الوحدة <span class="req">*</span></label>
+              <input list="measurement-units-list" [ngModel]="mUnitName()" (ngModelChange)="mUnitName.set($event)" placeholder="سيارة 50 طن" />
+            </div>
           </div>
+          <datalist id="measurement-names-list">
+            @for (m of applicableMeasurements(); track m.id) { <option [value]="m.name"></option> }
+          </datalist>
+          <datalist id="measurement-units-list">
+            @for (u of allUnits(); track u.id) { <option [value]="u.name"></option> }
+          </datalist>
         </div>
         <div class="si-modal-foot">
-          <button class="si-btn primary" [disabled]="savingSpec()" (click)="saveSpec()">حفظ</button>
-          <button class="si-btn" (click)="closeSpecForm()">إلغاء</button>
+          <button class="si-btn primary" [disabled]="savingMeasurement()" (click)="saveMeasurement()">حفظ</button>
+          <button class="si-btn" (click)="closeMeasurementForm()">إلغاء</button>
         </div>
       </div>
     </div>

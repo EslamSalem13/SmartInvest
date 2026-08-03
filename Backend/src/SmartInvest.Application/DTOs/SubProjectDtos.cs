@@ -50,7 +50,9 @@ public class SubProjectDetailDto
     public string Name { get; set; } = string.Empty;
 
     public int MainProjectId { get; set; }
+    public string MainProjectCode { get; set; } = string.Empty;
     public string MainProjectName { get; set; } = string.Empty;
+    public int SubProgramId { get; set; }
 
     public int ProjectLevelId { get; set; }
     public string ProjectLevelName { get; set; } = string.Empty;
@@ -93,6 +95,13 @@ public class SubProjectDetailDto
     public decimal BankFunding { get; set; }
     public decimal SelfFunding { get; set; }
     public decimal TotalCost { get; set; }
+
+    public string? ContractorName { get; set; }
+    public string? ContractTypeName { get; set; }
+    public string? ContractNumber { get; set; }
+    public decimal? ContractValue { get; set; }
+    public IReadOnlyList<SubProjectFinancialYearDto> FinancialYears { get; set; }
+        = new List<SubProjectFinancialYearDto>();
 
     public IReadOnlyList<ProjectSpecificationDto> Specifications { get; set; }
         = new List<ProjectSpecificationDto>();

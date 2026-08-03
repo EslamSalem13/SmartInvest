@@ -1,11 +1,12 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, Observable } from 'rxjs';
+import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { MeasurementsService } from '../../core/services/measurements.service';
+import { MeasurementResolutionService } from '../../core/services/measurement-resolution.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
   ExecutiveAgencyProfile,
@@ -311,6 +312,7 @@ export class SubProjectForm {
   private readonly agenciesService = inject(AgenciesService);
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly measurementsService = inject(MeasurementsService);
+  private readonly measurementResolution = inject(MeasurementResolutionService);
   private readonly auth = inject(AuthService);
 
   protected readonly isManager = this.auth.isManager;
@@ -794,60 +796,15 @@ export class SubProjectForm {
     }
   }
 
-  /**
-   * يحل كل صف قياس إلى (معرّف قياس، معرّف وحدة) - ينشئ قياسًا أو وحدة جديدة إذا لم تكن موجودة،
-   * ويربط وحدة جديدة بقياس قائم إذا لزم. عند تعارض اسم القياس بين صفين بوحدتين مختلفتين
-   * (مثال: "عدد" بوحدة "سيارة 30 طن" و"عدد" بوحدة "سيارة 50 طن") ينشئ قياسًا مميّزًا بالاسم
-   * بدلًا من تصادم معرّف القياس نفسه في نفس الاستدعاء.
-   */
   private async resolveMeasurementRows(rows: MeasurementRow[], subProgramId: number): Promise<SetMeasurementValue[]> {
-    let allMeasurements = this.applicableMeasurements();
-    let allUnitsList = this.allUnits();
-    const claimed = new Set<number>();
-    const result: SetMeasurementValue[] = [];
-
-    for (const row of rows) {
-      const name = row.name.trim();
-      const unitName = row.unitName.trim();
-
-      let unit = allUnitsList.find((u) => u.name.trim() === unitName);
-      if (!unit) {
-        unit = await this.toPromiseValue(this.lookups.createUnit({ name: unitName }));
-        allUnitsList = [...allUnitsList, unit];
-      }
-
-      let measurement = allMeasurements.find(
-        (m) => m.name.trim() === name && m.subProgramIds.includes(subProgramId) && !claimed.has(m.id),
-      );
-
-      if (!measurement) {
-        const collides = allMeasurements.some((m) => m.name.trim() === name && m.subProgramIds.includes(subProgramId));
-        const finalName = collides ? `${name} - ${unitName}` : name;
-        measurement = await this.toPromiseValue(
-          this.measurementsService.create({ name: finalName, subProgramIds: [subProgramId], unitIds: [unit.id] }),
-        );
-        allMeasurements = [...allMeasurements, measurement];
-      } else if (!measurement.unitIds.includes(unit.id)) {
-        measurement = await this.toPromiseValue(
-          this.measurementsService.update(measurement.id, {
-            name: measurement.name,
-            subProgramIds: measurement.subProgramIds,
-            unitIds: [...measurement.unitIds, unit.id],
-          }),
-        );
-        allMeasurements = allMeasurements.map((m) => (m.id === measurement!.id ? measurement! : m));
-      }
-
-      claimed.add(measurement.id);
-      result.push({ measurementId: measurement.id, unitId: unit.id, value: row.value });
-    }
-
-    this.applicableMeasurements.set(allMeasurements);
-    this.allUnits.set(allUnitsList);
-    return result;
-  }
-
-  private toPromiseValue<T>(obs: Observable<T>): Promise<T> {
-    return new Promise((resolve, reject) => obs.subscribe({ next: resolve, error: reject }));
+    const result = await this.measurementResolution.resolveRows(
+      rows,
+      subProgramId,
+      this.applicableMeasurements(),
+      this.allUnits(),
+    );
+    this.applicableMeasurements.set(result.measurements);
+    this.allUnits.set(result.units);
+    return result.values;
   }
 }
