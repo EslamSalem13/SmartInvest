@@ -133,6 +133,14 @@ export class Projects {
         if (!mainHit) mySubs = subHits;
       }
 
+      // The subsByMain.has(m.id) check above only guarantees this main has subs in the SELECTED
+      // YEAR - it says nothing about the approval/level/agency/etc filters just applied. If none
+      // of this main's subs survived matchesSubFilters, the main itself has nothing to show under
+      // the active filters and must be hidden entirely, not kept with an empty sub-list (which
+      // rendered as a misleading "لا توجد مشاريع فرعية" row while still counting toward the
+      // "N مشروع رئيسي" total).
+      if (mySubs.length === 0) continue;
+
       rows.push({ main: m, subs: mySubs });
     }
 

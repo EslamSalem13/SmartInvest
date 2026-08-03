@@ -22,7 +22,7 @@ public class ImportController : ControllerBase
 
     [HttpPost("preview")]
     [RequestSizeLimit(MaxFileSizeBytes)]
-    public async Task<ActionResult<ImportPreviewResultDto>> Preview(IFormFile file, CancellationToken cancellationToken)
+    public async Task<ActionResult<ImportPreviewResultDto>> Preview(IFormFile file, [FromForm] int? financialYearId, CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
         {
@@ -35,7 +35,7 @@ public class ImportController : ControllerBase
         }
 
         await using var stream = file.OpenReadStream();
-        var result = await _importService.PreviewAsync(stream, cancellationToken);
+        var result = await _importService.PreviewAsync(stream, financialYearId, cancellationToken);
         return Ok(result);
     }
 

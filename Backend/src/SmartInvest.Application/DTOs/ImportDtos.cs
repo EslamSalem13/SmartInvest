@@ -4,6 +4,11 @@ public class UnresolvedNameDto
 {
     public string Name { get; set; } = string.Empty;
     public int RowCount { get; set; }
+
+    // AI-suggested existing name this unresolved name might be a typo/prefix variant of.
+    // Never applied automatically - the reconcile screen pre-selects it as a starting point
+    // that staff still have to confirm before it's used.
+    public string? SuggestedMatch { get; set; }
 }
 
 public class MainProjectCodeConflictOptionDto
@@ -38,6 +43,13 @@ public class UnresolvedImportRowDto
     public string MainProjectName { get; set; } = string.Empty;
     public string SubProjectName { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
+
+    // AI-suggested existing sub-project this row might be the approved counterpart of (e.g. the
+    // same project re-submitted from a suggested-plan file with slightly different wording).
+    // Never applied automatically - the reconcile screen pre-selects it as a starting point that
+    // staff still have to confirm before it's used.
+    public int? SuggestedSubProjectId { get; set; }
+    public string? SuggestedMatchLabel { get; set; }
 }
 
 public class ApprovedImportPreviewDto

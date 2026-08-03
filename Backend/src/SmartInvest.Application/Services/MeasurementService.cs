@@ -177,18 +177,24 @@ public class MeasurementService : IMeasurementService
         var units = await _unitRepository.GetAllAsync(cancellationToken);
         var unitNamesById = units.ToDictionary(u => u.Id, u => u.Name);
 
+        // Measurement DEFINITIONS are shared across every sub-project in the sub-program (that's
+        // the point - "عدد" reused instead of re-created per project), so "applicable" can list
+        // dozens of measurements that have nothing to do with this specific sub-project. Only
+        // return the ones this sub-project actually has a recorded VALUE for - the full applicable
+        // list belongs to the "pick a name for a new row" datalist (GetApplicableForSubProgramAsync),
+        // not to "what does this sub-project currently have".
         return applicable
+            .Where(m => valuesByMeasurementId.ContainsKey(m.Id))
             .Select(m =>
             {
-                var hasValue = valuesByMeasurementId.TryGetValue(m.Id, out var existing);
-                int? unitId = hasValue ? existing!.UnitId : null;
+                var existing = valuesByMeasurementId[m.Id];
                 return new SubProjectMeasurementValueDto
                 {
                     MeasurementId = m.Id,
                     MeasurementName = m.Name,
-                    UnitId = unitId,
-                    UnitName = unitId.HasValue && unitNamesById.TryGetValue(unitId.Value, out var n) ? n : null,
-                    Value = hasValue ? existing!.Value : null,
+                    UnitId = existing.UnitId,
+                    UnitName = unitNamesById.TryGetValue(existing.UnitId, out var n) ? n : null,
+                    Value = existing.Value,
                 };
             })
             .ToList();

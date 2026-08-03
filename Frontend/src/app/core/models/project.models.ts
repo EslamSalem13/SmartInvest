@@ -397,6 +397,7 @@ export interface SetMeasurementValue {
 export interface UnresolvedName {
   name: string;
   rowCount: number;
+  suggestedMatch: string | null;
 }
 
 export interface MainProjectCodeConflictOption {
@@ -427,6 +428,8 @@ export interface UnresolvedImportRow {
   mainProjectName: string;
   subProjectName: string;
   code: string;
+  suggestedSubProjectId: number | null;
+  suggestedMatchLabel: string | null;
 }
 
 export interface ApprovedImportPreview {

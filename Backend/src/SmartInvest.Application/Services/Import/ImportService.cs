@@ -13,6 +13,8 @@ public class ImportService : IImportService
     private readonly ApprovedPlanImportService _approvedService;
     private readonly ICurrentUserService _currentUser;
     private readonly IMeasurementExtractionService _measurementExtractionService;
+    private readonly ILookupService _lookupService;
+    private readonly ILookupMatchSuggestionService _lookupMatchSuggestionService;
 
     public ImportService(
         IExcelImportParser parser,
@@ -20,7 +22,9 @@ public class ImportService : IImportService
         SuggestedPlanImportService suggestedService,
         ApprovedPlanImportService approvedService,
         ICurrentUserService currentUser,
-        IMeasurementExtractionService measurementExtractionService)
+        IMeasurementExtractionService measurementExtractionService,
+        ILookupService lookupService,
+        ILookupMatchSuggestionService lookupMatchSuggestionService)
     {
         _parser = parser;
         _sessionStore = sessionStore;
@@ -28,9 +32,11 @@ public class ImportService : IImportService
         _approvedService = approvedService;
         _currentUser = currentUser;
         _measurementExtractionService = measurementExtractionService;
+        _lookupService = lookupService;
+        _lookupMatchSuggestionService = lookupMatchSuggestionService;
     }
 
-    public async Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, CancellationToken cancellationToken = default)
+    public async Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, int? financialYearId, CancellationToken cancellationToken = default)
     {
         var file = await _parser.ParseAsync(fileStream, cancellationToken);
         var importId = _sessionStore.Save(file);
@@ -47,12 +53,61 @@ public class ImportService : IImportService
         }
         else
         {
-            result.Approved = await _approvedService.PreviewAsync(file, cancellationToken);
+            result.Approved = await _approvedService.PreviewAsync(file, financialYearId, cancellationToken);
         }
 
         result.RowMeasurements = await _measurementExtractionService.ExtractAsync(file.Rows, cancellationToken);
+        await NormalizeMeasurementUnitsAsync(result.RowMeasurements, cancellationToken);
 
         return result;
+    }
+
+    // AI extraction decides each row's unit text independently, so the same physical unit can
+    // come out as "م" on one row and "متر" on another - that fragments Unit records at commit
+    // time (EnsureUnitAsync matches by exact name) and corrupts any reporting that sums by unit.
+    // Canonicalize extracted unit names to an existing DB unit name before they ever reach the
+    // reconcile screen or commit.
+    private async Task NormalizeMeasurementUnitsAsync(List<RowMeasurementPreviewDto> rowMeasurements, CancellationToken cancellationToken)
+    {
+        var extractedUnitNames = rowMeasurements
+            .SelectMany(r => r.Measurements)
+            .Select(m => m.Unit.Trim())
+            .Where(u => u.Length > 0)
+            .Distinct()
+            .ToList();
+        if (extractedUnitNames.Count == 0)
+        {
+            return;
+        }
+
+        var existingUnitNames = (await _lookupService.GetUnitsAsync(cancellationToken)).Select(u => u.Name).ToList();
+        var existingSet = existingUnitNames.ToHashSet();
+        var unresolvedUnitNames = extractedUnitNames.Where(u => !existingSet.Contains(u)).ToList();
+        if (unresolvedUnitNames.Count == 0)
+        {
+            return;
+        }
+
+        var suggestions = await _lookupMatchSuggestionService.SuggestMatchesAsync(
+            new List<LookupMatchCategory> { new("measurementUnit", unresolvedUnitNames, existingUnitNames) },
+            cancellationToken);
+
+        if (!suggestions.TryGetValue("measurementUnit", out var matches) || matches.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var row in rowMeasurements)
+        {
+            foreach (var measurement in row.Measurements)
+            {
+                var trimmed = measurement.Unit.Trim();
+                if (matches.TryGetValue(trimmed, out var canonical) && canonical != null)
+                {
+                    measurement.Unit = canonical;
+                }
+            }
+        }
     }
 
     public async Task<ImportCommitResultDto> CommitAsync(ImportCommitDto dto, CancellationToken cancellationToken = default)

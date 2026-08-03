@@ -11,12 +11,23 @@ namespace SmartInvest.Infrastructure.Services;
 
 public class ExcelImportParser : IExcelImportParser
 {
-    private static readonly string[] ExpectedHeaders =
+    // Suggested-plan files legitimately never had a code column to begin with (not just blank
+    // cells under one) - a proposed plan has no codes yet. Only these 11 must be present as
+    // actual columns; the two code headers are recognized when present but aren't required for
+    // the file to be considered a valid plan file.
+    private static readonly string[] RequiredHeaders =
     {
-        "البرنامج الرئيسي", "البرنامج الفرعي", "كود المشروع الرئيسى", "المشروع الرئيسى",
-        "مستوى المشروع", "الجهة المنفذة", "المركز", "كود المشروع", "المشروع الفرعى",
+        "البرنامج الرئيسي", "البرنامج الفرعي", "المشروع الرئيسى",
+        "مستوى المشروع", "الجهة المنفذة", "المركز", "المشروع الفرعى",
         "المكوّن العيني", "بنك", "ذاتي", "الوحدة الحسابية",
     };
+
+    private static readonly string[] OptionalHeaders =
+    {
+        "كود المشروع الرئيسى", "كود المشروع",
+    };
+
+    private static readonly string[] ExpectedHeaders = RequiredHeaders.Concat(OptionalHeaders).ToArray();
 
     // Real-world plan files are typed without tashkeel (e.g. "المكون العيني") even though
     // the reference header above carries a shadda ("المكوّن العيني") - matching is diacritic-
@@ -40,6 +51,12 @@ public class ExcelImportParser : IExcelImportParser
     public async Task<ParsedImportFile> ParseAsync(Stream fileStream, CancellationToken cancellationToken = default)
     {
         using var workbook = new XLWorkbook(fileStream);
+        if (workbook.Worksheets.Count > 1)
+        {
+            throw new BusinessRuleException(
+                "الملف يحتوي على أكثر من ورقة عمل واحدة — يرجى رفع ملف يحتوي على ورقة بيانات المشروعات فقط، بدون أوراق إضافية (تفصيلية أو ملاحظات أو غيرها)");
+        }
+
         var worksheet = workbook.Worksheets.First();
 
         var columnIndexByHeader = await FindColumnsAsync(worksheet, cancellationToken);
@@ -144,7 +161,7 @@ public class ExcelImportParser : IExcelImportParser
                 }
             }
 
-            if (matches.Count == ExpectedHeaders.Length)
+            if (RequiredHeaders.All(matches.ContainsKey))
             {
                 return matches;
             }
@@ -157,9 +174,10 @@ public class ExcelImportParser : IExcelImportParser
             }
         }
 
-        // No row matched all 13 deterministically. Only worth an AI call if the best candidate
-        // row is clearly the header row with a few typos, not a completely different sheet.
-        if (bestRowNumber == -1 || bestMatches.Count <= ExpectedHeaders.Length / 2)
+        // No row matched all required headers deterministically. Only worth an AI call if the
+        // best candidate row is clearly the header row with a few typos, not a completely
+        // different sheet.
+        if (bestRowNumber == -1 || bestMatches.Count <= RequiredHeaders.Length / 2)
         {
             return null;
         }
@@ -182,8 +200,8 @@ public class ExcelImportParser : IExcelImportParser
             }
         }
 
-        var succeeded = bestMatches.Count == ExpectedHeaders.Length;
-        _logger.LogWarning("AI header fallback {Outcome}", succeeded ? "succeeded" : "did not resolve all expected headers");
+        var succeeded = RequiredHeaders.All(bestMatches.ContainsKey);
+        _logger.LogWarning("AI header fallback {Outcome}", succeeded ? "succeeded" : "did not resolve all required headers");
         return succeeded ? bestMatches : null;
     }
 

@@ -21,6 +21,7 @@ public class SuggestedPlanImportService
     private readonly IGenericRepository<ProjectStatus> _statusRepository;
     private readonly IGenericRepository<FinancialYear> _financialYearRepository;
     private readonly IGenericRepository<PlanProject> _planProjectRepository;
+    private readonly IGenericRepository<SubProjectFinancialYear> _financialYearLinkRepository;
     private readonly ILookupService _lookupService;
     private readonly IExecutiveAgencyService _agencyService;
     private readonly IMainProjectRepository _mainProjectRepository;
@@ -28,6 +29,7 @@ public class SuggestedPlanImportService
     private readonly IPlanRepo _planRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMeasurementResolutionService _measurementResolutionService;
+    private readonly ILookupMatchSuggestionService _lookupMatchSuggestionService;
 
     public SuggestedPlanImportService(
         IGenericRepository<Markaz> markazRepository,
@@ -42,13 +44,15 @@ public class SuggestedPlanImportService
         IGenericRepository<ProjectStatus> statusRepository,
         IGenericRepository<FinancialYear> financialYearRepository,
         IGenericRepository<PlanProject> planProjectRepository,
+        IGenericRepository<SubProjectFinancialYear> financialYearLinkRepository,
         ILookupService lookupService,
         IExecutiveAgencyService agencyService,
         IMainProjectRepository mainProjectRepository,
         ISubProjectRepository subProjectRepository,
         IPlanRepo planRepo,
         IUnitOfWork unitOfWork,
-        IMeasurementResolutionService measurementResolutionService)
+        IMeasurementResolutionService measurementResolutionService,
+        ILookupMatchSuggestionService lookupMatchSuggestionService)
     {
         _markazRepository = markazRepository;
         _governorateRepository = governorateRepository;
@@ -62,6 +66,7 @@ public class SuggestedPlanImportService
         _statusRepository = statusRepository;
         _financialYearRepository = financialYearRepository;
         _planProjectRepository = planProjectRepository;
+        _financialYearLinkRepository = financialYearLinkRepository;
         _lookupService = lookupService;
         _agencyService = agencyService;
         _mainProjectRepository = mainProjectRepository;
@@ -69,6 +74,7 @@ public class SuggestedPlanImportService
         _planRepo = planRepo;
         _unitOfWork = unitOfWork;
         _measurementResolutionService = measurementResolutionService;
+        _lookupMatchSuggestionService = lookupMatchSuggestionService;
     }
 
     public async Task<SuggestedImportPreviewDto> PreviewAsync(ParsedImportFile file, CancellationToken cancellationToken)
@@ -97,7 +103,60 @@ public class SuggestedPlanImportService
         dto.MainProjectCount = mainProjectGroups.Count;
         dto.SubProjectCount = file.Rows.Count;
 
+        await ApplyMatchSuggestionsAsync(
+            dto, markazNames, mainProgramNames, subProgramNames, agencyNames,
+            projectLevelNames, componentTypeNames, accountingUnitNames, cancellationToken);
+
         return dto;
+    }
+
+    private async Task ApplyMatchSuggestionsAsync(
+        SuggestedImportPreviewDto dto,
+        HashSet<string> markazNames,
+        HashSet<string> mainProgramNames,
+        HashSet<string> subProgramNames,
+        HashSet<string> agencyNames,
+        HashSet<string> projectLevelNames,
+        HashSet<string> componentTypeNames,
+        HashSet<string> accountingUnitNames,
+        CancellationToken cancellationToken)
+    {
+        var categories = new List<LookupMatchCategory>
+        {
+            new("markaz", dto.UnresolvedMarkaz.Select(u => u.Name).ToList(), markazNames.ToList()),
+            new("mainProgram", dto.UnresolvedMainPrograms.Select(u => u.Name).ToList(), mainProgramNames.ToList()),
+            new("subProgram", dto.UnresolvedSubPrograms.Select(u => u.Name).ToList(), subProgramNames.ToList()),
+            new("agency", dto.UnresolvedAgencies.Select(u => u.Name).ToList(), agencyNames.ToList()),
+            new("projectLevel", dto.UnresolvedProjectLevels.Select(u => u.Name).ToList(), projectLevelNames.ToList()),
+            new("componentType", dto.UnresolvedComponentTypes.Select(u => u.Name).ToList(), componentTypeNames.ToList()),
+            new("accountingUnit", dto.UnresolvedAccountingUnits.Select(u => u.Name).ToList(), accountingUnitNames.ToList()),
+        };
+
+        var suggestions = await _lookupMatchSuggestionService.SuggestMatchesAsync(categories, cancellationToken);
+
+        void Apply(string categoryKey, List<UnresolvedNameDto> items)
+        {
+            if (!suggestions.TryGetValue(categoryKey, out var matches))
+            {
+                return;
+            }
+
+            foreach (var item in items)
+            {
+                if (matches.TryGetValue(item.Name, out var suggested))
+                {
+                    item.SuggestedMatch = suggested;
+                }
+            }
+        }
+
+        Apply("markaz", dto.UnresolvedMarkaz);
+        Apply("mainProgram", dto.UnresolvedMainPrograms);
+        Apply("subProgram", dto.UnresolvedSubPrograms);
+        Apply("agency", dto.UnresolvedAgencies);
+        Apply("projectLevel", dto.UnresolvedProjectLevels);
+        Apply("componentType", dto.UnresolvedComponentTypes);
+        Apply("accountingUnit", dto.UnresolvedAccountingUnits);
     }
 
     public async Task<ImportCommitResultDto> CommitAsync(ParsedImportFile file, ImportCommitDto dto, CancellationToken cancellationToken)
@@ -156,11 +215,15 @@ public class SuggestedPlanImportService
             var subProgramName = group.Rows[0].SubProgramName.Trim();
             if (!subProgramIdByName.TryGetValue((mainProgramId, subProgramName), out var subProgramId))
             {
-                foreach (var row in group.Rows)
-                {
-                    result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"البرنامج الفرعي «{row.SubProgramName}» غير محلول" });
-                }
-                continue;
+                // The name may already exist under a different main program - sub-program names
+                // aren't globally unique, but the preview's "unresolved names" check only flags a
+                // name that doesn't exist ANYWHERE, so this case silently passes reconciliation
+                // and only surfaces here. Create it under the correct parent instead of failing
+                // rows the user already reconciled successfully.
+                var createdSubProgram = await _lookupService.CreateSubProgramAsync(
+                    new CreateSubProgramDto { Name = subProgramName, MainProgramId = mainProgramId }, cancellationToken);
+                subProgramId = createdSubProgram.Id;
+                subProgramIdByName[(mainProgramId, subProgramName)] = subProgramId;
             }
 
             MainProject? mainProject = null;
@@ -248,6 +311,18 @@ public class SuggestedPlanImportService
                     await _subProjectRepository.AddAsync(subProject, cancellationToken);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                     createdSubProjects.Add(subProject);
+
+                    try
+                    {
+                        await _financialYearLinkRepository.AddAsync(
+                            new SubProjectFinancialYear { SubProjectId = subProject.SubProjectId, FinancialYearId = dto.FinancialYearId },
+                            cancellationToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+                    catch (Exception linkEx)
+                    {
+                        result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر ربطه بالسنة المالية: {linkEx.Message}" });
+                    }
 
                     var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
                     if (measurementResolution != null)

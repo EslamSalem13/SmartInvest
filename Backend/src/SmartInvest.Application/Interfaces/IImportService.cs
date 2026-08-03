@@ -4,7 +4,7 @@ namespace SmartInvest.Application.Interfaces;
 
 public interface IImportService
 {
-    Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, CancellationToken cancellationToken = default);
+    Task<ImportPreviewResultDto> PreviewAsync(Stream fileStream, int? financialYearId, CancellationToken cancellationToken = default);
 
     Task<ImportCommitResultDto> CommitAsync(ImportCommitDto dto, CancellationToken cancellationToken = default);
 }

@@ -9,9 +9,12 @@ export class ImportService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrl}/subprojects/import`;
 
-  preview(file: File): Observable<ImportPreviewResult> {
+  preview(file: File, financialYearId: number | null): Observable<ImportPreviewResult> {
     const formData = new FormData();
     formData.append('file', file);
+    if (financialYearId != null) {
+      formData.append('financialYearId', String(financialYearId));
+    }
     return this.http.post<ImportPreviewResult>(`${this.base}/preview`, formData);
   }
 

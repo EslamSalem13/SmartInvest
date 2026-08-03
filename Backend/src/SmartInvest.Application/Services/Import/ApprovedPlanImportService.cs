@@ -70,7 +70,7 @@ public class ApprovedPlanImportService
 
     private record MatchResult(int? SubProjectId, int? MainProjectId, bool IsApproved);
 
-    public async Task<ApprovedImportPreviewDto> PreviewAsync(ParsedImportFile file, CancellationToken cancellationToken)
+    public async Task<ApprovedImportPreviewDto> PreviewAsync(ParsedImportFile file, int? financialYearId, CancellationToken cancellationToken)
     {
         var dto = new ApprovedImportPreviewDto();
 
@@ -93,7 +93,102 @@ public class ApprovedPlanImportService
             }
         }
 
+        if (dto.UnresolvedRows.Count > 0)
+        {
+            await SuggestMatchesForUnresolvedRowsAsync(dto.UnresolvedRows, financialYearId, cancellationToken);
+        }
+
         return dto;
+    }
+
+    // Confidence floor for a token-overlap match to be worth suggesting at all - picked from
+    // observation, not a formal calibration: two genuinely-the-same projects re-typed between a
+    // suggested-plan draft and its approved-plan export share the large majority of their words,
+    // so a true match scores well above this even after minor rewording.
+    private const double MinRowMatchSimilarity = 0.6;
+
+    private async Task SuggestMatchesForUnresolvedRowsAsync(List<UnresolvedImportRowDto> unresolvedRows, int? financialYearId, CancellationToken cancellationToken)
+    {
+        // Exact-name matching (MatchRowAsync) misses the common real-world case of the same
+        // project re-submitted from a suggested-plan file with slightly different wording (e.g.
+        // extra/missing spaces, minor rewording between draft and final text). Suggest the closest
+        // existing sub-project so staff don't have to manually search a list of hundreds.
+        //
+        // This deliberately does NOT go through the AI lookup-match service: verification against
+        // a real 85-row approved-plan file showed the model's index-pair response frequently
+        // pointed at the wrong entry once both the unresolved and existing lists ran into the
+        // hundreds - a real risk here, since a wrong match silently approves the wrong project
+        // under a real code. Matching near-identical structured text (not free-form semantics) is
+        // exactly what deterministic token-overlap similarity is for, and it can't hallucinate a
+        // match that isn't actually in the candidate list.
+        //
+        // Scoped to the target financial year: an approved-mode file is approving THAT year's own
+        // suggested-mode sub-projects, not some same-named duplicate left over in a different year
+        // from repeated testing - searching every year both bloated the candidate pool for no
+        // reason and could point the suggestion at the wrong year's copy.
+        var (allSubProjects, _) = await _subProjectRepository.SearchAsync(
+            null, null, null, null, null, null, financialYearId, null, 1, 5000, cancellationToken);
+
+        var candidates = allSubProjects
+            .Select(s => (
+                s.SubProjectId,
+                Label: $"{s.MainProject.MainProjectName} / {s.SubProjectName}",
+                s.IsApproved,
+                Tokens: Tokenize(s.MainProject.MainProjectName + " " + s.SubProjectName)))
+            .Where(c => c.Tokens.Count > 0)
+            .ToList();
+
+        foreach (var row in unresolvedRows)
+        {
+            var rowTokens = Tokenize(row.MainProjectName + " " + row.SubProjectName);
+            if (rowTokens.Count == 0)
+            {
+                continue;
+            }
+
+            var best = candidates
+                .Select(c => (c.SubProjectId, c.Label, c.IsApproved, Score: JaccardSimilarity(rowTokens, c.Tokens)))
+                .OrderByDescending(c => c.Score)
+                // Ties are common in a real deployment too (repeated suggested/approved cycles
+                // across years reuse the exact same project text). The whole point of an
+                // approved-mode import is to approve the still-pending sub-project it was
+                // submitted for, so an unapproved candidate must always win a tie over an
+                // already-approved one - otherwise this links to an unrelated already-approved
+                // duplicate from some other year while the actual target stays pending forever
+                // (verified live: this is exactly what happened before this ordering existed).
+                .ThenBy(c => c.IsApproved)
+                .ThenByDescending(c => c.SubProjectId)
+                .FirstOrDefault();
+
+            if (best.Score >= MinRowMatchSimilarity)
+            {
+                row.SuggestedSubProjectId = best.SubProjectId;
+                row.SuggestedMatchLabel = best.Label;
+            }
+        }
+    }
+
+    private static readonly char[] TokenizeSeparators = { ' ', '\t', '\n', '\r', '(', ')', '-', '،', ',', '.', '/', '"', '\'', ':' };
+
+    private static HashSet<string> Tokenize(string text)
+    {
+        return text
+            .Split(TokenizeSeparators, StringSplitOptions.RemoveEmptyEntries)
+            .Select(t => t.Trim())
+            .Where(t => t.Length > 1)
+            .ToHashSet();
+    }
+
+    private static double JaccardSimilarity(HashSet<string> a, HashSet<string> b)
+    {
+        if (a.Count == 0 || b.Count == 0)
+        {
+            return 0;
+        }
+
+        var intersection = a.Count(b.Contains);
+        var union = a.Count + b.Count - intersection;
+        return union == 0 ? 0 : (double)intersection / union;
     }
 
     public async Task<ImportCommitResultDto> CommitAsync(ParsedImportFile file, ImportCommitDto dto, CancellationToken cancellationToken)
@@ -173,6 +268,7 @@ public class ApprovedPlanImportService
                         result.SubProjectsAlreadyLinked++;
                     }
                     subProjectId = match.SubProjectId.Value;
+                    await EnsureMainProjectApprovedAsync(match.MainProjectId!.Value, row.MainProjectCode, cancellationToken);
                 }
                 else if (rowResolutionByIndex.TryGetValue(row.RowIndex, out var resolution) && !resolution.CreateNew && resolution.ExistingSubProjectId.HasValue)
                 {
@@ -188,6 +284,7 @@ public class ApprovedPlanImportService
                         result.SubProjectsAlreadyLinked++;
                     }
                     subProjectId = resolution.ExistingSubProjectId.Value;
+                    await EnsureMainProjectApprovedAsync(existingSubProject.MainProjectId, row.MainProjectCode, cancellationToken);
                 }
                 else if (rowResolutionByIndex.TryGetValue(row.RowIndex, out var createResolution) && createResolution.CreateNew)
                 {
@@ -213,6 +310,13 @@ public class ApprovedPlanImportService
                         mainProjectCreatedHere = true;
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
                         result.MainProjectsCreated++;
+                    }
+                    else
+                    {
+                        // Reused an existing MainProject (e.g. created earlier by a suggested-mode
+                        // import) by exact name match - it still needs approving and coding here,
+                        // same as the brand-new-MainProject branch above already does at creation.
+                        await EnsureMainProjectApprovedAsync(mainProject.MainProjectId, row.MainProjectCode, cancellationToken);
                     }
 
                     var resolvedProjectLevelId = await ResolveOrCreateProjectLevelIdAsync(row.ProjectLevelName, projectLevelIdByName, unspecifiedProjectLevelId, cancellationToken);
@@ -365,6 +469,39 @@ public class ApprovedPlanImportService
         result.PlanName = resultPlan.PlanName;
         result.PlanStatus = resultPlan.PlanStatus.ToString();
         return result;
+    }
+
+    // Approving a row's sub-project (whether by exact match, resolved-to-existing, or reusing an
+    // existing MainProject under "create new sub-project") never implied approving its PARENT
+    // MainProject too - a suggested-mode import always creates the MainProject with IsApproved
+    // false and no code, and nothing here ever updated that, so the sub-project would show its
+    // real code while the main project stayed stuck on "مقترح" forever. Every branch that links
+    // to an existing MainProject during an approved-mode commit must go through this.
+    private async Task EnsureMainProjectApprovedAsync(int mainProjectId, string mainProjectCode, CancellationToken cancellationToken)
+    {
+        var mainProject = await _mainProjectRepository.GetByIdAsync(mainProjectId, cancellationToken)
+            ?? throw new NotFoundException($"المشروع الرئيسي رقم {mainProjectId} غير موجود");
+
+        var trimmedCode = mainProjectCode.Trim();
+        var changed = false;
+
+        if (!mainProject.IsApproved)
+        {
+            mainProject.IsApproved = true;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(trimmedCode) && mainProject.MainProjectCode != trimmedCode)
+        {
+            mainProject.MainProjectCode = trimmedCode;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _mainProjectRepository.Update(mainProject);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <summary>

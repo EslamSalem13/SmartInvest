@@ -25,11 +25,11 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
   imports: [FormsModule],
   template: `
     @if (open()) {
-      <div class="si-overlay" (click)="close.emit()">
+      <div class="si-overlay" (click)="dismiss()">
         <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(720px,100%)">
           <div class="si-modal-head">
             <div class="grow"><h3>استيراد مشروعات من Excel</h3></div>
-            <button class="si-x" (click)="close.emit()" aria-label="إغلاق">×</button>
+            <button class="si-x" (click)="dismiss()" aria-label="إغلاق">×</button>
           </div>
           <div class="si-modal-body">
             @if (error()) { <div class="si-err">{{ error() }}</div> }
@@ -58,6 +58,9 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                       <div class="recon-row">
                         <span class="recon-name">{{ item.name }}</span>
                         <span class="recon-count">({{ item.rowCount }} صف)</span>
+                        @if (item.suggestedMatch) {
+                          <span class="recon-suggest">اقتراح: «{{ item.suggestedMatch }}» — راجع قبل التأكيد</span>
+                        }
                         <label class="recon-choice"><input type="radio" [name]="group.key + '-' + item.name" [checked]="isNew(group.key, item.name)" (change)="setNew(group.key, item.name)" /> جديد</label>
                         <label class="recon-choice"><input type="radio" [name]="group.key + '-' + item.name" [checked]="!isNew(group.key, item.name)" (change)="setExisting(group.key, item.name, existingIdFor(group.key, item.name))" /> ربط بموجود:</label>
                         <select [ngModel]="existingIdFor(group.key, item.name)" (ngModelChange)="setExisting(group.key, item.name, $event)" [disabled]="isNew(group.key, item.name) || optionsLoading()" style="max-width:160px">
@@ -99,20 +102,37 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
                 <p>تم مطابقة جميع الصفوف بنجاح.</p>
               } @else {
                 @for (row of a.unresolvedRows; track row.rowIndex) {
-                  <div class="recon-row">
-                    <span class="recon-name">{{ row.mainProjectName }} / {{ row.subProjectName }} (كود {{ row.code }})</span>
-                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="isRowCreateNew(row.rowIndex)" (change)="setRowCreateNew(row.rowIndex)" /> إنشاء جديد (معتمد)</label>
-                    <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="!isRowCreateNew(row.rowIndex)" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود:</label>
-                    <select [ngModel]="existingSubProjectId(row.rowIndex)" (ngModelChange)="setRowExisting(row.rowIndex, $event)" [disabled]="isRowCreateNew(row.rowIndex) || subProjectOptionsLoading()" style="max-width:220px">
-                      @if (subProjectOptionsLoading()) {
-                        <option [ngValue]="null">جارٍ التحميل…</option>
-                      } @else {
-                        <option [ngValue]="null">— اختر —</option>
-                        @for (opt of subProjectOptions(); track opt.id) {
-                          <option [ngValue]="opt.id">{{ opt.name }}</option>
-                        }
+                  <div class="recon-row" style="flex-direction:column; align-items:stretch;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                      <span class="recon-name">{{ row.mainProjectName }} / {{ row.subProjectName }} (كود {{ row.code }})</span>
+                      @if (row.suggestedMatchLabel) {
+                        <span class="recon-suggest">اقتراح: «{{ row.suggestedMatchLabel }}» — راجع قبل التأكيد</span>
                       }
-                    </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                      <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="isRowCreateNew(row.rowIndex)" (change)="setRowCreateNew(row.rowIndex)" /> إنشاء جديد (معتمد)</label>
+                      <label class="recon-choice"><input type="radio" [name]="'row-' + row.rowIndex" [checked]="!isRowCreateNew(row.rowIndex)" (change)="setRowExisting(row.rowIndex, existingSubProjectId(row.rowIndex))" /> ربط بمشروع موجود:</label>
+                      <div class="combo-wrap">
+                        <input
+                          type="text"
+                          autocomplete="off"
+                          [ngModel]="subProjectLabelFor(row.rowIndex)"
+                          (ngModelChange)="onSubProjectLabelChange(row.rowIndex, $event)"
+                          (focus)="openSubProjectDropdownRow.set(row.rowIndex)"
+                          (blur)="onSubProjectInputBlur(row.rowIndex)"
+                          [disabled]="isRowCreateNew(row.rowIndex) || subProjectOptionsLoading()"
+                          [placeholder]="subProjectOptionsLoading() ? 'جارٍ التحميل…' : 'اكتب للبحث عن مشروع فرعي…'"
+                          [class.invalid]="!isRowCreateNew(row.rowIndex) && existingSubProjectId(row.rowIndex) == null && subProjectLabelFor(row.rowIndex).length > 0"
+                        />
+                        @if (openSubProjectDropdownRow() === row.rowIndex && filteredSubProjectOptions(row.rowIndex).length > 0) {
+                          <div class="combo-list">
+                            @for (opt of filteredSubProjectOptions(row.rowIndex); track opt.id) {
+                              <button type="button" class="combo-item" (mousedown)="selectSubProjectOption(row.rowIndex, opt)">{{ opt.name }}</button>
+                            }
+                          </div>
+                        }
+                      </div>
+                    </div>
                   </div>
                 }
               }
@@ -197,8 +217,13 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
               }
               @if (r.failed.length > 0) {
                 <div class="si-err">
-                  فشل استيراد {{ r.failed.length }} صف:
-                  @for (f of r.failed; track f.name) { <div>{{ f.name }}: {{ f.reason }}</div> }
+                  <div class="si-err-title">فشل استيراد {{ r.failed.length }} صف:</div>
+                  @for (f of r.failed; track f.name) {
+                    <div class="si-err-row">
+                      <span class="si-err-name">{{ f.name }}</span>
+                      <span class="si-err-reason">{{ f.reason }}</span>
+                    </div>
+                  }
                 </div>
               }
             }
@@ -221,7 +246,7 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
             @if (step() === 'result') {
               <button class="si-btn primary" (click)="finish()">تم</button>
             }
-            <button class="si-btn" (click)="close.emit()">إلغاء</button>
+            <button class="si-btn" (click)="dismiss()">إلغاء</button>
           </div>
         </div>
       </div>
@@ -234,9 +259,18 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
     .recon-name { font-weight: 700; }
     .recon-count { color: var(--muted); font-size: 12px; }
     .recon-choice { display: flex; align-items: center; gap: 5px; font-size: 12.5px; }
-    .measure-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; width: 100%; }
-    .measure-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+    .recon-suggest { color: var(--warn); font-size: 12px; font-weight: 700; }
+    .combo-wrap { position: relative; flex: 1; max-width: 320px; }
+    .combo-wrap input { width: 100%; box-sizing: border-box; }
+    .combo-wrap input.invalid { border-color: #b32a39; }
+    .combo-list { position: absolute; top: calc(100% + 4px); right: 0; left: 0; max-height: 220px; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.16); z-index: 60; }
+    .combo-item { display: block; width: 100%; text-align: right; padding: 8px 12px; font-size: 12.5px; background: none; border: none; border-bottom: 1px solid var(--line); cursor: pointer; color: inherit; }
+    .combo-item:last-child { border-bottom: none; }
+    .combo-item:hover { background: var(--surface-2); }
+    .measure-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; width: 100%; padding: 10px; background: var(--surface-2); border-radius: 8px; }
+    .measure-row { display: grid; grid-template-columns: 2fr 1fr 1.4fr auto; gap: 10px; align-items: end; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
     .measure-row .si-fld { margin: 0; }
+    .measure-row .si-fld label { font-size: 11px; color: var(--muted); margin-bottom: 3px; display: block; }
     .si-x.sm { width: 32px; height: 32px; flex: 0 0 auto; }
   `],
 })
@@ -266,6 +300,7 @@ export class ExcelImportWizard {
   protected readonly subProjectOptionsLoading = signal(false);
   protected readonly allMeasurementNames = signal<string[]>([]);
   protected readonly allUnitNames = signal<string[]>([]);
+  protected readonly openSubProjectDropdownRow = signal<number | null>(null);
 
   private readonly resolutions: Record<string, Map<string, ImportResolution>> = {
     markaz: new Map(), mainProgram: new Map(), subProgram: new Map(), agency: new Map(),
@@ -274,6 +309,7 @@ export class ExcelImportWizard {
   private readonly codeResolutions = new Map<string, MainProjectCodeResolution>();
   private readonly rowResolutions = new Map<number, ImportRowResolution>();
   private readonly measurementResolutions = new Map<number, ExtractedMeasurement[]>();
+  private readonly subProjectLabelDrafts = new Map<number, string>();
 
   private wasOpen = false;
   private requestToken = 0;
@@ -355,6 +391,50 @@ export class ExcelImportWizard {
     this.rowResolutions.set(rowIndex, { rowIndex, createNew: false, existingSubProjectId: subProjectId });
   }
 
+  // Search-as-you-type combobox for "ربط بمشروع موجود" - a custom styled dropdown list (not a
+  // native <select>/<datalist>, whose OS-default popup styling can't be themed) shown while the
+  // input is focused, filtered against whatever the user is currently typing.
+  protected subProjectLabelFor(rowIndex: number): string {
+    if (this.subProjectLabelDrafts.has(rowIndex)) {
+      return this.subProjectLabelDrafts.get(rowIndex)!;
+    }
+    const id = this.existingSubProjectId(rowIndex);
+    if (id == null) return '';
+    return this.subProjectOptions().find((o) => o.id === id)?.name ?? '';
+  }
+
+  protected filteredSubProjectOptions(rowIndex: number): Lookup[] {
+    const query = this.subProjectLabelFor(rowIndex).trim().toLowerCase();
+    const options = this.subProjectOptions();
+    const filtered = query.length === 0 ? options : options.filter((o) => o.name.toLowerCase().includes(query));
+    return filtered.slice(0, 20);
+  }
+
+  protected selectSubProjectOption(rowIndex: number, opt: Lookup): void {
+    this.subProjectLabelDrafts.set(rowIndex, opt.name);
+    this.setRowExisting(rowIndex, opt.id);
+    this.openSubProjectDropdownRow.set(null);
+  }
+
+  protected onSubProjectLabelChange(rowIndex: number, label: string): void {
+    this.subProjectLabelDrafts.set(rowIndex, label);
+    // Typed text that doesn't exactly match a real option must NOT keep whatever id this row
+    // resolved to before (e.g. a pre-filled AI suggestion) - that silent staleness is what let a
+    // made-up name commit against an unrelated project instead of being caught by validation.
+    const match = this.subProjectOptions().find((o) => o.name === label);
+    this.setRowExisting(rowIndex, match ? match.id : null);
+  }
+
+  protected onSubProjectInputBlur(rowIndex: number): void {
+    // mousedown on a dropdown option fires before blur, so a real selection already committed by
+    // the time this runs; delay closing so that mousedown handler gets a chance to run first.
+    setTimeout(() => {
+      if (this.openSubProjectDropdownRow() === rowIndex) {
+        this.openSubProjectDropdownRow.set(null);
+      }
+    }, 150);
+  }
+
   protected isRowCreateNew(rowIndex: number): boolean {
     return this.rowResolutions.get(rowIndex)?.createNew ?? true;
   }
@@ -405,7 +485,7 @@ export class ExcelImportWizard {
     const token = ++this.requestToken;
     this.uploading.set(true);
     this.error.set(null);
-    this.importService.preview(file).subscribe({
+    this.importService.preview(file, this.financialYearId()).subscribe({
       next: (result) => {
         if (token !== this.requestToken) return;
         this.uploading.set(false);
@@ -419,6 +499,8 @@ export class ExcelImportWizard {
         for (const map of Object.values(this.resolutions)) map.clear();
         this.codeResolutions.clear();
         this.rowResolutions.clear();
+        this.subProjectLabelDrafts.clear();
+    this.openSubProjectDropdownRow.set(null);
 
         if (result.suggested) {
           for (const group of this.suggestedCategories(result.suggested)) {
@@ -429,7 +511,11 @@ export class ExcelImportWizard {
           this.loadExistingOptions();
         }
         for (const row of result.approved?.unresolvedRows ?? []) {
-          this.setRowCreateNew(row.rowIndex);
+          if (row.suggestedSubProjectId != null) {
+            this.setRowExisting(row.rowIndex, row.suggestedSubProjectId);
+          } else {
+            this.setRowCreateNew(row.rowIndex);
+          }
         }
         if ((result.approved?.unresolvedRows.length ?? 0) > 0) {
           this.loadSubProjectOptions();
@@ -460,6 +546,15 @@ export class ExcelImportWizard {
         if (token !== this.requestToken) return;
         this.optionsLoading.set(false);
         const mainProgramNameById = new Map(result.mainProgram.map((p) => [p.id, p.name]));
+        const rawOptionsByCategory: Record<string, Lookup[]> = {
+          markaz: result.markaz,
+          mainProgram: result.mainProgram,
+          subProgram: result.subProgram.map((sp) => ({ id: sp.id, name: sp.name })),
+          agency: result.agency.map((a) => ({ id: a.id, name: a.agencyName })),
+          projectLevel: result.projectLevel,
+          componentType: result.componentType,
+          accountingUnit: result.accountingUnit,
+        };
         this.existingOptions.set({
           markaz: result.markaz,
           mainProgram: result.mainProgram,
@@ -469,6 +564,7 @@ export class ExcelImportWizard {
           componentType: result.componentType,
           accountingUnit: result.accountingUnit,
         });
+        this.applySuggestedMatches(rawOptionsByCategory);
       },
       error: () => {
         if (token !== this.requestToken) return;
@@ -478,10 +574,33 @@ export class ExcelImportWizard {
     });
   }
 
+  // Pre-select "ربط بموجود" with the AI-suggested existing name, when the backend found one -
+  // staff still see the "اقتراح" hint next to it and can switch back to "جديد" or a different
+  // existing option before confirming; nothing is applied without them seeing it first.
+  private applySuggestedMatches(rawOptionsByCategory: Record<string, Lookup[]>): void {
+    const suggested = this.preview()?.suggested;
+    if (!suggested) return;
+    for (const group of this.suggestedCategories(suggested)) {
+      const options = rawOptionsByCategory[group.key] ?? [];
+      for (const item of group.items) {
+        if (!item.suggestedMatch) continue;
+        const match = options.find((o) => o.name === item.suggestedMatch);
+        if (match) {
+          this.setExisting(group.key, item.name, match.id);
+        }
+      }
+    }
+  }
+
   private loadSubProjectOptions(): void {
     const token = this.requestToken;
     this.subProjectOptionsLoading.set(true);
-    this.projectsService.searchSubProjects({ page: 1, pageSize: 500 }).subscribe({
+    // Scoped to the financial year this import targets - unscoped, this pulled sub-projects from
+    // every year ever imported (1000+ after repeated test imports), which both pushed the actual
+    // target (this year's own suggested-mode sub-project) past the pageSize cap - so the picker
+    // couldn't resolve an id to a name and showed the placeholder instead of the suggestion - and
+    // flooded manual search with same-named duplicates from unrelated years.
+    this.projectsService.searchSubProjects({ page: 1, pageSize: 500, financialYearId: this.financialYearId() ?? undefined }).subscribe({
       next: (result) => {
         if (token !== this.requestToken) return;
         this.subProjectOptionsLoading.set(false);
@@ -588,6 +707,19 @@ export class ExcelImportWizard {
     this.saved.emit();
   }
 
+  // The × button, the overlay backdrop, and "إلغاء" are all generic "close this dialog" actions
+  // that appear on every step, including the result screen after a successful commit. Without
+  // this, closing via any of those instead of the explicit "تم" button skips the table reload
+  // entirely - the import genuinely succeeded, but the Projects page keeps showing pre-import
+  // data until a manual page refresh.
+  protected dismiss(): void {
+    if (this.result()) {
+      this.finish();
+    } else {
+      this.close.emit();
+    }
+  }
+
   private reset(): void {
     this.requestToken++;
     this.step.set('upload');
@@ -606,6 +738,8 @@ export class ExcelImportWizard {
     this.codeResolutions.clear();
     this.rowResolutions.clear();
     this.measurementResolutions.clear();
+    this.subProjectLabelDrafts.clear();
+    this.openSubProjectDropdownRow.set(null);
 
     forkJoin({
       measurements: this.measurementsService.getAll(),
