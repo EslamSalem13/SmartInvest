@@ -9,10 +9,7 @@ namespace SmartInvest.Application.Services.Import;
 
 public class MeasurementExtractionService : IMeasurementExtractionService
 {
-    // Smaller than before (was 15): the current AI provider is a "thinking" model that spends
-    // part of every call's token budget on internal reasoning before writing the JSON answer,
-    // so a bigger batch's larger expected output was hitting maxTokens and truncating mid-JSON.
-    private const int BatchSize = 8;
+    private const int BatchSize = 15;
 
     // A generous multiple of realistic real-world files (which run ~88 rows). Guards against a
     // compressed .xlsx smuggling far more than 15×N rows worth of short text past the 10MB
@@ -76,7 +73,7 @@ public class MeasurementExtractionService : IMeasurementExtractionService
         string outputText;
         try
         {
-            outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 6000, cancellationToken);
+            outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 2000, cancellationToken);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
