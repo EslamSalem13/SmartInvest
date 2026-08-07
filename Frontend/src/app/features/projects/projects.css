@@ -1,5 +1,7 @@
 .page { padding: 28px 32px; }
 
+.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--green-700); text-align: end; }
+
 .page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .page-head h1 { font-size: var(--text-2xl); color: var(--green-900); }
 .page-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
@@ -19,8 +21,8 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .seg.small button { padding: 8px 13px; }
 
 /* المؤشرات */
-.kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
-@media (max-width: 1000px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+.kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
 .kpi {
   background: linear-gradient(175deg, var(--surface) 0%, var(--surface-2) 145%);
@@ -41,6 +43,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 }
 .kpi.ok::after { background: radial-gradient(circle, var(--ok-bg), transparent 72%); }
 .kpi.warn::after { background: radial-gradient(circle, var(--warn-bg), transparent 72%); }
+.kpi.bad::after { background: radial-gradient(circle, var(--bad-bg), transparent 72%); }
 .kpi.gold::after { background: radial-gradient(circle, var(--gold-100), transparent 72%); }
 .kpi::before {
   content: ""; position: relative; z-index: 1; display: block;
@@ -49,6 +52,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 }
 .kpi.ok::before { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-bg); }
 .kpi.warn::before { background: var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
+.kpi.bad::before { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-bg); }
 .kpi.gold::before { background: var(--gold); box-shadow: 0 0 0 4px var(--gold-100); }
 .kpi .lab { position: relative; z-index: 1; color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
 .kpi .val { position: relative; z-index: 1; display: block; font-size: var(--text-xl); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--green-900); }

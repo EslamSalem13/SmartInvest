@@ -160,6 +160,14 @@ interface MeasurementRow {
                 </select>
               </div>
               <div class="si-fld">
+                <label>نوع المشروع <span class="req">*</span></label>
+                <select [ngModel]="projectNature()" (ngModelChange)="projectNature.set($event)">
+                  <option [ngValue]="null">— اختر —</option>
+                  <option value="توريدات">توريدات</option>
+                  <option value="مقاولات">مقاولات</option>
+                </select>
+              </div>
+              <div class="si-fld">
                 <label>المركز <span class="req">*</span></label>
                 <select [ngModel]="markazId()" (ngModelChange)="markazId.set($event)">
                   <option [ngValue]="null">— اختر —</option>
@@ -347,6 +355,7 @@ export class SubProjectForm {
   protected readonly projectLevelId = signal<number | null>(null);
   protected readonly componentTypeId = signal<number | null>(null);
   protected readonly accountingUnitId = signal<number | null>(null);
+  protected readonly projectNature = signal<string | null>(null);
   protected readonly markazId = signal<number | null>(null);
   protected readonly priorityId = signal<number | null>(null);
   protected readonly statusId = signal<number | null>(null);
@@ -481,6 +490,7 @@ export class SubProjectForm {
           this.projectLevelId.set(d.projectLevelId);
           this.componentTypeId.set(d.componentTypeId);
           this.accountingUnitId.set(d.accountingUnitId);
+          this.projectNature.set(d.projectNature || null);
           this.markazId.set(d.markazId);
           this.priorityId.set(d.priorityId);
           this.statusId.set(d.statusId);
@@ -612,6 +622,7 @@ export class SubProjectForm {
     this.projectLevelId.set(null);
     this.componentTypeId.set(null);
     this.accountingUnitId.set(null);
+    this.projectNature.set(null);
     this.markazId.set(null);
     this.priorityId.set(null);
     this.statusId.set(null);
@@ -667,6 +678,7 @@ export class SubProjectForm {
     if (this.projectLevelId() == null) { this.error.set('برجاء اختيار المستوى'); return; }
     if (this.componentTypeId() == null) { this.error.set('برجاء اختيار المكوّن العيني'); return; }
     if (this.accountingUnitId() == null) { this.error.set('برجاء اختيار الوحدة الحسابية'); return; }
+    if (this.projectNature() == null) { this.error.set('برجاء اختيار نوع المشروع'); return; }
     if (this.markazId() == null) { this.error.set('برجاء اختيار المركز'); return; }
     if (this.priorityId() == null) { this.error.set('برجاء اختيار الأولوية'); return; }
     if (this.statusId() == null) { this.error.set('برجاء اختيار حالة المشروع'); return; }
@@ -700,7 +712,7 @@ export class SubProjectForm {
       projectLevelId: this.projectLevelId()!,
       componentTypeId: this.componentTypeId()!,
       accountingUnitId: this.accountingUnitId()!,
-      projectNature: '',
+      projectNature: this.projectNature()!,
       markazId: this.markazId()!,
       priorityId: this.priorityId()!,
       statusId: this.statusId()!,

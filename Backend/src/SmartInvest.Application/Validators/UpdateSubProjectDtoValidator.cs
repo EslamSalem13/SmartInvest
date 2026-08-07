@@ -26,6 +26,9 @@ public class UpdateSubProjectDtoValidator : AbstractValidator<UpdateSubProjectDt
         RuleFor(x => x.StatusId)
             .GreaterThan(0).WithMessage("يجب اختيار حالة المشروع");
 
+        RuleFor(x => x.ProjectNature)
+            .Must(v => v == "توريدات" || v == "مقاولات").WithMessage("نوع المشروع يجب أن يكون توريدات أو مقاولات");
+
         RuleFor(x => x.BankFunding)
             .GreaterThanOrEqualTo(0).WithMessage("التمويل البنكي لا يمكن أن يكون سالبًا");
 

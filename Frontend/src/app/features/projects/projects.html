@@ -35,6 +35,7 @@
     <div class="kpi"><span class="lab">إجمالي المشاريع الفرعية</span><b class="val tnum">{{ kpiTotal() }}</b></div>
     <div class="kpi ok"><span class="lab">المعتمدة</span><b class="val tnum">{{ kpiApproved() }}</b></div>
     <div class="kpi warn"><span class="lab">بانتظار الاعتماد</span><b class="val tnum">{{ kpiPending() }}</b></div>
+    <div class="kpi bad"><span class="lab">متعثرة</span><b class="val tnum">{{ kpiStalled() }}</b></div>
     <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum">{{ money(kpiBank()) }} <small>ج.م</small></b></div>
     <div class="kpi gold"><span class="lab">إجمالي تمويل ذاتي</span><b class="val tnum">{{ money(kpiSelf()) }} <small>ج.م</small></b></div>
   </div>
@@ -49,6 +50,7 @@
       <button [class.on]="approvalFilter() === 'all'" (click)="approvalFilter.set('all')">الكل</button>
       <button [class.on]="approvalFilter() === 'approved'" (click)="approvalFilter.set('approved')">معتمد</button>
       <button [class.on]="approvalFilter() === 'pending'" (click)="approvalFilter.set('pending')">غير معتمد</button>
+      <button [class.on]="approvalFilter() === 'stalled'" (click)="approvalFilter.set('stalled')">متعثر</button>
     </div>
     <button class="si-btn" (click)="showAdvanced.set(!showAdvanced())">
       <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18M6 12h12M10 19h4" /></svg>
@@ -208,10 +210,13 @@
         </div>
         <div class="si-modal-body">
           @if (addYearError()) { <div class="si-err">{{ addYearError() }}</div> }
-          <div class="si-fld">
-            <label>الموازنة (اختياري)</label>
-            <input type="number" [ngModel]="newYearBudget()" (ngModelChange)="newYearBudget.set($event)" placeholder="0" />
+          <div class="si-grid">
+            <div class="si-fld"><label>مليار</label><input type="number" min="0" [ngModel]="newYearBudgetParts().billions" (ngModelChange)="updateNewYearBudgetPart('billions', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="newYearBudgetParts().millions" (ngModelChange)="updateNewYearBudgetPart('millions', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="newYearBudgetParts().thousands" (ngModelChange)="updateNewYearBudgetPart('thousands', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="newYearBudgetParts().units" (ngModelChange)="updateNewYearBudgetPart('units', $event)" placeholder="0" /></div>
           </div>
+          <div class="budget-total">الإجمالي: {{ newYearBudgetTotal().toLocaleString('en-US') }} ج.م</div>
         </div>
         <div class="si-modal-foot">
           <button class="si-btn primary" [disabled]="savingYear()" (click)="confirmAddYear()">

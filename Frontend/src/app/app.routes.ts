@@ -130,6 +130,11 @@ export const routes: Routes = [
             loadComponent: () => import('./features/settings/settings-lookup-page').then((m) => m.SettingsLookupPage),
           },
           {
+            path: 'financial-years',
+            loadComponent: () =>
+              import('./features/settings/financial-years-settings').then((m) => m.FinancialYearsSettings),
+          },
+          {
             path: 'users',
             canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
             loadComponent: () =>

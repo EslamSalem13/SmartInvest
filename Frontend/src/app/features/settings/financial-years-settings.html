@@ -1,0 +1,90 @@
+<div class="lookup-panel">
+  <div class="panel-head">
+    <div><h2>السنوات المالية</h2></div>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else if (years().length === 0) {
+    <div class="state">لا توجد سنوات مالية بعد.</div>
+  } @else {
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>السنة المالية</th>
+            <th>البداية</th>
+            <th>النهاية</th>
+            <th>الموازنة</th>
+            <th>الحالة</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (year of years(); track year.id) {
+            <tr>
+              <td><b>{{ year.name }}</b></td>
+              <td class="tnum">{{ year.startDate.slice(0, 10) }}</td>
+              <td class="tnum">{{ year.endDate.slice(0, 10) }}</td>
+              <td class="tnum">{{ money(year.budget) }} ج.م</td>
+              <td>{{ year.isClosed ? 'مقفولة' : 'مفتوحة' }}</td>
+              <td>
+                @if (isManager()) {
+                  <div class="acts">
+                    <button class="act" title="تعديل" (click)="openEdit(year)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (showForm()) {
+    <div class="si-overlay" (click)="closeForm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(520px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>تعديل السنة المالية</h3></div>
+          <button class="si-x" (click)="closeForm()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (formError()) { <div class="si-err">{{ formError() }}</div> }
+          <div class="si-grid">
+            <div class="si-fld full">
+              <label>اسم السنة المالية <span class="req">*</span></label>
+              <input [ngModel]="formName()" (ngModelChange)="formName.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>تاريخ البداية <span class="req">*</span></label>
+              <input type="date" [ngModel]="formStartDate()" (ngModelChange)="formStartDate.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>تاريخ النهاية <span class="req">*</span></label>
+              <input type="date" [ngModel]="formEndDate()" (ngModelChange)="formEndDate.set($event)" />
+            </div>
+          </div>
+          <div class="si-grid">
+            <div class="si-fld"><label>مليار</label><input type="number" min="0" [ngModel]="formBudgetParts().billions" (ngModelChange)="updateBudgetPart('billions', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="formBudgetParts().millions" (ngModelChange)="updateBudgetPart('millions', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="formBudgetParts().thousands" (ngModelChange)="updateBudgetPart('thousands', $event)" placeholder="0" /></div>
+            <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="formBudgetParts().units" (ngModelChange)="updateBudgetPart('units', $event)" placeholder="0" /></div>
+          </div>
+          <label class="si-check">
+            <input type="checkbox" [ngModel]="formIsClosed()" (ngModelChange)="formIsClosed.set($event)" />
+            سنة مالية مقفولة
+          </label>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="saving()" (click)="submitForm()">
+            @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { حفظ التعديلات }
+          </button>
+          <button class="si-btn" [disabled]="saving()" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

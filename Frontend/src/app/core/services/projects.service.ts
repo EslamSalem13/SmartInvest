@@ -80,6 +80,14 @@ export class ProjectsService {
     return this.http.put<SubProjectDetail>(`${this.base}/subprojects/${id}/approve`, { code });
   }
 
+  markSubProjectStalled(id: number, reason: string): Observable<SubProjectDetail> {
+    return this.http.put<SubProjectDetail>(`${this.base}/subprojects/${id}/mark-stalled`, { reason });
+  }
+
+  reactivateSubProject(id: number): Observable<SubProjectDetail> {
+    return this.http.put<SubProjectDetail>(`${this.base}/subprojects/${id}/reactivate`, {});
+  }
+
   deleteSubProject(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/subprojects/${id}`);
   }

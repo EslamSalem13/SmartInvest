@@ -41,6 +41,7 @@ export class SettingsIndex {
       label: t.label,
       description: LOOKUP_DESCRIPTIONS[t.key] ?? '',
     })),
+    { slug: 'financial-years', label: 'السنوات المالية', description: 'تعديل بيانات وموازنات السنوات المالية' },
     { slug: 'contractors', label: 'المقاولون', description: 'بيانات المقاولين المسندة إليهم المشروعات' },
     { slug: 'agencies', label: 'الجهات التنفيذية', description: 'الجهات المسؤولة عن تنفيذ المشروعات' },
     { slug: 'measurements', label: 'القياسات', description: 'تعريفات القياسات المخصصة للمشروعات الفرعية' },

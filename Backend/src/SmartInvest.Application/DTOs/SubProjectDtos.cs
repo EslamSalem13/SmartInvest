@@ -5,6 +5,11 @@ public class ApproveSubProjectDto
     public string Code { get; set; } = string.Empty;
 }
 
+public class MarkStalledDto
+{
+    public string Reason { get; set; } = string.Empty;
+}
+
 public class SubProjectListItemDto
 {
     public int Id { get; set; }

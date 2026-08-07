@@ -93,6 +93,25 @@ public class SubProjectsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("{id:int}/mark-stalled")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<SubProjectDetailDto>> MarkStalled(
+        int id,
+        MarkStalledDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await _subProjectService.MarkStalledAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("{id:int}/reactivate")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<SubProjectDetailDto>> Reactivate(int id, CancellationToken cancellationToken)
+    {
+        var result = await _subProjectService.ReactivateAsync(id, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Roles = Roles.PlanningManager)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)

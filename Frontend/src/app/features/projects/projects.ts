@@ -7,6 +7,7 @@ import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { BudgetParts, combineBudget } from '../../core/utils/budget.util';
 import {
   FinancialYear,
   Lookup,
@@ -53,13 +54,14 @@ export class Projects {
   );
 
   protected readonly showAddYearForm = signal(false);
-  protected readonly newYearBudget = signal<number | null>(null);
+  protected readonly newYearBudgetParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
+  protected readonly newYearBudgetTotal = computed(() => combineBudget(this.newYearBudgetParts()));
   protected readonly addYearError = signal<string | null>(null);
   protected readonly savingYear = signal(false);
 
   // ابحث + فلاتر
   protected readonly searchTerm = signal('');
-  protected readonly approvalFilter = signal<'all' | 'approved' | 'pending'>('all');
+  protected readonly approvalFilter = signal<'all' | 'approved' | 'pending' | 'stalled'>('all');
   protected readonly showAdvanced = signal(false);
   protected readonly fMainProgram = signal('');
   protected readonly fSubProgram = signal('');
@@ -78,15 +80,21 @@ export class Projects {
 
   // ===== مؤشرات =====
   protected readonly kpiTotal = computed(() => this.subs().length);
-  protected readonly kpiApproved = computed(() => this.subs().filter((s) => s.isApproved).length);
+  protected readonly kpiApproved = computed(() => this.subs().filter((s) => s.isApproved && !this.isStalled(s)).length);
   protected readonly kpiPending = computed(() => this.subs().filter((s) => !s.isApproved).length);
+  protected readonly kpiStalled = computed(() => this.subs().filter((s) => this.isStalled(s)).length);
   protected readonly kpiBank = computed(() => this.subs().reduce((a, s) => a + s.bankFunding, 0));
   protected readonly kpiSelf = computed(() => this.subs().reduce((a, s) => a + s.selfFunding, 0));
 
+  protected isStalled(s: SubProjectListItem): boolean {
+    return s.isApproved && s.statusName === 'متعثر';
+  }
+
   // ===== الفلترة والتجميع =====
   private matchesSubFilters(s: SubProjectListItem): boolean {
-    if (this.approvalFilter() === 'approved' && !s.isApproved) return false;
+    if (this.approvalFilter() === 'approved' && (!s.isApproved || this.isStalled(s))) return false;
     if (this.approvalFilter() === 'pending' && s.isApproved) return false;
+    if (this.approvalFilter() === 'stalled' && !this.isStalled(s)) return false;
     if (this.fLevel() && s.projectLevelName !== this.fLevel()) return false;
     if (this.fAgency() && s.executiveAgencyName !== this.fAgency()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
@@ -323,7 +331,7 @@ export class Projects {
   }
 
   protected openAddYear(): void {
-    this.newYearBudget.set(null);
+    this.newYearBudgetParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
     this.addYearError.set(null);
     this.showAddYearForm.set(true);
   }
@@ -332,13 +340,18 @@ export class Projects {
     this.showAddYearForm.set(false);
   }
 
+  protected updateNewYearBudgetPart(part: keyof BudgetParts, value: number | string): void {
+    this.newYearBudgetParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  }
+
   protected confirmAddYear(): void {
     if (this.savingYear()) return;
     const next = this.computeNextYear();
     this.savingYear.set(true);
     this.addYearError.set(null);
+    const budget = this.newYearBudgetTotal();
     this.financialYearsService
-      .create({ name: next.name, startDate: next.startDate, endDate: next.endDate, budget: this.newYearBudget() })
+      .create({ name: next.name, startDate: next.startDate, endDate: next.endDate, budget: budget > 0 ? budget : null })
       .subscribe({
         next: (year) => {
           this.savingYear.set(false);

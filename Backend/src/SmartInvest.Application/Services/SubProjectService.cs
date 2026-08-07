@@ -191,6 +191,56 @@ public class SubProjectService : ISubProjectService
         return _mapper.Map<SubProjectDetailDto>(approved);
     }
 
+    public async Task<SubProjectDetailDto> MarkStalledAsync(int id, MarkStalledDto dto, CancellationToken cancellationToken = default)
+    {
+        var subProject = await _subProjectRepository.GetByIdAsync(id, cancellationToken);
+        if (subProject == null)
+        {
+            throw new NotFoundException($"المشروع الفرعي رقم {id} غير موجود");
+        }
+
+        if (!subProject.IsApproved)
+        {
+            throw new BusinessRuleException("لا يمكن تسجيل تعثر مشروع غير معتمد");
+        }
+
+        var reason = (dto.Reason ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new BusinessRuleException("سبب التعثر مطلوب");
+        }
+
+        // العلامة IsApproved تبقى كما هي — المشروع فعليًا معتمد ولا زال كذلك، هو فقط توقف عن التنفيذ.
+        subProject.StatusId = await ResolveStatusIdByNameAsync("متعثر", cancellationToken);
+        subProject.ApprovalCancellationReason = reason;
+        subProject.ApprovalCancelledAt = DateTime.UtcNow;
+
+        _subProjectRepository.Update(subProject);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var updated = await _subProjectRepository.GetWithDetailsAsync(id, cancellationToken);
+        return _mapper.Map<SubProjectDetailDto>(updated);
+    }
+
+    public async Task<SubProjectDetailDto> ReactivateAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var subProject = await _subProjectRepository.GetByIdAsync(id, cancellationToken);
+        if (subProject == null)
+        {
+            throw new NotFoundException($"المشروع الفرعي رقم {id} غير موجود");
+        }
+
+        subProject.StatusId = await ResolveStatusIdByNameAsync("قيد التنفيذ", cancellationToken);
+        subProject.ApprovalCancellationReason = null;
+        subProject.ApprovalCancelledAt = null;
+
+        _subProjectRepository.Update(subProject);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var updated = await _subProjectRepository.GetWithDetailsAsync(id, cancellationToken);
+        return _mapper.Map<SubProjectDetailDto>(updated);
+    }
+
     private async Task<int> ResolveStatusIdByNameAsync(string statusName, CancellationToken cancellationToken)
     {
         var status = await _statusRepository.FirstOrDefaultAsync(x => x.StatusName == statusName, cancellationToken);

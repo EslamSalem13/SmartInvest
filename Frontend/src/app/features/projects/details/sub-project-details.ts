@@ -69,6 +69,11 @@ export class SubProjectDetails implements OnDestroy {
   private marker: L.Marker | null = null;
   private mapInitialized = false;
 
+  // تعثر / إلغاء تعثر
+  protected readonly showMarkStalledForm = signal(false);
+  protected readonly stalledReason = signal('');
+  protected readonly savingStatus = signal(false);
+
   private subId = 0;
 
   protected readonly isApproved = computed(() => !!this.project()?.code);
@@ -189,6 +194,53 @@ export class SubProjectDetails implements OnDestroy {
       error: (err) => {
         this.savingLocation.set(false);
         alert(err?.error?.message ?? 'تعذّر حفظ الموقع');
+      },
+    });
+  }
+
+  // ===== تعثر / إلغاء تعثر =====
+  protected openMarkStalled(): void {
+    this.stalledReason.set('');
+    this.showMarkStalledForm.set(true);
+  }
+
+  protected closeMarkStalled(): void {
+    if (this.savingStatus()) return;
+    this.showMarkStalledForm.set(false);
+  }
+
+  protected confirmMarkStalled(): void {
+    if (this.savingStatus()) return;
+    const reason = this.stalledReason().trim();
+    if (!reason) return;
+
+    this.savingStatus.set(true);
+    this.projectsService.markSubProjectStalled(this.subId, reason).subscribe({
+      next: () => {
+        this.savingStatus.set(false);
+        this.showMarkStalledForm.set(false);
+        this.load();
+      },
+      error: (err) => {
+        this.savingStatus.set(false);
+        alert(err?.error?.message ?? 'تعذّر تسجيل التعثر');
+      },
+    });
+  }
+
+  protected reactivate(): void {
+    if (this.savingStatus()) return;
+    if (!confirm('تأكيد إلغاء تعثر المشروع؟')) return;
+
+    this.savingStatus.set(true);
+    this.projectsService.reactivateSubProject(this.subId).subscribe({
+      next: () => {
+        this.savingStatus.set(false);
+        this.load();
+      },
+      error: (err) => {
+        this.savingStatus.set(false);
+        alert(err?.error?.message ?? 'تعذّر إلغاء التعثر');
       },
     });
   }
