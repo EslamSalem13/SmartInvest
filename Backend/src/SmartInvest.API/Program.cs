@@ -7,6 +7,11 @@ using SmartInvest.Application.Common.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.Local.json حمّلها بآخر الترتيب فتغلب أي قيمة فارغة في appsettings.json — ملف
+// مش متتبّع بالـ git (.gitignore) عشان تحط فيه مفاتيح API الحقيقية وتغيّرها بسهولة بدون
+// أي أمر CLI. لو الملف مش موجود، التطبيق يشتغل عادي (optional: true).
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 // ---------------------------------------------------------------------------
 // Layer registrations (Onion composition root)
 // ---------------------------------------------------------------------------
