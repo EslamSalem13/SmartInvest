@@ -100,8 +100,9 @@ public class ExcelImportParser : IExcelImportParser
                 SubProjectCode = GetText(row, columnIndex, "كود المشروع"),
                 SubProjectName = subProjectName,
                 ComponentTypeName = GetText(row, columnIndex, "المكوّن العيني"),
-                BankFunding = GetDecimal(row, columnIndex, "بنك"),
-                SelfFunding = GetDecimal(row, columnIndex, "ذاتي"),
+                // أرقام التمويل بالملف بالآلاف (مثال: 500 تعني 500,000 جنيه) — نحوّلها لجنيه كامل هنا.
+                BankFunding = GetDecimal(row, columnIndex, "بنك") * 1000m,
+                SelfFunding = GetDecimal(row, columnIndex, "ذاتي") * 1000m,
                 AccountingUnitName = GetText(row, columnIndex, "الوحدة الحسابية"),
             });
         }

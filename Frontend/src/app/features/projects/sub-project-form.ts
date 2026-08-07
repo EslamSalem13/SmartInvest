@@ -8,6 +8,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { MeasurementsService } from '../../core/services/measurements.service';
 import { MeasurementResolutionService } from '../../core/services/measurement-resolution.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BudgetParts, combineBudget, splitBudget } from '../../core/utils/budget.util';
 import {
   ExecutiveAgencyProfile,
   FinancialYear,
@@ -195,13 +196,23 @@ interface MeasurementRow {
                   @for (a of executiveAgencies(); track a.id) { <option [ngValue]="a.id">{{ a.agencyName }}</option> }
                 </select>
               </div>
-              <div class="si-fld">
+              <div class="si-fld full">
                 <label>تمويل بنكي (ج.م)</label>
-                <input type="number" [ngModel]="bankFunding()" (ngModelChange)="bankFunding.set($event)" placeholder="0" />
+                <div class="si-grid money-grid">
+                  <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="bankFundingParts().millions" (ngModelChange)="updateBankFundingPart('millions', $event)" placeholder="0" /></div>
+                  <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="bankFundingParts().thousands" (ngModelChange)="updateBankFundingPart('thousands', $event)" placeholder="0" /></div>
+                  <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="bankFundingParts().units" (ngModelChange)="updateBankFundingPart('units', $event)" placeholder="0" /></div>
+                </div>
+                <div class="money-total">الإجمالي: {{ bankFunding().toLocaleString('en-US') }} ج.م</div>
               </div>
-              <div class="si-fld">
+              <div class="si-fld full">
                 <label>تمويل ذاتي (ج.م)</label>
-                <input type="number" [ngModel]="selfFunding()" (ngModelChange)="selfFunding.set($event)" placeholder="0" />
+                <div class="si-grid money-grid">
+                  <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="selfFundingParts().millions" (ngModelChange)="updateSelfFundingPart('millions', $event)" placeholder="0" /></div>
+                  <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="selfFundingParts().thousands" (ngModelChange)="updateSelfFundingPart('thousands', $event)" placeholder="0" /></div>
+                  <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="selfFundingParts().units" (ngModelChange)="updateSelfFundingPart('units', $event)" placeholder="0" /></div>
+                </div>
+                <div class="money-total">الإجمالي: {{ selfFunding().toLocaleString('en-US') }} ج.م</div>
               </div>
               <div class="si-fld full">
                 <label>ملاحظات / وصف</label>
@@ -312,6 +323,8 @@ interface MeasurementRow {
     .measure-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
     .measure-row .si-fld{margin:0}
     .si-x.sm{width:32px;height:32px;flex:0 0 auto}
+    .money-grid{grid-template-columns:repeat(3,1fr);margin-top:6px}
+    .money-total{margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green-700);text-align:end}
   `],
 })
 export class SubProjectForm {
@@ -359,8 +372,18 @@ export class SubProjectForm {
   protected readonly markazId = signal<number | null>(null);
   protected readonly priorityId = signal<number | null>(null);
   protected readonly statusId = signal<number | null>(null);
-  protected readonly bankFunding = signal<number>(0);
-  protected readonly selfFunding = signal<number>(0);
+  protected readonly bankFundingParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
+  protected readonly selfFundingParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
+  protected readonly bankFunding = computed(() => combineBudget(this.bankFundingParts()));
+  protected readonly selfFunding = computed(() => combineBudget(this.selfFundingParts()));
+
+  protected updateBankFundingPart(part: keyof BudgetParts, value: number | string): void {
+    this.bankFundingParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  }
+
+  protected updateSelfFundingPart(part: keyof BudgetParts, value: number | string): void {
+    this.selfFundingParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  }
   protected readonly description = signal('');
   protected readonly executiveAgencyId = signal<number | null>(null);
   private originalExecutiveAgencyId: number | null = null;
@@ -494,8 +517,8 @@ export class SubProjectForm {
           this.markazId.set(d.markazId);
           this.priorityId.set(d.priorityId);
           this.statusId.set(d.statusId);
-          this.bankFunding.set(d.bankFunding);
-          this.selfFunding.set(d.selfFunding);
+          this.bankFundingParts.set(splitBudget(d.bankFunding));
+          this.selfFundingParts.set(splitBudget(d.selfFunding));
           this.description.set(d.description ?? '');
           this.executiveAgencyId.set(d.executiveAgencyId);
           this.originalExecutiveAgencyId = d.executiveAgencyId;
@@ -626,8 +649,8 @@ export class SubProjectForm {
     this.markazId.set(null);
     this.priorityId.set(null);
     this.statusId.set(null);
-    this.bankFunding.set(0);
-    this.selfFunding.set(0);
+    this.bankFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
+    this.selfFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
     this.description.set('');
     this.executiveAgencyId.set(null);
     this.originalExecutiveAgencyId = null;
@@ -716,8 +739,8 @@ export class SubProjectForm {
       markazId: this.markazId()!,
       priorityId: this.priorityId()!,
       statusId: this.statusId()!,
-      bankFunding: Number(this.bankFunding()) || 0,
-      selfFunding: Number(this.selfFunding()) || 0,
+      bankFunding: this.bankFunding(),
+      selfFunding: this.selfFunding(),
       latitude: null,
       longitude: null,
       description: this.description().trim() || null,
