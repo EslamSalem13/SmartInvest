@@ -68,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IExecutiveAgencyService, ExecutiveAgencyService>();
         services.AddScoped<IContractorService, ContractorService>();
+        services.AddScoped<IExecutionStageService, ExecutionStageService>();
         services.AddScoped<IContractTypeService, ContractTypeService>();
         services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
