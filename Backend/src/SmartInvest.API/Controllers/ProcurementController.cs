@@ -100,12 +100,30 @@ public class ProcurementController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>تأكيد/إلغاء تأكيد صرف الدفعة المقدمة 25% — خاص بمرحلة العقد والترسية.</summary>
+    /// <summary>تأكيد/إلغاء تأكيد صرف الدفعة المقدمة — خاص بمرحلة العقد والترسية.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/advance-payment")]
     [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> SetAdvancePaymentDone(int subProjectId, SetAdvancePaymentDoneDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetAdvancePaymentDoneAsync(subProjectId, dto.Done, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>حفظ بيانات الترسية: المقاول، الدفعة المقدمة، مدة التنفيذ، الشرط الجزائي.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/details")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<IActionResult> SetContractAwardDetails(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.SetContractAwardDetailsAsync(subProjectId, dto, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/site-handover")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<IActionResult> SetSiteHandover(int subProjectId, SetSiteHandoverDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.SetSiteHandoverAsync(subProjectId, dto.HandoverDate, cancellationToken);
         return NoContent();
     }
 

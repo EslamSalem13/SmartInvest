@@ -113,6 +113,10 @@ export class PresentationMemos implements OnInit {
   protected readonly uploading = signal(false);
   protected readonly dragOverMemoFile = signal(false);
 
+  /** قرار لجنة الشؤون القانونية — اختياري وقت الرفع، إلزامي قبل الإكمال */
+  protected readonly legalDecisionFile = signal<File | null>(null);
+  protected readonly dragOverLegalFile = signal(false);
+
   protected readonly busy = signal(false);
 
   protected readonly isStaff = computed(() => {
@@ -273,6 +277,7 @@ export class PresentationMemos implements OnInit {
   // ===== الإصدارات =====
   protected openUploadForm(): void {
     this.uploadFile.set(null);
+    this.legalDecisionFile.set(null);
     this.uploadNotes.set('');
     this.uploadError.set(null);
     this.showUpload.set(true);
@@ -313,6 +318,36 @@ export class PresentationMemos implements OnInit {
     }
   }
 
+  protected onLegalFilePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.legalDecisionFile.set(input.files?.[0] ?? null);
+    input.value = '';
+  }
+
+  protected clearLegalFile(event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.legalDecisionFile.set(null);
+  }
+
+  protected onLegalDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.dragOverLegalFile.set(true);
+  }
+
+  protected onLegalDragLeave(): void {
+    this.dragOverLegalFile.set(false);
+  }
+
+  protected onLegalDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.dragOverLegalFile.set(false);
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      this.legalDecisionFile.set(file);
+    }
+  }
+
   protected submitUpload(): void {
     const id = this.openMemoId();
     const file = this.uploadFile();
@@ -326,27 +361,30 @@ export class PresentationMemos implements OnInit {
 
     this.uploading.set(true);
     this.uploadError.set(null);
-    this.financial.uploadMemoVersion(id, file, this.uploadNotes()).subscribe({
-      next: () => {
-        this.uploading.set(false);
-        this.showUpload.set(false);
-        this.reload();
-      },
-      error: (err) => {
-        this.uploading.set(false);
-        this.uploadError.set(err?.error?.message ?? 'تعذر رفع الإصدار');
-      },
-    });
+    this.financial
+      .uploadMemoVersion(id, file, this.uploadNotes(), this.legalDecisionFile())
+      .subscribe({
+        next: () => {
+          this.uploading.set(false);
+          this.showUpload.set(false);
+          this.reload();
+        },
+        error: (err) => {
+          this.uploading.set(false);
+          this.uploadError.set(err?.error?.message ?? 'تعذر رفع الإصدار');
+        },
+      });
   }
 
-  protected download(version: ProcurementVersion): void {
+  protected download(version: ProcurementVersion, fileKey?: string): void {
     const id = this.openMemoId();
     if (id == null) {
       return;
     }
-    const fileName = version.files[0]?.fileName ?? 'memo';
+    const fileName =
+      version.files.find((f) => f.key === fileKey)?.fileName ?? version.files[0]?.fileName ?? 'memo';
     this.financial
-      .downloadMemoFile(id, version.versionNumber)
+      .downloadMemoFile(id, version.versionNumber, fileKey)
       .subscribe((blob) => this.financial.saveBlob(blob, fileName));
   }
 

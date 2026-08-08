@@ -38,4 +38,10 @@ public class UploadMemoVersionDto
 {
     public string? Notes { get; set; }
     public FileUploadDto File { get; set; } = new();
+
+    /// <summary>
+    /// قرار لجنة الشؤون القانونية — اختياري عند رفع الإصدار، وإلزامي قبل إكمال المذكرة.
+    /// يُسمح برفع الإصدار بدونه حتى لا يتعطّل العمل بانتظار القرار.
+    /// </summary>
+    public FileUploadDto? LegalAffairsCommitteeDecision { get; set; }
 }

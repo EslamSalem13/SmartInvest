@@ -17,7 +17,8 @@ public interface IPresentationMemoService
 
     Task<ProcurementVersionDto> UploadVersionAsync(int id, UploadMemoVersionDto dto, CancellationToken cancellationToken = default);
 
-    Task<FileDownloadDto> DownloadFileAsync(int id, int versionNumber, CancellationToken cancellationToken = default);
+    /// <summary><paramref name="fileKey"/>: "file" لملف المذكرة، "legal-affairs-decision" لقرار لجنة الشؤون القانونية.</summary>
+    Task<FileDownloadDto> DownloadFileAsync(int id, int versionNumber, string? fileKey = null, CancellationToken cancellationToken = default);
 
     Task SetCompletionAsync(int id, bool isCompleted, CancellationToken cancellationToken = default);
 }

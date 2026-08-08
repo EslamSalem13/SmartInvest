@@ -14,6 +14,11 @@ public class ContractAwardConfiguration : IEntityTypeConfiguration<ContractAward
                .WithOne()
                .HasForeignKey<ContractAward>(x => x.SubProjectId)
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.ProjectAssignment)
+               .WithMany()
+               .HasForeignKey(x => x.ProjectAssignmentId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -32,5 +37,6 @@ public class ContractAwardVersionConfiguration : IEntityTypeConfiguration<Contra
 
         builder.OwnsStoredFile(x => x.AwardOrder, "AwardOrder_");
         builder.OwnsStoredFile(x => x.Contract, "Contract_");
+        builder.OwnsStoredFile(x => x.AdvancePaymentProof, "AdvancePaymentProof_");
     }
 }

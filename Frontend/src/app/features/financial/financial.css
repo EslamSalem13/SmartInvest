@@ -196,6 +196,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .files { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .file-lnk { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--green-700); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 6px 11px; font-family: inherit; transition: background .15s var(--ease); }
 .file-lnk:hover { background: var(--ok-bg); }
+.fsize { color: var(--muted); font-weight: 600; font-size: 11px; }
 .file-lnk .fsize { color: var(--muted); font-weight: 600; font-size: 11px; }
 td.notes { color: var(--muted); max-width: 240px; }
 
@@ -205,3 +206,12 @@ td.notes { color: var(--muted); max-width: 240px; }
 .check-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background .15s var(--ease); }
 .check-item:hover { background: var(--surface-2); }
 .check-item input { accent-color: var(--green-700); width: 16px; height: 16px; }
+
+/* لوحة بيانات الترسية (المرحلة السادسة) */
+.award-panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 16px 18px; margin-bottom: 16px; }
+.award-budget { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.ab-item { flex: 1 1 150px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 12px; display: flex; flex-direction: column; gap: 3px; }
+.ab-item span { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.ab-item b { font-size: 13.5px; color: var(--green-900); }
+.inline-check { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.inline-check input { accent-color: var(--green-700); width: 16px; height: 16px; }

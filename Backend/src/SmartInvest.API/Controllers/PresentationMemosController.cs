@@ -59,12 +59,13 @@ public class PresentationMemosController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>رفع إصدار جديد — multipart/form-data: حقل file + حقل notes اختياري.</summary>
+    /// <summary>رفع إصدار جديد — multipart/form-data: حقل file، وnotes وlegalAffairsCommitteeDecision اختياريان.</summary>
     [HttpPost("{id:int}/versions")]
     [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProcurementVersionDto>> UploadVersion(
         int id,
         IFormFile? file,
+        IFormFile? legalAffairsCommitteeDecision,
         [FromForm] string? notes,
         CancellationToken cancellationToken)
     {
@@ -77,16 +78,20 @@ public class PresentationMemosController : ControllerBase
         {
             Notes = notes,
             File = await FileRequestHelpers.ToUploadDtoAsync(file, cancellationToken),
+            LegalAffairsCommitteeDecision = legalAffairsCommitteeDecision is { Length: > 0 }
+                ? await FileRequestHelpers.ToUploadDtoAsync(legalAffairsCommitteeDecision, cancellationToken)
+                : null,
         };
 
         var result = await _memoService.UploadVersionAsync(id, dto, cancellationToken);
         return Ok(result);
     }
 
+    /// <summary><paramref name="fileKey"/> اختياري: "legal-affairs-decision" لتحميل قرار اللجنة بدل ملف المذكرة.</summary>
     [HttpGet("{id:int}/versions/{versionNumber:int}/file")]
-    public async Task<IActionResult> DownloadFile(int id, int versionNumber, CancellationToken cancellationToken)
+    public async Task<IActionResult> DownloadFile(int id, int versionNumber, [FromQuery] string? fileKey, CancellationToken cancellationToken)
     {
-        var file = await _memoService.DownloadFileAsync(id, versionNumber, cancellationToken);
+        var file = await _memoService.DownloadFileAsync(id, versionNumber, fileKey, cancellationToken);
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 

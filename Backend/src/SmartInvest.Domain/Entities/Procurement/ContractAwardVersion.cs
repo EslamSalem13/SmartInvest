@@ -2,7 +2,7 @@ using SmartInvest.Domain.Common;
 
 namespace SmartInvest.Domain.Entities
 {
-    /// <summary>إصدار العقد والترسية — ملفان: أمر الإسناد، العقد (الدفعة المقدمة 25% أصبحت حالة على المستند، راجع ContractAward.AdvancePaymentDone).</summary>
+    /// <summary>إصدار العقد والترسية — أمر الإسناد، العقد، وإثبات صرف الدفعة المقدمة (بيانات الدفعة نفسها حالة على المستند، راجع ContractAward).</summary>
     public class ContractAwardVersion : DocumentVersionBase
     {
         public int ContractAwardId { get; set; }
@@ -13,5 +13,8 @@ namespace SmartInvest.Domain.Entities
 
         /// <summary>العقد الموقَّع.</summary>
         public StoredFile? Contract { get; set; }
+
+        /// <summary>إثبات صرف الدفعة المقدمة — مطلوب لمشروعات «مقاولات» فقط.</summary>
+        public StoredFile? AdvancePaymentProof { get; set; }
     }
 }

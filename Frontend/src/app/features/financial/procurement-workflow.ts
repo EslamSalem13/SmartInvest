@@ -3,8 +3,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
+import { ContractorsService } from '../../core/services/contractors.service';
+import { ContractTypesService } from '../../core/services/contract-types.service';
 import { Roles } from '../../core/models/auth.models';
+import { Contractor, Lookup } from '../../core/models/project.models';
 import {
+  ContractAwardDetails,
   ProcurementOverview,
   ProcurementStage,
   ProcurementStageDetail,
@@ -20,6 +24,8 @@ import {
 export class ProcurementWorkflow implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly financial = inject(FinancialService);
+  private readonly contractorsService = inject(ContractorsService);
+  private readonly contractTypesService = inject(ContractTypesService);
   private readonly auth = inject(AuthService);
 
   protected readonly subProjectId = Number(this.route.snapshot.paramMap.get('id'));
@@ -54,8 +60,119 @@ export class ProcurementWorkflow implements OnInit {
     () => this.overview()?.stages.filter((s) => s.isCompleted).length ?? 0,
   );
 
+  // ===== مرحلة الترسية =====
+  protected readonly contractors = signal<Contractor[]>([]);
+  protected readonly contractTypes = signal<Lookup[]>([]);
+
+  protected readonly award = computed(() => this.stageDetail()?.contractAward ?? null);
+
+  /** نموذج الترسية — إشارة لكل حقل، على نمط باقي النماذج في المشروع */
+  protected readonly aContractorId = signal<number | null>(null);
+  protected readonly aContractTypeId = signal<number | null>(null);
+  protected readonly aContractNumber = signal('');
+  protected readonly aContractValue = signal<number | null>(null);
+  protected readonly aAdvanceDone = signal(false);
+  protected readonly aAdvancePercentage = signal<number | null>(null);
+  protected readonly aAdvanceSelf = signal<number | null>(null);
+  protected readonly aAdvanceBank = signal<number | null>(null);
+  protected readonly aDurationMonths = signal<number | null>(null);
+  protected readonly aDurationDays = signal<number | null>(null);
+  protected readonly aHandoverMode = signal<number | null>(null);
+  protected readonly aPenaltyAmount = signal<number | null>(null);
+  protected readonly awardSaving = signal(false);
+  protected readonly awardError = signal<string | null>(null);
+
+  /** قيمة الدفعة المقدمة بالجنيه — تظهر تلقائيًا بمجرد كتابة النسبة */
+  protected readonly advanceAmount = computed(() => {
+    const pct = this.aAdvancePercentage();
+    const total = this.award()?.totalCost ?? 0;
+    if (pct == null || pct <= 0) {
+      return 0;
+    }
+    return Math.round(total * pct) / 100;
+  });
+
+  /** ما تبقّى ليتوازن التقسيم بين الذاتي والبنكي */
+  protected readonly advanceRemaining = computed(
+    () => Math.round((this.advanceAmount() - (this.aAdvanceSelf() ?? 0) - (this.aAdvanceBank() ?? 0)) * 100) / 100,
+  );
+
+  protected readonly awardEditable = computed(
+    () => this.isStaff() && !this.stageDetail()?.isCompleted,
+  );
+
   ngOnInit(): void {
     this.reload();
+  }
+
+  private loadAwardLookups(): void {
+    if (this.contractors().length > 0) {
+      return;
+    }
+    this.contractors.set([]);
+    this.contractorsService.getAll().subscribe({
+      next: (items) => this.contractors.set(items.filter((c) => c.isActive)),
+    });
+    this.contractTypesService.getAll().subscribe({
+      next: (items) => this.contractTypes.set(items),
+    });
+  }
+
+  /** يملأ النموذج من الخادم — يُستدعى كلما أُعيد تحميل تفاصيل المرحلة */
+  private syncAwardForm(details: ContractAwardDetails | null | undefined): void {
+    this.awardError.set(null);
+    if (!details) {
+      return;
+    }
+    this.aContractorId.set(details.contractorId);
+    this.aContractTypeId.set(details.contractTypeId);
+    this.aContractNumber.set(details.contractNumber ?? '');
+    this.aContractValue.set(details.contractValue);
+    this.aAdvanceDone.set(details.advancePaymentDone);
+    this.aAdvancePercentage.set(details.advancePaymentPercentage);
+    this.aAdvanceSelf.set(details.advancePaymentSelfAmount);
+    this.aAdvanceBank.set(details.advancePaymentBankAmount);
+    this.aDurationMonths.set(details.executionDurationMonths);
+    this.aDurationDays.set(details.executionDurationDays);
+    this.aHandoverMode.set(details.siteHandoverMode);
+    this.aPenaltyAmount.set(details.penaltyAmount);
+  }
+
+  protected saveAward(): void {
+    if (this.awardSaving()) {
+      return;
+    }
+    this.awardSaving.set(true);
+    this.awardError.set(null);
+    this.financial
+      .setContractAwardDetails(this.subProjectId, {
+        advancePaymentDone: this.aAdvanceDone(),
+        advancePaymentPercentage: this.aAdvancePercentage(),
+        advancePaymentSelfAmount: this.aAdvanceSelf(),
+        advancePaymentBankAmount: this.aAdvanceBank(),
+        executionDurationMonths: this.aDurationMonths(),
+        executionDurationDays: this.aDurationDays(),
+        siteHandoverMode: this.aHandoverMode(),
+        penaltyAmount: this.aPenaltyAmount(),
+        contractorId: this.aContractorId(),
+        contractTypeId: this.aContractTypeId(),
+        contractNumber: this.aContractNumber().trim() || null,
+        contractValue: this.aContractValue(),
+      })
+      .subscribe({
+        next: () => {
+          this.awardSaving.set(false);
+          this.reload();
+        },
+        error: (err) => {
+          this.awardSaving.set(false);
+          this.awardError.set(err?.error?.message ?? 'تعذر حفظ بيانات الترسية');
+        },
+      });
+  }
+
+  protected money(value: number | null | undefined): string {
+    return (value ?? 0).toLocaleString('en-US');
   }
 
   protected reload(): void {
@@ -92,9 +209,13 @@ export class ProcurementWorkflow implements OnInit {
 
   private loadStage(stage: string): void {
     this.stageLoading.set(true);
+    if (stage === 'contract-award') {
+      this.loadAwardLookups();
+    }
     this.financial.getStage(this.subProjectId, stage).subscribe({
       next: (detail) => {
         this.stageDetail.set(detail);
+        this.syncAwardForm(detail.contractAward);
         this.stageLoading.set(false);
       },
       error: () => this.stageLoading.set(false),
@@ -234,24 +355,6 @@ export class ProcurementWorkflow implements OnInit {
       error: (err) => {
         this.busy.set(false);
         alert(err?.error?.message ?? 'تعذر إكمال المرحلة');
-      },
-    });
-  }
-
-  // ===== الدفعة المقدمة 25% (مرحلة العقد والترسية فقط) =====
-  protected toggleAdvancePayment(done: boolean): void {
-    if (this.busy()) {
-      return;
-    }
-    this.busy.set(true);
-    this.financial.setAdvancePaymentDone(this.subProjectId, done).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.reload();
-      },
-      error: (err) => {
-        this.busy.set(false);
-        alert(err?.error?.message ?? 'تعذر تحديث حالة الدفعة المقدمة');
       },
     });
   }

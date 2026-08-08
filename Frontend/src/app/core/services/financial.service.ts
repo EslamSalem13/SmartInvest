@@ -10,6 +10,7 @@ import {
   ProcurementStageDetail,
   ProcurementSubProjectListItem,
   ProcurementVersion,
+  SetContractAwardDetails,
   UpdatePresentationMemo,
 } from '../models/financial.models';
 
@@ -76,11 +77,27 @@ export class FinancialService {
     return this.http.put<void>(`${this.base}/subprojects/${subProjectId}/procurement/${stage}/reopen`, {});
   }
 
-  /** تأكيد/إلغاء تأكيد صرف الدفعة المقدمة 25% — خاص بمرحلة العقد والترسية */
+  /** تأكيد/إلغاء تأكيد صرف الدفعة المقدمة — خاص بمرحلة العقد والترسية */
   setAdvancePaymentDone(subProjectId: number, done: boolean): Observable<void> {
     return this.http.put<void>(
       `${this.base}/subprojects/${subProjectId}/procurement/contract-award/advance-payment`,
       { done },
+    );
+  }
+
+  /** حفظ بيانات الترسية: المقاول، الدفعة المقدمة، مدة التنفيذ، الشرط الجزائي */
+  setContractAwardDetails(subProjectId: number, dto: SetContractAwardDetails): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/contract-award/details`,
+      dto,
+    );
+  }
+
+  /** تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ */
+  setSiteHandover(subProjectId: number, handoverDate: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/contract-award/site-handover`,
+      { handoverDate },
     );
   }
 
@@ -105,18 +122,31 @@ export class FinancialService {
     return this.http.delete<void>(`${this.base}/presentation-memos/${id}`);
   }
 
-  uploadMemoVersion(id: number, file: File, notes: string): Observable<ProcurementVersion> {
+  uploadMemoVersion(
+    id: number,
+    file: File,
+    notes: string,
+    legalAffairsCommitteeDecision?: File | null,
+  ): Observable<ProcurementVersion> {
     const form = new FormData();
     form.append('file', file, file.name);
     if (notes.trim()) {
       form.append('notes', notes.trim());
     }
+    if (legalAffairsCommitteeDecision) {
+      form.append(
+        'legalAffairsCommitteeDecision',
+        legalAffairsCommitteeDecision,
+        legalAffairsCommitteeDecision.name,
+      );
+    }
     return this.http.post<ProcurementVersion>(`${this.base}/presentation-memos/${id}/versions`, form);
   }
 
-  downloadMemoFile(id: number, versionNumber: number): Observable<Blob> {
+  downloadMemoFile(id: number, versionNumber: number, fileKey?: string): Observable<Blob> {
     return this.http.get(`${this.base}/presentation-memos/${id}/versions/${versionNumber}/file`, {
       responseType: 'blob',
+      params: fileKey ? { fileKey } : {},
     });
   }
 

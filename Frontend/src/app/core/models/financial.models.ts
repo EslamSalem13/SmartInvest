@@ -14,6 +14,54 @@ export interface ProcurementVersion {
   notes: string | null;
   createdAt: string;
   files: ProcurementFile[];
+  /** إصدارات مذكرة العرض فقط — تاريخ رفع قرار لجنة الشؤون القانونية */
+  legalAffairsDecisionUploadedAt?: string | null;
+}
+
+/** بيانات مرحلة الترسية بخلاف الملفات. */
+export interface ContractAwardDetails {
+  projectNature: string;
+  /** «مقاولات» فقط — «توريدات» لا يُصرف لها مقدَّم */
+  requiresAdvancePayment: boolean;
+
+  totalCost: number;
+  bankFunding: number;
+  selfFunding: number;
+
+  advancePaymentDone: boolean;
+  advancePaymentPercentage: number | null;
+  advancePaymentSelfAmount: number | null;
+  advancePaymentBankAmount: number | null;
+
+  executionDurationMonths: number | null;
+  executionDurationDays: number | null;
+  /** 1 = مُسلَّمة وقت الترسية، 2 = لم تُسلَّم بعد */
+  siteHandoverMode: number | null;
+  siteHandoverDate: string | null;
+  contractualDeliveryDate: string | null;
+
+  penaltyAmount: number | null;
+
+  contractorId: number | null;
+  contractorName: string | null;
+  contractTypeId: number | null;
+  contractNumber: string | null;
+  contractValue: number | null;
+}
+
+export interface SetContractAwardDetails {
+  advancePaymentDone: boolean;
+  advancePaymentPercentage: number | null;
+  advancePaymentSelfAmount: number | null;
+  advancePaymentBankAmount: number | null;
+  executionDurationMonths: number | null;
+  executionDurationDays: number | null;
+  siteHandoverMode: number | null;
+  penaltyAmount: number | null;
+  contractorId: number | null;
+  contractTypeId: number | null;
+  contractNumber: string | null;
+  contractValue: number | null;
 }
 
 export interface ProcurementFileSlot {
@@ -34,6 +82,7 @@ export interface ProcurementStage {
   isLocked: boolean;
   /** تأكيد صرف الدفعة المقدمة 25% — قيمة غير فارغة فقط لمرحلة "العقد والترسية" */
   advancePaymentDone: boolean | null;
+  contractAward?: ContractAwardDetails | null;
 }
 
 export interface ProcurementStageDetail extends ProcurementStage {
