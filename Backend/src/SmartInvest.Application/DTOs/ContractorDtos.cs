@@ -12,6 +12,10 @@ public class ContractorDto
     public string Category { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public List<AssignedSubProjectDto> AssignedSubProjects { get; set; } = new();
+    public bool? WillWorkAgain { get; set; }
+    public decimal TotalFines { get; set; }
+    public decimal UnpaidFines { get; set; }
+    public List<ContractorNoteDto> Notes { get; set; } = new();
 }
 
 public class CreateContractorDto

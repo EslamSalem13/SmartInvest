@@ -12,6 +12,8 @@ public class ContractorService : IContractorService
     private readonly IGenericRepository<Contractor> _contractorRepository;
     private readonly IGenericRepository<ProjectAssignment> _assignmentRepository;
     private readonly IProjectAssignmentRepository _projectAssignmentRepository;
+    private readonly IGenericRepository<ExecutionStage> _executionStageRepository;
+    private readonly IGenericRepository<ContractorNote> _noteRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -19,12 +21,16 @@ public class ContractorService : IContractorService
         IGenericRepository<Contractor> contractorRepository,
         IGenericRepository<ProjectAssignment> assignmentRepository,
         IProjectAssignmentRepository projectAssignmentRepository,
+        IGenericRepository<ExecutionStage> executionStageRepository,
+        IGenericRepository<ContractorNote> noteRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _contractorRepository = contractorRepository;
         _assignmentRepository = assignmentRepository;
         _projectAssignmentRepository = projectAssignmentRepository;
+        _executionStageRepository = executionStageRepository;
+        _noteRepository = noteRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -50,7 +56,71 @@ public class ContractorService : IContractorService
             })
             .ToList();
 
+        var subProjectIds = assignments.Select(a => a.SubProjectId).ToHashSet();
+        var stagesWithPenalty = subProjectIds.Count == 0
+            ? []
+            : await _executionStageRepository.FindAsync(
+                s => subProjectIds.Contains(s.SubProjectId) && s.PenaltyAmount != null, cancellationToken);
+
+        dto.TotalFines = stagesWithPenalty.Sum(s => s.PenaltyAmount ?? 0);
+        dto.UnpaidFines = stagesWithPenalty.Where(s => !s.PenaltyPaid).Sum(s => s.PenaltyAmount ?? 0);
+
+        var notes = await _noteRepository.FindAsync(n => n.ContractorId == id, cancellationToken);
+        dto.Notes = notes
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(n => new ContractorNoteDto
+            {
+                Id = n.ContractorNoteId,
+                SubProjectId = n.SubProjectId,
+                SubProjectName = n.SubProject?.SubProjectName,
+                Text = n.Text,
+                IsAiGenerated = n.IsAiGenerated,
+                CreatedAt = n.CreatedAt,
+            })
+            .ToList();
+
         return dto;
+    }
+
+    public async Task<ContractorDto> SetWillWorkAgainAsync(int id, SetWillWorkAgainDto dto, CancellationToken cancellationToken = default)
+    {
+        var contractor = await GetOrThrowAsync(id, cancellationToken);
+        contractor.WillWorkAgain = dto.WillWorkAgain;
+
+        _contractorRepository.Update(contractor);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<ContractorNoteDto> AddNoteAsync(int id, CreateContractorNoteDto dto, CancellationToken cancellationToken = default)
+    {
+        await GetOrThrowAsync(id, cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(dto.Text))
+        {
+            throw new BusinessRuleException("نص الملاحظة مطلوب");
+        }
+
+        var note = new ContractorNote
+        {
+            ContractorId = id,
+            SubProjectId = dto.SubProjectId,
+            Text = dto.Text.Trim(),
+            IsAiGenerated = false,
+        };
+
+        await _noteRepository.AddAsync(note, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new ContractorNoteDto
+        {
+            Id = note.ContractorNoteId,
+            SubProjectId = note.SubProjectId,
+            Text = note.Text,
+            IsAiGenerated = false,
+            CreatedAt = note.CreatedAt,
+        };
     }
 
     public async Task<ContractorDto> CreateAsync(CreateContractorDto dto, CancellationToken cancellationToken = default)

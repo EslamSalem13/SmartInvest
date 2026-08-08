@@ -55,4 +55,20 @@ public class ContractorsController : ControllerBase
         await _contractorService.DeleteAsync(id, cancellationToken);
         return NoContent();
     }
+
+    [HttpPut("{id:int}/will-work-again")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<ContractorDto>> SetWillWorkAgain(int id, SetWillWorkAgainDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _contractorService.SetWillWorkAgainAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("{id:int}/notes")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<ActionResult<ContractorNoteDto>> AddNote(int id, CreateContractorNoteDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _contractorService.AddNoteAsync(id, dto, cancellationToken);
+        return Ok(result);
+    }
 }
