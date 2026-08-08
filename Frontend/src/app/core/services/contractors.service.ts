@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Contractor, CreateContractor, UpdateContractor } from '../models/project.models';
+import { Contractor, ContractorNote, CreateContractor, UpdateContractor } from '../models/project.models';
 
 @Injectable({ providedIn: 'root' })
 export class ContractorsService {
@@ -27,5 +27,13 @@ export class ContractorsService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  setWillWorkAgain(id: number, willWorkAgain: boolean | null): Observable<Contractor> {
+    return this.http.put<Contractor>(`${this.base}/${id}/will-work-again`, { willWorkAgain });
+  }
+
+  addNote(id: number, text: string, subProjectId: number | null): Observable<ContractorNote> {
+    return this.http.post<ContractorNote>(`${this.base}/${id}/notes`, { text, subProjectId });
   }
 }

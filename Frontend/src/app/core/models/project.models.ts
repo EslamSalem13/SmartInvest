@@ -295,6 +295,15 @@ export interface AssignedSubProject {
   mainProjectName: string;
 }
 
+export interface ContractorNote {
+  id: number;
+  subProjectId: number | null;
+  subProjectName: string | null;
+  text: string;
+  isAiGenerated: boolean;
+  createdAt: string;
+}
+
 export interface Contractor {
   id: number;
   contractorName: string;
@@ -306,6 +315,10 @@ export interface Contractor {
   category: string;
   isActive: boolean;
   assignedSubProjects: AssignedSubProject[];
+  willWorkAgain: boolean | null;
+  totalFines: number;
+  unpaidFines: number;
+  notes: ContractorNote[];
 }
 
 export interface CreateContractor {
