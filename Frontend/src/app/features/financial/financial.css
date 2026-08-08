@@ -200,6 +200,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 td.notes { color: var(--muted); max-width: 240px; }
 
 /* قائمة اختيار المشروعات (مودال المذكرة) */
+.picker-search { margin-bottom: 8px; }
 .check-list { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); max-height: 240px; overflow: auto; padding: 6px; }
 .check-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background .15s var(--ease); }
 .check-item:hover { background: var(--surface-2); }

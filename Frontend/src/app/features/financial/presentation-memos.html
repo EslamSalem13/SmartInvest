@@ -21,6 +21,12 @@
   } @else if (error()) {
     <div class="state error">{{ error() }}</div>
   } @else {
+    <div class="toolbar">
+      <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
+        @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
+      </select>
+    </div>
+
     <div class="memo-filters">
       <div class="filter-tabs">
         <button class="ftab" [class.on]="statusFilter() === 'all'" (click)="statusFilter.set('all')">
@@ -219,8 +225,14 @@
             </div>
             <div class="si-fld full">
               <label>المشروعات الفرعية <span class="req">*</span></label>
+              <input
+                class="picker-search"
+                placeholder="ابحث باسم المشروع أو كوده…"
+                [ngModel]="pickerSearch()"
+                (ngModelChange)="pickerSearch.set($event)"
+              />
               <div class="check-list">
-                @for (sub of subProjects(); track sub.subProjectId) {
+                @for (sub of filteredSubProjects(); track sub.subProjectId) {
                   <label class="check-item">
                     <input
                       type="checkbox"
@@ -231,7 +243,11 @@
                     @if (sub.subProjectCode) { <span class="tnum muted">({{ sub.subProjectCode }})</span> }
                   </label>
                 } @empty {
-                  <div class="empty">لا توجد مشروعات فرعية.</div>
+                  @if (pickerSearch().trim()) {
+                    <div class="empty">لا توجد مشروعات مطابقة للبحث.</div>
+                  } @else {
+                    <div class="empty">لا توجد مشروعات فرعية في هذه السنة المالية.</div>
+                  }
                 }
               </div>
             </div>
