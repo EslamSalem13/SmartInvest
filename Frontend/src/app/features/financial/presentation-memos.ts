@@ -3,7 +3,9 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
+import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { Roles } from '../../core/models/auth.models';
+import { FinancialYear } from '../../core/models/project.models';
 import {
   PresentationMemo,
   PresentationMemoDetail,
@@ -19,12 +21,20 @@ import {
 })
 export class PresentationMemos implements OnInit {
   private readonly financial = inject(FinancialService);
+  private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly memos = signal<PresentationMemo[]>([]);
   protected readonly subProjects = signal<ProcurementSubProjectListItem[]>([]);
+
+  /** السنة المالية — المذكرة تُبنى من مشروعات السنة المفتوحة حاليًا فقط */
+  protected readonly financialYears = signal<FinancialYear[]>([]);
+  protected readonly selectedYearId = signal<number | null>(null);
+  protected readonly sortedYears = computed(() =>
+    [...this.financialYears()].sort((a, b) => b.startDate.localeCompare(a.startDate)),
+  );
 
   /** فلاتر القائمة */
   protected readonly statusFilter = signal<'all' | 'not-started' | 'active' | 'completed'>('all');
@@ -75,6 +85,26 @@ export class PresentationMemos implements OnInit {
   protected readonly formError = signal<string | null>(null);
   protected readonly saving = signal(false);
 
+  /** بحث داخل قائمة المشروعات في النموذج */
+  protected readonly pickerSearch = signal('');
+
+  /**
+   * المشروعات المعروضة في النموذج. المشروع المُختار يظل ظاهرًا دائمًا حتى لو
+   * لم يطابق البحث — وإلا اختفى اختيار المستخدم من أمامه قبل الحفظ.
+   */
+  protected readonly filteredSubProjects = computed(() => {
+    const term = this.pickerSearch().trim();
+    if (!term) {
+      return this.subProjects();
+    }
+    return this.subProjects().filter(
+      (sub) =>
+        this.isChecked(sub.subProjectId) ||
+        sub.subProjectName.includes(term) ||
+        (sub.subProjectCode ?? '').includes(term),
+    );
+  });
+
   /** نموذج رفع إصدار */
   protected readonly showUpload = signal(false);
   protected readonly uploadFile = signal<File | null>(null);
@@ -93,7 +123,28 @@ export class PresentationMemos implements OnInit {
 
   ngOnInit(): void {
     this.reload();
-    this.financial.getSubProjects().subscribe({
+    this.financialYearsService.getAll().subscribe({
+      next: (years) => {
+        this.financialYears.set(years);
+        const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
+        if (sorted.length > 0) {
+          this.selectedYearId.set(sorted[0].id);
+        }
+        this.loadSubProjects();
+      },
+      error: () => this.loadSubProjects(),
+    });
+  }
+
+  protected onYearChange(id: number | null): void {
+    this.selectedYearId.set(id);
+    this.fSubProjectIds.set([]);
+    this.pickerSearch.set('');
+    this.loadSubProjects();
+  }
+
+  private loadSubProjects(): void {
+    this.financial.getSubProjects(this.selectedYearId()).subscribe({
       next: (items) => this.subProjects.set(items),
     });
   }
@@ -144,6 +195,7 @@ export class PresentationMemos implements OnInit {
     this.fTitle.set('');
     this.fSubProjectIds.set([]);
     this.formError.set(null);
+    this.pickerSearch.set('');
     this.showForm.set(true);
   }
 
@@ -152,6 +204,7 @@ export class PresentationMemos implements OnInit {
     this.fTitle.set(memo.title);
     this.fSubProjectIds.set(memo.subProjects.map((x) => x.subProjectId));
     this.formError.set(null);
+    this.pickerSearch.set('');
     this.showForm.set(true);
   }
 
