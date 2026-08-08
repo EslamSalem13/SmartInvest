@@ -13,6 +13,7 @@ public class ImportService : IImportService
     private readonly ApprovedPlanImportService _approvedService;
     private readonly ICurrentUserService _currentUser;
     private readonly IMeasurementExtractionService _measurementExtractionService;
+    private readonly IProjectNatureClassificationService _projectNatureClassificationService;
     private readonly ILookupService _lookupService;
     private readonly ILookupMatchSuggestionService _lookupMatchSuggestionService;
 
@@ -23,6 +24,7 @@ public class ImportService : IImportService
         ApprovedPlanImportService approvedService,
         ICurrentUserService currentUser,
         IMeasurementExtractionService measurementExtractionService,
+        IProjectNatureClassificationService projectNatureClassificationService,
         ILookupService lookupService,
         ILookupMatchSuggestionService lookupMatchSuggestionService)
     {
@@ -32,6 +34,7 @@ public class ImportService : IImportService
         _approvedService = approvedService;
         _currentUser = currentUser;
         _measurementExtractionService = measurementExtractionService;
+        _projectNatureClassificationService = projectNatureClassificationService;
         _lookupService = lookupService;
         _lookupMatchSuggestionService = lookupMatchSuggestionService;
     }
@@ -58,6 +61,11 @@ public class ImportService : IImportService
 
         result.RowMeasurements = await _measurementExtractionService.ExtractAsync(file.Rows, cancellationToken);
         await NormalizeMeasurementUnitsAsync(result.RowMeasurements, cancellationToken);
+
+        // Mutates file.Rows in place (sets ProjectNature) - those are the same row objects
+        // ImportSessionStore just saved, so CommitAsync sees the classification without any DTO
+        // needed to carry it across the preview/commit round trip.
+        await _projectNatureClassificationService.ClassifyAsync(file.Rows, cancellationToken);
 
         return result;
     }

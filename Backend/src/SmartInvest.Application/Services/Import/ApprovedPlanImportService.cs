@@ -334,7 +334,7 @@ public class ApprovedPlanImportService
                         ComponentTypeId = resolvedComponentTypeId,
                         AccountingUnitId = resolvedAccountingUnitId,
                         ExecutiveAgencyId = agencyIdByName.TryGetValue(row.ExecutiveAgencyName.Trim(), out var resolvedAgencyId) ? resolvedAgencyId : null,
-                        ProjectNature = string.Empty,
+                        ProjectNature = row.ProjectNature,
                         MarkazId = markazIdByName.TryGetValue(row.MarkazName.Trim(), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
                         PriorityId = defaultPriorityId,
                         StatusId = runningStatusId,

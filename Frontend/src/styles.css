@@ -328,6 +328,7 @@ button { font-family: inherit; cursor: pointer; }
 .si-locked .lh b { color: #fff; font-size: var(--text-base); }
 .si-locked .lh .lc { color: #E7CE8C; font-size: var(--text-sm); font-weight: 700; }
 .si-locked .lh .lb { margin-inline-start: auto; background: rgba(255,255,255,.14); color: #EAF3EC; padding: 5px 11px; border-radius: 999px; font-size: var(--text-xs); font-weight: 700; white-space: nowrap; }
+.si-hint { background: #FDF6E3; border: 1px solid #E7CE8C; color: #7a5c14; border-radius: var(--radius-sm); padding: 11px 15px; font-size: var(--text-sm); margin-bottom: 14px; }
 .si-err { background: var(--bad-bg); border: 1px solid #F3C6CC; color: #b32a39; border-radius: var(--radius-sm); padding: 11px 15px; font-size: var(--text-base); margin-bottom: 14px; }
 .si-err-title { font-weight: 700; margin-bottom: 8px; }
 .si-err-row { display: flex; flex-wrap: wrap; gap: 4px 8px; padding: 6px 0; border-top: 1px dashed #F3C6CC; }

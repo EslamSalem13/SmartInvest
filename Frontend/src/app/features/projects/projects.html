@@ -144,7 +144,7 @@
                 <td>
                   <div class="acts">
                     @if (isManager() && !row.main.isApproved) {
-                      <button class="act approve" title="اعتماد المشروع" (click)="openMainApprovalModal(row.main, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
+                      <button class="act approve" title="اعتماد المشروع الرئيسي (لا يعتمد المشاريع الفرعية تلقائيًا)" (click)="openMainApprovalModal(row.main, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
                     }
                     <button class="act" title="مشروع فرعي" (click)="openAddSubFor(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg></button>
                     <button class="act" title="تعديل" (click)="openEditMain(row.main); $event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
@@ -233,10 +233,16 @@
     <div class="si-overlay" (click)="closeApprovalModal()">
       <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
         <div class="si-modal-head">
-          <div class="grow"><h3>اعتماد المشروع</h3><p>أدخل كود المشروع لاعتماده</p></div>
+          <div class="grow">
+            <h3>{{ approvalTarget()?.kind === 'main' ? 'اعتماد المشروع الرئيسي' : 'اعتماد المشروع الفرعي' }}</h3>
+            <p>أدخل كود المشروع لاعتماده</p>
+          </div>
           <button class="si-x" (click)="closeApprovalModal()" aria-label="إغلاق">×</button>
         </div>
         <div class="si-modal-body">
+          @if (approvalTarget()?.kind === 'main') {
+            <div class="si-hint">اعتماد المشروع الرئيسي فقط — لن يعتمد مشاريعه الفرعية تلقائيًا، كل مشروع فرعي يحتاج اعتماده بشكل منفصل من صفه.</div>
+          }
           @if (approvalError()) { <div class="si-err">{{ approvalError() }}</div> }
           <div class="si-grid" style="grid-template-columns:1fr">
             <div class="si-fld">
@@ -252,7 +258,8 @@
         <div class="si-modal-foot">
           <button class="si-btn primary" [disabled]="approvalSaving()" (click)="submitApproval()">
             @if (approvalSaving()) { جاري الاعتماد… } @else {
-              <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg> اعتماد المشروع
+              <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg>
+              {{ approvalTarget()?.kind === 'main' ? 'اعتماد المشروع الرئيسي' : 'اعتماد المشروع الفرعي' }}
             }
           </button>
           <button class="si-btn" (click)="closeApprovalModal()">إلغاء</button>

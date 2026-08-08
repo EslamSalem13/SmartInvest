@@ -22,6 +22,11 @@ public class ParsedImportRow
     public decimal BankFunding { get; set; }
     public decimal SelfFunding { get; set; }
     public string AccountingUnitName { get; set; } = string.Empty;
+
+    // AI-classified during preview (ProjectNatureClassificationService) - "توريدات" or "مقاولات",
+    // empty if the model couldn't decide or the call failed. Threaded through to commit time via
+    // ImportSessionStore since this is the same row object saved at preview and read back at commit.
+    public string ProjectNature { get; set; } = string.Empty;
 }
 
 public class ParsedImportFile

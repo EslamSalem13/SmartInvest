@@ -227,20 +227,33 @@ public class SuggestedPlanImportService
             }
 
             MainProject? mainProject = null;
+            var mainProjectCreatedHere = false;
             try
             {
-                mainProject = new MainProject
-                {
-                    MainProjectCode = string.IsNullOrWhiteSpace(group.Code) ? null : group.Code,
-                    MainProjectName = group.MainProjectName,
-                    ExecutingAgency = string.Empty,
-                    SubProgramId = subProgramId,
-                    IsApproved = false,
-                };
+                // A suggested-mode file re-imported (whole or in part - e.g. staff re-uploads the
+                // same plan after fixing one row) must not spawn a second "الإدارة المحلية..." main
+                // project identical to one already sitting in the DB from the first import. Reuse
+                // it by exact name when unambiguous, same matching ApprovedPlanImportService already
+                // does for its own "create new" branch.
+                var existingMainProjects = await _mainProjectRepository.FindByNameAsync(group.MainProjectName.Trim(), cancellationToken);
+                mainProject = existingMainProjects.Count == 1 ? existingMainProjects[0] : null;
 
-                await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-                result.MainProjectsCreated++;
+                if (mainProject == null)
+                {
+                    mainProject = new MainProject
+                    {
+                        MainProjectCode = string.IsNullOrWhiteSpace(group.Code) ? null : group.Code,
+                        MainProjectName = group.MainProjectName,
+                        ExecutingAgency = string.Empty,
+                        SubProgramId = subProgramId,
+                        IsApproved = false,
+                    };
+
+                    await _mainProjectRepository.AddAsync(mainProject, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    mainProjectCreatedHere = true;
+                    result.MainProjectsCreated++;
+                }
             }
             catch (Exception ex)
             {
@@ -251,8 +264,10 @@ public class SuggestedPlanImportService
 
                 // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
                 // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
-                // mislabeling the next group as failed for the same reason.
-                if (mainProject is not null)
+                // mislabeling the next group as failed for the same reason. Only remove it when THIS
+                // attempt created it - a reused existing MainProject is tracked as Unchanged and must
+                // not be deleted just because something later in this group's processing failed.
+                if (mainProject is not null && mainProjectCreatedHere)
                 {
                     _mainProjectRepository.Remove(mainProject);
                 }
@@ -263,6 +278,7 @@ public class SuggestedPlanImportService
             foreach (var row in group.Rows)
             {
                 SubProject? subProject = null;
+                var subProjectCreatedHere = false;
                 try
                 {
                     if (!markazIdByName.TryGetValue(row.MarkazName.Trim(), out var markazId))
@@ -290,54 +306,79 @@ public class SuggestedPlanImportService
                         throw new BusinessRuleException($"الوحدة الحسابية «{row.AccountingUnitName}» غير محلولة");
                     }
 
-                    subProject = new SubProject
-                    {
-                        MainProjectId = mainProject.MainProjectId,
-                        SubProjectName = row.SubProjectName.Trim(),
-                        SubProjectCode = null,
-                        IsApproved = false,
-                        ProjectLevelId = projectLevelId,
-                        ComponentTypeId = componentTypeId,
-                        AccountingUnitId = accountingUnitId,
-                        ProjectNature = string.Empty,
-                        MarkazId = markazId,
-                        PriorityId = defaultPriorityId,
-                        StatusId = defaultStatusId,
-                        ExecutiveAgencyId = agencyId,
-                        BankFunding = row.BankFunding,
-                        SelfFunding = row.SelfFunding,
-                    };
+                    // Same duplicate guard as the main-project reuse above, one level down - a
+                    // sub-project with this exact name already under this main project (from an
+                    // earlier import of the same/overlapping file) is reused instead of duplicated.
+                    var existingSubProjects = await _subProjectRepository.FindByNameWithinMainProjectAsync(row.SubProjectName.Trim(), mainProject.MainProjectId, cancellationToken);
+                    subProject = existingSubProjects.Count == 1 ? existingSubProjects[0] : null;
 
-                    await _subProjectRepository.AddAsync(subProject, cancellationToken);
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    if (subProject == null)
+                    {
+                        subProject = new SubProject
+                        {
+                            MainProjectId = mainProject.MainProjectId,
+                            SubProjectName = row.SubProjectName.Trim(),
+                            SubProjectCode = null,
+                            IsApproved = false,
+                            ProjectLevelId = projectLevelId,
+                            ComponentTypeId = componentTypeId,
+                            AccountingUnitId = accountingUnitId,
+                            ProjectNature = row.ProjectNature,
+                            MarkazId = markazId,
+                            PriorityId = defaultPriorityId,
+                            StatusId = defaultStatusId,
+                            ExecutiveAgencyId = agencyId,
+                            BankFunding = row.BankFunding,
+                            SelfFunding = row.SelfFunding,
+                        };
+
+                        await _subProjectRepository.AddAsync(subProject, cancellationToken);
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        subProjectCreatedHere = true;
+                        result.SubProjectsCreated++;
+                    }
+                    else
+                    {
+                        result.SubProjectsAlreadyLinked++;
+                    }
+
                     createdSubProjects.Add(subProject);
 
                     try
                     {
-                        await _financialYearLinkRepository.AddAsync(
-                            new SubProjectFinancialYear { SubProjectId = subProject.SubProjectId, FinancialYearId = dto.FinancialYearId },
-                            cancellationToken);
-                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        var alreadyLinkedToYear = await _financialYearLinkRepository.FindAsync(
+                            x => x.SubProjectId == subProject.SubProjectId && x.FinancialYearId == dto.FinancialYearId, cancellationToken);
+                        if (alreadyLinkedToYear.Count == 0)
+                        {
+                            await _financialYearLinkRepository.AddAsync(
+                                new SubProjectFinancialYear { SubProjectId = subProject.SubProjectId, FinancialYearId = dto.FinancialYearId },
+                                cancellationToken);
+                            await _unitOfWork.SaveChangesAsync(cancellationToken);
+                        }
                     }
                     catch (Exception linkEx)
                     {
                         result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر ربطه بالسنة المالية: {linkEx.Message}" });
                     }
 
-                    var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
-                    if (measurementResolution != null)
+                    // Only record AI-extracted measurements for a row that just created its
+                    // sub-project - re-running this against a reused/already-existing sub-project
+                    // would append duplicate measurement rows on top of whatever it already has.
+                    if (subProjectCreatedHere)
                     {
-                        try
+                        var measurementResolution = dto.MeasurementResolutions.FirstOrDefault(m => m.RowIndex == row.RowIndex);
+                        if (measurementResolution != null)
                         {
-                            await _measurementResolutionService.RecordMeasurementsAsync(subProject.SubProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
-                        }
-                        catch (Exception measurementEx)
-                        {
-                            result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر تسجيل القياسات: {measurementEx.Message}" });
+                            try
+                            {
+                                await _measurementResolutionService.RecordMeasurementsAsync(subProject.SubProjectId, subProgramId, measurementResolution.Measurements, cancellationToken);
+                            }
+                            catch (Exception measurementEx)
+                            {
+                                result.Failed.Add(new ImportRowFailureDto { Name = row.SubProjectName, Reason = $"تم حفظ المشروع الفرعي بنجاح، لكن تعذّر تسجيل القياسات: {measurementEx.Message}" });
+                            }
                         }
                     }
-
-                    result.SubProjectsCreated++;
                 }
                 catch (Exception ex)
                 {
@@ -345,8 +386,10 @@ public class SuggestedPlanImportService
 
                     // SaveChangesAsync leaves a failed entity tracked as Added; if we don't detach it here,
                     // the next AddAsync+SaveChangesAsync call will try to persist it again and fail again,
-                    // mislabeling the next row as failed for the same reason.
-                    if (subProject is not null)
+                    // mislabeling the next row as failed for the same reason. Only remove it when THIS
+                    // attempt created it - a reused existing sub-project is tracked as Unchanged and
+                    // must not be deleted just because a later step for this row failed.
+                    if (subProject is not null && subProjectCreatedHere)
                     {
                         _subProjectRepository.Remove(subProject);
                     }
@@ -370,7 +413,12 @@ public class SuggestedPlanImportService
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
-        foreach (var subProject in createdSubProjects)
+        // createdSubProjects now also holds reused (not just newly-created) sub-projects - a reused
+        // one may already sit on this exact plan from the import that first created it, so guard
+        // against a duplicate PlanProject row the same way ApprovedPlanImportService does.
+        var alreadyLinkedToPlan = (await _planProjectRepository.FindAsync(x => x.PlanId == plan.PlanId, cancellationToken))
+            .Select(x => x.SubProjectId).ToHashSet();
+        foreach (var subProject in createdSubProjects.Where(sp => !alreadyLinkedToPlan.Contains(sp.SubProjectId)))
         {
             await _planProjectRepository.AddAsync(new PlanProject { PlanId = plan.PlanId, SubProjectId = subProject.SubProjectId }, cancellationToken);
         }
