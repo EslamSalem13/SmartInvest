@@ -185,7 +185,7 @@ public class ExecutionStageService : IExecutionStageService
                 ? 0
                 : Math.Round(stages.Sum(x => x.SelfFundingSpent + x.BankFundingSpent) / s.TotalCost * 100, 2);
 
-            var latestPhysical = stages.OrderByDescending(x => x.CreatedAt).FirstOrDefault()?.PhysicalProgressPercent ?? 0;
+            var latestPhysical = stages.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.ExecutionStageId).FirstOrDefault()?.PhysicalProgressPercent ?? 0;
 
             var nextDeadline = stages.Where(x => !x.IsCompleted).OrderBy(x => x.Deadline).FirstOrDefault()?.Deadline;
 
