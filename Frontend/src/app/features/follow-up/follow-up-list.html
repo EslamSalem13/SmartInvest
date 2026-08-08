@@ -69,7 +69,7 @@
                   {{ item.nextDeadline ? (item.nextDeadline | date: 'yyyy/MM/dd') : '—' }}
                 </td>
                 <td>
-                  <button class="si-btn primary sm" (click)="openStages(item)">عرض المراحل</button>
+                  <button class="si-btn primary sm" (click)="onSelectStages(item)">عرض المراحل</button>
                 </td>
               </tr>
             } @empty {
@@ -77,6 +77,141 @@
             }
           </tbody>
         </table>
+      </div>
+    </div>
+  }
+
+  @if (selectedItem(); as item) {
+    <div class="si-overlay" (click)="closeStages()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(760px,100%)">
+        <div class="si-modal-head">
+          <div class="grow">
+            <h3>مراحل تنفيذ: {{ item.subProjectName }}</h3>
+            <p>{{ item.mainProjectName }}</p>
+          </div>
+          <button class="si-btn primary sm" (click)="openAddStage()">+ مرحلة جديدة</button>
+          <button class="si-x" (click)="closeStages()">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (stagesLoading()) {
+            <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+          } @else {
+            <div class="tbl-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>المرحلة</th>
+                    <th>الموعد</th>
+                    <th>ذاتي</th>
+                    <th>بنكي</th>
+                    <th>تنفيذ عيني</th>
+                    <th>غرامة</th>
+                    <th>الحالة</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (s of stages(); track s.id) {
+                    <tr>
+                      <td>{{ s.name }}</td>
+                      <td class="tnum">{{ s.deadline | date: 'yyyy/MM/dd' }}</td>
+                      <td class="tnum">
+                        {{ money(s.selfFundingSpent) }}
+                        @if (s.hasSelfFundingProof) {
+                          <button type="button" class="file-lnk" title="تنزيل إثبات الصرف الذاتي" (click)="downloadProof(s, 'self')">📎</button>
+                        }
+                      </td>
+                      <td class="tnum">
+                        {{ money(s.bankFundingSpent) }}
+                        @if (s.hasBankFundingProof) {
+                          <button type="button" class="file-lnk" title="تنزيل إثبات الصرف البنكي" (click)="downloadProof(s, 'bank')">📎</button>
+                        }
+                      </td>
+                      <td class="tnum">
+                        {{ s.physicalProgressPercent }}%
+                        @if (s.hasPhysicalProgressProof) {
+                          <button type="button" class="file-lnk" title="تنزيل إثبات التنفيذ العيني" (click)="downloadProof(s, 'progress')">📎</button>
+                        }
+                      </td>
+                      <td class="tnum">{{ s.penaltyAmount != null ? money(s.penaltyAmount) : '—' }}</td>
+                      <td>
+                        @if (s.isCompleted) {
+                          <span class="st-pill ok">مكتملة</span>
+                        } @else {
+                          <button class="si-btn sm" (click)="completeStage(s)">إنهاء</button>
+                        }
+                      </td>
+                      <td>@if (s.notes) { <span class="note-hint" [title]="s.notes">📝</span> }</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="8" class="empty">لا توجد مراحل تنفيذ بعد.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn" (click)="closeStages()">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showAddStage()) {
+    <div class="si-overlay" (click)="closeAddStage()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(560px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>مرحلة تنفيذ جديدة</h3></div>
+          <button class="si-x" (click)="closeAddStage()">×</button>
+        </div>
+        <div class="si-modal-body">
+          @if (stageError()) { <div class="si-err">{{ stageError() }}</div> }
+          <div class="si-grid">
+            <div class="si-fld full">
+              <label>اسم المرحلة <span class="req">*</span></label>
+              <input [ngModel]="newStageName()" (ngModelChange)="newStageName.set($event)" placeholder="مثال: رصف الطبقة الأولى" />
+            </div>
+            <div class="si-fld">
+              <label>الموعد النهائي <span class="req">*</span></label>
+              <input type="date" [ngModel]="newStageDeadline()" (ngModelChange)="newStageDeadline.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>نسبة التنفيذ العيني %</label>
+              <input type="number" min="0" max="100" [ngModel]="newStageProgress()" (ngModelChange)="newStageProgress.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>مصروف ذاتي</label>
+              <input type="number" min="0" [ngModel]="newStageSelfSpent()" (ngModelChange)="newStageSelfSpent.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>مصروف بنكي</label>
+              <input type="number" min="0" [ngModel]="newStageBankSpent()" (ngModelChange)="newStageBankSpent.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>إثبات الصرف الذاتي</label>
+              <input type="file" (change)="onSelfFileChange($event)" />
+            </div>
+            <div class="si-fld">
+              <label>إثبات الصرف البنكي</label>
+              <input type="file" (change)="onBankFileChange($event)" />
+            </div>
+            <div class="si-fld">
+              <label>إثبات التنفيذ العيني</label>
+              <input type="file" (change)="onProgressFileChange($event)" />
+            </div>
+            <div class="si-fld full">
+              <label>ملاحظات</label>
+              <textarea rows="3" [ngModel]="newStageNotes()" (ngModelChange)="newStageNotes.set($event)"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="savingStage()" (click)="saveNewStage()">
+            @if (savingStage()) { جاري الحفظ… } @else { حفظ المرحلة }
+          </button>
+          <button class="si-btn" (click)="closeAddStage()">إلغاء</button>
+        </div>
       </div>
     </div>
   }

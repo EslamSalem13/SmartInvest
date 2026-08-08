@@ -66,4 +66,22 @@ export class FollowUpService {
   downloadFileUrl(subProjectId: number, stageId: number, fileKey: 'self' | 'bank' | 'progress'): string {
     return `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/files/${fileKey}`;
   }
+
+  /**
+   * تنزيل ملف الإثبات كـ Blob عبر HttpClient (يمر بمصدّق auth.interceptor) — رابط <a href> مباشر
+   * لا يرسل رأس Authorization فيفشل بـ 401 لأن التنقل الطبيعي للمتصفح لا يمر على الـ interceptor.
+   */
+  downloadFile(subProjectId: number, stageId: number, fileKey: 'self' | 'bank' | 'progress'): Observable<Blob> {
+    return this.http.get(this.downloadFileUrl(subProjectId, stageId, fileKey), { responseType: 'blob' });
+  }
+
+  /** تنزيل Blob كملف في المتصفح — نفس نمط FinancialService.saveBlob */
+  saveBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 }

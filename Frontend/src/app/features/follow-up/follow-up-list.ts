@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FollowUpService } from '../../core/services/follow-up.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
-import { FollowUpListItem } from '../../core/models/follow-up.models';
+import { ExecutionStage, FollowUpListItem } from '../../core/models/follow-up.models';
 import { FinancialYear } from '../../core/models/project.models';
 
 @Component({
@@ -86,6 +86,130 @@ export class FollowUpList implements OnInit {
 
   protected closeStages(): void {
     this.selectedItem.set(null);
+  }
+
+  protected readonly stages = signal<ExecutionStage[]>([]);
+  protected readonly stagesLoading = signal(false);
+  protected readonly showAddStage = signal(false);
+  protected readonly savingStage = signal(false);
+  protected readonly stageError = signal<string | null>(null);
+
+  protected readonly newStageName = signal('');
+  protected readonly newStageDeadline = signal('');
+  protected readonly newStageSelfSpent = signal(0);
+  protected readonly newStageBankSpent = signal(0);
+  protected readonly newStageProgress = signal(0);
+  protected readonly newStageNotes = signal('');
+  protected newStageSelfFile: File | null = null;
+  protected newStageBankFile: File | null = null;
+  protected newStageProgressFile: File | null = null;
+
+  protected onSelectStages(item: FollowUpListItem): void {
+    this.openStages(item);
+    this.loadStages(item.subProjectId);
+  }
+
+  private loadStages(subProjectId: number): void {
+    this.stagesLoading.set(true);
+    this.followUp.getStages(subProjectId).subscribe({
+      next: (stages) => {
+        this.stages.set(stages);
+        this.stagesLoading.set(false);
+      },
+      error: () => this.stagesLoading.set(false),
+    });
+  }
+
+  protected openAddStage(): void {
+    this.newStageName.set('');
+    this.newStageDeadline.set('');
+    this.newStageSelfSpent.set(0);
+    this.newStageBankSpent.set(0);
+    this.newStageProgress.set(0);
+    this.newStageNotes.set('');
+    this.newStageSelfFile = null;
+    this.newStageBankFile = null;
+    this.newStageProgressFile = null;
+    this.stageError.set(null);
+    this.showAddStage.set(true);
+  }
+
+  protected closeAddStage(): void {
+    this.showAddStage.set(false);
+  }
+
+  protected onSelfFileChange(event: Event): void {
+    this.newStageSelfFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected onBankFileChange(event: Event): void {
+    this.newStageBankFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected onProgressFileChange(event: Event): void {
+    this.newStageProgressFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected saveNewStage(): void {
+    const item = this.selectedItem();
+    if (!item || this.savingStage()) return;
+
+    if (!this.newStageName().trim() || !this.newStageDeadline()) {
+      this.stageError.set('اسم المرحلة والموعد النهائي مطلوبان');
+      return;
+    }
+
+    this.savingStage.set(true);
+    this.stageError.set(null);
+
+    this.followUp
+      .createStage(item.subProjectId, {
+        name: this.newStageName().trim(),
+        deadline: this.newStageDeadline(),
+        selfFundingSpent: this.newStageSelfSpent(),
+        bankFundingSpent: this.newStageBankSpent(),
+        physicalProgressPercent: this.newStageProgress(),
+        notes: this.newStageNotes(),
+        selfFundingProof: this.newStageSelfFile,
+        bankFundingProof: this.newStageBankFile,
+        physicalProgressProof: this.newStageProgressFile,
+      })
+      .subscribe({
+        next: () => {
+          this.savingStage.set(false);
+          this.showAddStage.set(false);
+          this.loadStages(item.subProjectId);
+          this.load();
+        },
+        error: (err) => {
+          this.savingStage.set(false);
+          this.stageError.set(err?.error?.message ?? 'تعذّر حفظ المرحلة');
+        },
+      });
+  }
+
+  protected completeStage(stage: ExecutionStage): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.followUp.markComplete(item.subProjectId, stage.id).subscribe({
+      next: () => this.loadStages(item.subProjectId),
+    });
+  }
+
+  /**
+   * رابط <a href> مباشر لملف موثّق بـ [Authorize] يفشل بـ 401 عند النقر — التنقل الطبيعي
+   * للمتصفح لا يمر على auth.interceptor فلا يُرسل رأس Authorization. نجلب الملف كـ Blob
+   * عبر HttpClient (نفس نمط FinancialService.downloadStageFile/saveBlob) بدل رابط مباشر.
+   */
+  protected downloadProof(stage: ExecutionStage, key: 'self' | 'bank' | 'progress'): void {
+    const label = key === 'self' ? 'ذاتي' : key === 'bank' ? 'بنكي' : 'تنفيذ-عيني';
+    this.followUp
+      .downloadFile(stage.subProjectId, stage.id, key)
+      .subscribe((blob) => this.followUp.saveBlob(blob, `${stage.name}-${label}`));
+  }
+
+  protected money(value: number | null | undefined): string {
+    return (value ?? 0).toLocaleString('en-US');
   }
 
   protected overdue(item: FollowUpListItem): boolean {
