@@ -13,6 +13,10 @@
         public string Category { get; set; } = string.Empty;
         public bool IsActive { get; set; }
 
+        /// <summary>هل نتعامل معه تاني؟ null = لم يُقيَّم بعد.</summary>
+        public bool? WillWorkAgain { get; set; }
+
         public virtual ICollection<ProjectAssignment> ProjectAssignments { get; set; }
+        public virtual ICollection<ContractorNote> Notes { get; set; } = new List<ContractorNote>();
     }
 }

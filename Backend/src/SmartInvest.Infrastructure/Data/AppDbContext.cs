@@ -49,6 +49,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ContractAwardVersion> ContractAwardVersions => Set<ContractAwardVersion>();
     // ===== end Financial Management =====
 
+    // ===== Project Execution Tracking (متابعة المشروعات) =====
+    public DbSet<ExecutionStage> ExecutionStages => Set<ExecutionStage>();
+    public DbSet<ContractorNote> ContractorNotes => Set<ContractorNote>();
+    // ===== end Project Execution Tracking =====
+
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

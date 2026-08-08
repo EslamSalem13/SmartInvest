@@ -22,8 +22,11 @@
         public virtual AccountingUnit AccountingUnit { get; set; }
 
         [NotMapped]
-        public decimal TotalCost => BankFunding + SelfFunding; 
+        public decimal TotalCost => BankFunding + SelfFunding;
         public string ProjectNature { get; set; } = string.Empty;
+
+        /// <summary>نسبة السماح بتجاوز الميزانية أثناء التنفيذ (مثال: 10 تعني 10%) — على مستوى المشروع الفرعي كله، وليس لكل مرحلة.</summary>
+        public decimal? OverrunPercentage { get; set; }
 
         // Nullables based on ERD
         public string? GreenInvestmentLink { get; set; } 
