@@ -1,0 +1,83 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>متابعة المشروعات</h1>
+      <p>نسبة التنفيذ المالي والعيني لكل مشروع فرعي معتمد، ومراحل تنفيذه بعد الترسية</p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
+      @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
+    </select>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري التحميل…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else {
+    <div class="kpis">
+      <div class="kpi">
+        <span>إجمالي المشروعات</span>
+        <b class="tnum">{{ kpiTotal() }}</b>
+      </div>
+      <div class="kpi">
+        <span>متعثرة</span>
+        <b class="tnum warn">{{ kpiStalled() }}</b>
+      </div>
+      <div class="kpi">
+        <span>متأخرة عن الموعد</span>
+        <b class="tnum warn">{{ kpiOverdue() }}</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>المشروعات الفرعية</h3>
+        <div class="grow"></div>
+        <input
+          class="search"
+          placeholder="بحث بالاسم أو الكود…"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>اسم المشروع الفرعي</th>
+              <th>المقاول</th>
+              <th>% التنفيذ المالي</th>
+              <th>% التنفيذ العيني</th>
+              <th>أقرب موعد مرحلة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of filtered(); track item.subProjectId) {
+              <tr>
+                <td>
+                  {{ item.subProjectName }}
+                  @if (item.isStalled) { <span class="chip warn-chip">متعثر</span> }
+                </td>
+                <td>{{ item.contractorName ?? 'غير مسند' }}</td>
+                <td class="tnum">{{ item.financialProgressPercent }}%</td>
+                <td class="tnum">{{ item.physicalProgressPercent }}%</td>
+                <td class="tnum" [class.warn]="overdue(item)">
+                  {{ item.nextDeadline ? (item.nextDeadline | date: 'yyyy/MM/dd') : '—' }}
+                </td>
+                <td>
+                  <button class="si-btn primary sm" (click)="openStages(item)">عرض المراحل</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية معتمدة لهذه السنة.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

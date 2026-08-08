@@ -61,6 +61,11 @@ export const routes: Routes = [
           import('./features/financial/procurement-workflow').then((m) => m.ProcurementWorkflow),
       },
       {
+        path: 'follow-up',
+        loadComponent: () =>
+          import('./features/follow-up/follow-up-list').then((m) => m.FollowUpList),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/settings/settings').then((m) => m.Settings),
