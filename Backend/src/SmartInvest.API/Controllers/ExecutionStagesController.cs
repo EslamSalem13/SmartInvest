@@ -1,0 +1,112 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SmartInvest.API.Common;
+using SmartInvest.Application.DTOs;
+using SmartInvest.Application.Interfaces;
+using SmartInvest.Domain.Common;
+
+namespace SmartInvest.API.Controllers;
+
+/// <summary>مراحل التنفيذ بعد الترسية (متابعة المشروعات).</summary>
+[ApiController]
+[Authorize]
+public class ExecutionStagesController : ControllerBase
+{
+    private readonly IExecutionStageService _executionStageService;
+
+    public ExecutionStagesController(IExecutionStageService executionStageService)
+    {
+        _executionStageService = executionStageService;
+    }
+
+    /// <summary>جدول متابعة المشروعات — مشروعات معتمدة فقط، بنفس فلاتر صفحة المشروعات.</summary>
+    [HttpGet("api/follow-up")]
+    public async Task<ActionResult<IReadOnlyList<FollowUpListItemDto>>> GetFollowUpList(
+        [FromQuery] int? financialYearId,
+        [FromQuery] int? mainProgramId,
+        [FromQuery] int? subProgramId,
+        [FromQuery] int? markazId,
+        [FromQuery] int? priorityId,
+        [FromQuery] string? searchTerm,
+        CancellationToken cancellationToken)
+    {
+        var result = await _executionStageService.GetFollowUpListAsync(
+            financialYearId, mainProgramId, subProgramId, markazId, priorityId, searchTerm, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("api/subprojects/{subProjectId:int}/execution-stages")]
+    public async Task<ActionResult<IReadOnlyList<ExecutionStageDto>>> GetBySubProject(int subProjectId, CancellationToken cancellationToken)
+    {
+        var result = await _executionStageService.GetBySubProjectAsync(subProjectId, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>multipart/form-data: name, deadline, selfFundingSpent, bankFundingSpent, physicalProgressPercent, notes + حتى 3 ملفات (selfFundingProof / bankFundingProof / physicalProgressProof).</summary>
+    [HttpPost("api/subprojects/{subProjectId:int}/execution-stages")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<ActionResult<ExecutionStageDto>> Create(
+        int subProjectId,
+        [FromForm] string name,
+        [FromForm] DateTime deadline,
+        [FromForm] decimal selfFundingSpent,
+        [FromForm] decimal bankFundingSpent,
+        [FromForm] decimal physicalProgressPercent,
+        [FromForm] string? notes,
+        CancellationToken cancellationToken)
+    {
+        var dto = new CreateExecutionStageDto
+        {
+            Name = name,
+            Deadline = deadline,
+            SelfFundingSpent = selfFundingSpent,
+            BankFundingSpent = bankFundingSpent,
+            PhysicalProgressPercent = physicalProgressPercent,
+            Notes = notes,
+        };
+
+        var selfFile = Request.Form.Files["selfFundingProof"];
+        if (selfFile is { Length: > 0 })
+        {
+            dto.SelfFundingProofFile = await FileRequestHelpers.ToUploadDtoAsync(selfFile, cancellationToken);
+        }
+
+        var bankFile = Request.Form.Files["bankFundingProof"];
+        if (bankFile is { Length: > 0 })
+        {
+            dto.BankFundingProofFile = await FileRequestHelpers.ToUploadDtoAsync(bankFile, cancellationToken);
+        }
+
+        var progressFile = Request.Form.Files["physicalProgressProof"];
+        if (progressFile is { Length: > 0 })
+        {
+            dto.PhysicalProgressProofFile = await FileRequestHelpers.ToUploadDtoAsync(progressFile, cancellationToken);
+        }
+
+        var result = await _executionStageService.CreateAsync(subProjectId, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/complete")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<ActionResult<ExecutionStageDto>> MarkComplete(int subProjectId, int stageId, CancellationToken cancellationToken)
+    {
+        var result = await _executionStageService.MarkCompleteAsync(subProjectId, stageId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/penalty")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<ExecutionStageDto>> SetPenalty(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken)
+    {
+        var result = await _executionStageService.SetPenaltyAsync(subProjectId, stageId, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/files/{fileKey}")]
+    public async Task<IActionResult> DownloadFile(int subProjectId, int stageId, string fileKey, CancellationToken cancellationToken)
+    {
+        var file = await _executionStageService.DownloadFileAsync(subProjectId, stageId, fileKey, cancellationToken);
+        return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
+    }
+}
