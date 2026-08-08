@@ -13,6 +13,9 @@ public class PresentationMemoService : IPresentationMemoService
     private const string FileKey = "file";
     private const string FileLabel = "ملف مذكرة العرض";
 
+    private const string LegalDecisionKey = "legal-affairs-decision";
+    private const string LegalDecisionLabel = "قرار لجنة الشؤون القانونية";
+
     private readonly AppDbContext _context;
 
     public PresentationMemoService(AppDbContext context)
@@ -75,17 +78,38 @@ public class PresentationMemoService : IPresentationMemoService
                 VersionNumber = v.VersionNumber,
                 Notes = v.Notes,
                 CreatedAt = v.CreatedAt,
-                Files = new List<ProcurementFileDto>
-                {
-                    new ProcurementFileDto
+                LegalAffairsDecisionUploadedAt = v.LegalAffairsDecisionUploadedAt,
+                Files = v.LegalAffairsCommitteeDecision == null
+                    ? new List<ProcurementFileDto>
                     {
-                        Key = FileKey,
-                        Label = FileLabel,
-                        FileName = v.File.FileName,
-                        FileExtension = v.File.FileExtension,
-                        FileSize = v.File.FileSize,
+                        new ProcurementFileDto
+                        {
+                            Key = FileKey,
+                            Label = FileLabel,
+                            FileName = v.File.FileName,
+                            FileExtension = v.File.FileExtension,
+                            FileSize = v.File.FileSize,
+                        },
+                    }
+                    : new List<ProcurementFileDto>
+                    {
+                        new ProcurementFileDto
+                        {
+                            Key = FileKey,
+                            Label = FileLabel,
+                            FileName = v.File.FileName,
+                            FileExtension = v.File.FileExtension,
+                            FileSize = v.File.FileSize,
+                        },
+                        new ProcurementFileDto
+                        {
+                            Key = LegalDecisionKey,
+                            Label = LegalDecisionLabel,
+                            FileName = v.LegalAffairsCommitteeDecision.FileName,
+                            FileExtension = v.LegalAffairsCommitteeDecision.FileExtension,
+                            FileSize = v.LegalAffairsCommitteeDecision.FileSize,
+                        },
                     },
-                },
             })
             .ToListAsync(cancellationToken);
 
@@ -214,8 +238,44 @@ public class PresentationMemoService : IPresentationMemoService
             },
         };
 
+        if (dto.LegalAffairsCommitteeDecision is { Content.Length: > 0 } decision)
+        {
+            version.LegalAffairsCommitteeDecision = new StoredFile
+            {
+                FileName = decision.FileName,
+                FileExtension = decision.FileExtension,
+                FileSize = decision.FileSize,
+                Content = decision.Content,
+            };
+            version.LegalAffairsDecisionUploadedAt = DateTime.UtcNow;
+        }
+
         _context.PresentationMemoVersions.Add(version);
         await _context.SaveChangesAsync(cancellationToken);
+
+        var files = new List<ProcurementFileDto>
+        {
+            new()
+            {
+                Key = FileKey,
+                Label = FileLabel,
+                FileName = version.File.FileName,
+                FileExtension = version.File.FileExtension,
+                FileSize = version.File.FileSize,
+            },
+        };
+
+        if (version.LegalAffairsCommitteeDecision is not null)
+        {
+            files.Add(new ProcurementFileDto
+            {
+                Key = LegalDecisionKey,
+                Label = LegalDecisionLabel,
+                FileName = version.LegalAffairsCommitteeDecision.FileName,
+                FileExtension = version.LegalAffairsCommitteeDecision.FileExtension,
+                FileSize = version.LegalAffairsCommitteeDecision.FileSize,
+            });
+        }
 
         return new ProcurementVersionDto
         {
@@ -223,31 +283,27 @@ public class PresentationMemoService : IPresentationMemoService
             VersionNumber = version.VersionNumber,
             Notes = version.Notes,
             CreatedAt = version.CreatedAt,
-            Files =
-            [
-                new ProcurementFileDto
-                {
-                    Key = FileKey,
-                    Label = FileLabel,
-                    FileName = version.File.FileName,
-                    FileExtension = version.File.FileExtension,
-                    FileSize = version.File.FileSize,
-                },
-            ],
+            LegalAffairsDecisionUploadedAt = version.LegalAffairsDecisionUploadedAt,
+            Files = files,
         };
     }
 
-    public async Task<FileDownloadDto> DownloadFileAsync(int id, int versionNumber, CancellationToken cancellationToken = default)
+    public async Task<FileDownloadDto> DownloadFileAsync(int id, int versionNumber, string? fileKey = null, CancellationToken cancellationToken = default)
     {
         var version = await _context.PresentationMemoVersions.AsNoTracking()
             .FirstOrDefaultAsync(v => v.PresentationMemoId == id && v.VersionNumber == versionNumber, cancellationToken)
             ?? throw new NotFoundException("الإصدار المطلوب غير موجود");
 
+        var file = fileKey == LegalDecisionKey
+            ? version.LegalAffairsCommitteeDecision
+                ?? throw new NotFoundException("قرار لجنة الشؤون القانونية غير مرفوع لهذا الإصدار")
+            : version.File;
+
         return new FileDownloadDto
         {
-            FileName = version.File.FileName,
-            FileExtension = version.File.FileExtension,
-            Content = version.File.Content,
+            FileName = file.FileName,
+            FileExtension = file.FileExtension,
+            Content = file.Content,
         };
     }
 
@@ -257,9 +313,23 @@ public class PresentationMemoService : IPresentationMemoService
             .FirstOrDefaultAsync(m => m.Id == id, cancellationToken)
             ?? throw new NotFoundException($"مذكرة العرض رقم {id} غير موجودة");
 
-        if (isCompleted && memo.CurrentVersionNumber == 0)
+        if (isCompleted)
         {
-            throw new BusinessRuleException("لا يمكن إكمال مذكرة عرض بدون أي إصدار مرفوع");
+            if (memo.CurrentVersionNumber == 0)
+            {
+                throw new BusinessRuleException("لا يمكن إكمال مذكرة عرض بدون أي إصدار مرفوع");
+            }
+
+            // القرار مطلوب على أحدث إصدار تحديدًا — إصدار جديد بدون القرار يعني أن المذكرة تغيّرت بعد صدوره
+            var latestHasDecision = await _context.PresentationMemoVersions.AsNoTracking()
+                .Where(v => v.PresentationMemoId == id && v.VersionNumber == memo.CurrentVersionNumber)
+                .Select(v => v.LegalAffairsCommitteeDecision != null)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!latestHasDecision)
+            {
+                throw new BusinessRuleException("يجب إرفاق قرار لجنة الشؤون القانونية قبل إكمال مذكرة العرض");
+            }
         }
 
         memo.IsCompleted = isCompleted;

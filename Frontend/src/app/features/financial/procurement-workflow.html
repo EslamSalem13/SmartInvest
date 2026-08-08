@@ -96,29 +96,143 @@
                   </div>
                 }
 
-                <!-- الدفعة المقدمة 25% — حالة وليست مستندًا (خاص بمرحلة العقد والترسية) -->
-                @if (stageDetail()!.stage === 'contract-award') {
-                  <label
-                    class="advance-payment"
-                    [class.done]="stageDetail()!.advancePaymentDone"
-                    [class.disabled]="!isStaff() || stageDetail()!.isCompleted"
-                  >
-                    <input
-                      type="checkbox"
-                      [checked]="!!stageDetail()!.advancePaymentDone"
-                      [disabled]="!isStaff() || stageDetail()!.isCompleted || busy()"
-                      (change)="toggleAdvancePayment($any($event.target).checked)"
-                    />
-                    <span class="ap-box">
-                      @if (stageDetail()!.advancePaymentDone) {
-                        <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5" /></svg>
+                <!-- بيانات الترسية: الإسناد، الدفعة المقدمة، المدة، الشرط الجزائي -->
+                @if (stageDetail()!.stage === 'contract-award' && award(); as aw) {
+                  <div class="award-panel">
+                    <!-- ميزانية المشروع معروضة من البداية -->
+                    <div class="award-budget">
+                      <div class="ab-item">
+                        <span>إجمالي التكلفة</span><b class="tnum">{{ money(aw.totalCost) }} ج.م</b>
+                      </div>
+                      <div class="ab-item">
+                        <span>تمويل ذاتي</span><b class="tnum">{{ money(aw.selfFunding) }} ج.م</b>
+                      </div>
+                      <div class="ab-item">
+                        <span>تمويل بنكي</span><b class="tnum">{{ money(aw.bankFunding) }} ج.م</b>
+                      </div>
+                      <div class="ab-item">
+                        <span>نوع المشروع</span><b>{{ aw.projectNature || '—' }}</b>
+                      </div>
+                    </div>
+
+                    <div class="si-step"><span class="n">1</span><h4>إسناد المشروع لمقاول</h4></div>
+                    <div class="si-grid">
+                      <div class="si-fld">
+                        <label>المقاول <span class="req">*</span></label>
+                        <select [ngModel]="aContractorId()" (ngModelChange)="aContractorId.set($event)" [disabled]="!awardEditable()">
+                          <option [ngValue]="null">— اختر المقاول —</option>
+                          @for (c of contractors(); track c.id) {
+                            <option [ngValue]="c.id">{{ c.contractorName }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="si-fld">
+                        <label>نوع العقد <span class="req">*</span></label>
+                        <select [ngModel]="aContractTypeId()" (ngModelChange)="aContractTypeId.set($event)" [disabled]="!awardEditable()">
+                          <option [ngValue]="null">— اختر —</option>
+                          @for (t of contractTypes(); track t.id) {
+                            <option [ngValue]="t.id">{{ t.name }}</option>
+                          }
+                        </select>
+                      </div>
+                      <div class="si-fld">
+                        <label>رقم العقد</label>
+                        <input [ngModel]="aContractNumber()" (ngModelChange)="aContractNumber.set($event)" [disabled]="!awardEditable()" />
+                      </div>
+                      <div class="si-fld">
+                        <label>قيمة العقد</label>
+                        <input type="number" [ngModel]="aContractValue()" (ngModelChange)="aContractValue.set($event)" [disabled]="!awardEditable()" />
+                      </div>
+                    </div>
+
+                    @if (aw.requiresAdvancePayment) {
+                      <div class="si-step"><span class="n">2</span><h4>الدفعة المقدمة للمقاول</h4></div>
+                      <div class="si-grid">
+                        <div class="si-fld">
+                          <label>النسبة (%) <span class="req">*</span></label>
+                          <input type="number" min="1" max="100" [ngModel]="aAdvancePercentage()" (ngModelChange)="aAdvancePercentage.set($event)" [disabled]="!awardEditable()" />
+                          <span class="hint tnum">= {{ money(advanceAmount()) }} ج.م</span>
+                        </div>
+                        <div class="si-fld">
+                          <label>من التمويل الذاتي</label>
+                          <input type="number" [ngModel]="aAdvanceSelf()" (ngModelChange)="aAdvanceSelf.set($event)" [disabled]="!awardEditable()" />
+                        </div>
+                        <div class="si-fld">
+                          <label>من التمويل البنكي</label>
+                          <input type="number" [ngModel]="aAdvanceBank()" (ngModelChange)="aAdvanceBank.set($event)" [disabled]="!awardEditable()" />
+                        </div>
+                        <div class="si-fld">
+                          <label>المتبقي للتوزيع</label>
+                          <input class="tnum" [value]="money(advanceRemaining()) + ' ج.م'" disabled />
+                          <span class="hint">يجب أن يصل إلى صفر</span>
+                        </div>
+                        <div class="si-fld full">
+                          <label class="inline-check">
+                            <input type="checkbox" [checked]="aAdvanceDone()" (change)="aAdvanceDone.set($any($event.target).checked)" [disabled]="!awardEditable()" />
+                            <span>تم صرف الدفعة المقدمة فعليًا</span>
+                          </label>
+                          <span class="hint">ارفع «إثبات صرف الدفعة المقدمة» ضمن ملفات الإصدار — شرط لازم لإكمال المرحلة</span>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="si-note">
+                        مشروع «{{ aw.projectNature || 'توريدات' }}» — لا تُصرف دفعة مقدمة للمقاول. المورّد يورّد أولًا ثم يُصرف له.
+                      </div>
+                    }
+
+                    <div class="si-step"><span class="n">{{ aw.requiresAdvancePayment ? 3 : 2 }}</span><h4>مدة التنفيذ وتسليم الأرضية</h4></div>
+                    <div class="si-grid">
+                      <div class="si-fld">
+                        <label>المدة القصوى — شهور</label>
+                        <input type="number" min="0" [ngModel]="aDurationMonths()" (ngModelChange)="aDurationMonths.set($event)" [disabled]="!awardEditable()" />
+                      </div>
+                      <div class="si-fld">
+                        <label>المدة القصوى — أيام</label>
+                        <input type="number" min="0" [ngModel]="aDurationDays()" (ngModelChange)="aDurationDays.set($event)" [disabled]="!awardEditable()" />
+                      </div>
+                      <div class="si-fld full">
+                        <label>أرضية المشروع <span class="req">*</span></label>
+                        <select [ngModel]="aHandoverMode()" (ngModelChange)="aHandoverMode.set($event)" [disabled]="!awardEditable()">
+                          <option [ngValue]="null">— اختر —</option>
+                          <option [ngValue]="1">مُسلَّمة للمقاول — تبدأ المدة فور الترسية</option>
+                          <option [ngValue]="2">لم تُسلَّم بعد — تبدأ المدة عند تسجيل التسليم لاحقًا</option>
+                        </select>
+                        <span class="hint">المدة لا تبدأ من الترسية، بل من تسليم الأرضية للمقاول</span>
+                      </div>
+                      @if (aw.siteHandoverDate) {
+                        <div class="si-fld">
+                          <label>تاريخ تسليم الأرضية</label>
+                          <input [value]="dateStr(aw.siteHandoverDate)" disabled />
+                        </div>
                       }
-                    </span>
-                    <span class="ap-text">
-                      <b>تم صرف الدفعة المقدمة 25%</b>
-                      <span class="ap-hint">شرط لازم لإكمال هذه المرحلة</span>
-                    </span>
-                  </label>
+                      @if (aw.contractualDeliveryDate) {
+                        <div class="si-fld">
+                          <label>تاريخ التسليم المستحق</label>
+                          <input [value]="dateStr(aw.contractualDeliveryDate)" disabled />
+                        </div>
+                      }
+                    </div>
+
+                    <div class="si-step"><span class="n">{{ aw.requiresAdvancePayment ? 4 : 3 }}</span><h4>الشرط الجزائي</h4></div>
+                    <div class="si-grid">
+                      <div class="si-fld full">
+                        <label>قيمة الشرط الجزائي</label>
+                        <input type="number" min="0" [ngModel]="aPenaltyAmount()" (ngModelChange)="aPenaltyAmount.set($event)" [disabled]="!awardEditable()" />
+                        <span class="hint">يُطبَّق عند تجاوز تاريخ التسليم المستحق</span>
+                      </div>
+                    </div>
+
+                    @if (awardError()) {
+                      <div class="si-err">{{ awardError() }}</div>
+                    }
+                    @if (awardEditable()) {
+                      <div class="upload-foot">
+                        <button class="si-btn primary sm" [disabled]="awardSaving()" (click)="saveAward()">
+                          @if (awardSaving()) { جاري الحفظ… } @else { حفظ بيانات الترسية }
+                        </button>
+                      </div>
+                    }
+                  </div>
                 }
 
                 <!-- نموذج الرفع -->

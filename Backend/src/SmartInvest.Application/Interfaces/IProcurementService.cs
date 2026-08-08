@@ -23,4 +23,10 @@ public interface IProcurementService
 
     /// <summary>تأكيد/إلغاء تأكيد صرف الدفعة المقدمة 25% — خاص بمرحلة العقد والترسية فقط.</summary>
     Task SetAdvancePaymentDoneAsync(int subProjectId, bool done, CancellationToken cancellationToken = default);
+
+    /// <summary>حفظ بيانات الترسية: الإسناد، الدفعة المقدمة، مدة التنفيذ، الشرط الجزائي.</summary>
+    Task SetContractAwardDetailsAsync(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken = default);
+
+    /// <summary>تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ.</summary>
+    Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, CancellationToken cancellationToken = default);
 }

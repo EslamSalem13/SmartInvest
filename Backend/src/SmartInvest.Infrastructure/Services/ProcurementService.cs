@@ -88,6 +88,7 @@ public class ProcurementService : IProcurementService
             if (stage == ProcurementStage.ContractAward)
             {
                 stageDto.AdvancePaymentDone = await GetAdvancePaymentDoneAsync(subProjectId, cancellationToken);
+                stageDto.ContractAward = await GetContractAwardDetailsAsync(subProjectId, cancellationToken);
             }
             overview.Stages.Add(stageDto);
             previousCompleted = state?.IsCompleted ?? false;
@@ -108,6 +109,7 @@ public class ProcurementService : IProcurementService
         if (stage == ProcurementStage.ContractAward)
         {
             dto.AdvancePaymentDone = await GetAdvancePaymentDoneAsync(subProjectId, cancellationToken);
+            dto.ContractAward = await GetContractAwardDetailsAsync(subProjectId, cancellationToken);
         }
 
         if (state != null)
@@ -181,6 +183,12 @@ public class ProcurementService : IProcurementService
         {
             await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
             await _stages[stage].SetCompletionAsync(subProjectId, true, cancellationToken);
+
+            if (stage == ProcurementStage.ContractAward)
+            {
+                await StampSiteHandoverOnAwardAsync(subProjectId, cancellationToken);
+            }
+
             return;
         }
 
@@ -195,6 +203,53 @@ public class ProcurementService : IProcurementService
     }
 
     public async Task SetAdvancePaymentDoneAsync(int subProjectId, bool done, CancellationToken cancellationToken = default)
+    {
+        var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
+        doc.AdvancePaymentDone = done;
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SetContractAwardDetailsAsync(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken = default)
+    {
+        var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
+
+        doc.AdvancePaymentDone = dto.AdvancePaymentDone;
+        doc.AdvancePaymentPercentage = dto.AdvancePaymentPercentage;
+        doc.AdvancePaymentSelfAmount = dto.AdvancePaymentSelfAmount;
+        doc.AdvancePaymentBankAmount = dto.AdvancePaymentBankAmount;
+        doc.ExecutionDurationMonths = dto.ExecutionDurationMonths;
+        doc.ExecutionDurationDays = dto.ExecutionDurationDays;
+        doc.SiteHandoverMode = dto.SiteHandoverMode is int mode ? (SiteHandoverMode)mode : null;
+        doc.PenaltyAmount = dto.PenaltyAmount;
+
+        // الإسناد نفسه يعيش في ProjectAssignment — مصدر حقيقة واحد لهوية المقاول،
+        // تقرأ منه متابعة المشروعات وملف المقاول.
+        if (dto.ContractorId is int contractorId)
+        {
+            await UpsertAssignmentAsync(doc, contractorId, dto, cancellationToken);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, CancellationToken cancellationToken = default)
+    {
+        await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+
+        var doc = await _context.ContractAwards
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken)
+            ?? throw new NotFoundException("لم تبدأ مرحلة الترسية بعد");
+
+        if (!doc.IsCompleted)
+        {
+            throw new BusinessRuleException("لا يمكن تسجيل تسليم الأرضية قبل إكمال الترسية");
+        }
+
+        doc.SiteHandoverDate = handoverDate;
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<ContractAward> GetEditableContractAwardAsync(int subProjectId, CancellationToken cancellationToken)
     {
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
         await EnsurePreviousStageCompletedAsync(ProcurementStage.ContractAward, subProjectId, cancellationToken);
@@ -212,8 +267,50 @@ public class ProcurementService : IProcurementService
             throw new BusinessRuleException("هذه المرحلة مكتملة — يجب إعادة فتحها قبل التعديل");
         }
 
-        doc.AdvancePaymentDone = done;
+        return doc;
+    }
+
+    /// <summary>ينشئ الإسناد أو يحدّثه — إعادة فتح الترسية ثم إكمالها لا تُنشئ إسنادًا مكررًا.</summary>
+    private async Task UpsertAssignmentAsync(ContractAward doc, int contractorId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken)
+    {
+        var contractorExists = await _context.Set<Contractor>().AsNoTracking()
+            .AnyAsync(c => c.ContractorId == contractorId, cancellationToken);
+        if (!contractorExists)
+        {
+            throw new NotFoundException($"المقاول رقم {contractorId} غير موجود");
+        }
+
+        var contractTypeId = dto.ContractTypeId
+            ?? throw new BusinessRuleException("يجب اختيار نوع العقد مع المقاول");
+
+        if (!await _context.Set<ContractType>().AsNoTracking().AnyAsync(t => t.ContractTypeId == contractTypeId, cancellationToken))
+        {
+            throw new NotFoundException($"نوع العقد رقم {contractTypeId} غير موجود");
+        }
+
+        var assignment = doc.ProjectAssignmentId is int existingId
+            ? await _context.Set<ProjectAssignment>().FirstOrDefaultAsync(a => a.AssignmentId == existingId, cancellationToken)
+            : null;
+
+        if (assignment == null)
+        {
+            assignment = new ProjectAssignment
+            {
+                SubProjectId = doc.SubProjectId,
+                AssignmentDate = DateTime.UtcNow,
+                ExpectedStartDate = DateTime.UtcNow,
+                ExpectedEndDate = DateTime.UtcNow,
+            };
+            _context.Set<ProjectAssignment>().Add(assignment);
+        }
+
+        assignment.ContractorId = contractorId;
+        assignment.ContractTypeId = contractTypeId;
+        assignment.ContractNumber = dto.ContractNumber;
+        assignment.ContractValue = dto.ContractValue;
+
         await _context.SaveChangesAsync(cancellationToken);
+        doc.ProjectAssignmentId = assignment.AssignmentId;
     }
 
     // ------------------------------------------------------------------
@@ -254,6 +351,91 @@ public class ProcurementService : IProcurementService
             var previousStage = (ProcurementStage)((int)stage - 1);
             throw new BusinessRuleException($"يجب إكمال مرحلة \"{_stages[previousStage].Label}\" أولاً");
         }
+    }
+
+    /// <summary>
+    /// عند إكمال الترسية: لو الأرضية مُسلَّمة بالفعل، يبدأ العد من تاريخ الإكمال.
+    /// أما وضع "لم تُسلَّم بعد" فيترك التاريخ فارغًا حتى يُسجَّل من متابعة المشروعات.
+    /// </summary>
+    private async Task StampSiteHandoverOnAwardAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var doc = await _context.ContractAwards
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken);
+
+        if (doc?.SiteHandoverMode == SiteHandoverMode.AtAward && doc.SiteHandoverDate == null)
+        {
+            doc.SiteHandoverDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private async Task<ContractAwardDetailsDto?> GetContractAwardDetailsAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var project = await _context.SubProjects.AsNoTracking()
+            .Where(s => s.SubProjectId == subProjectId)
+            .Select(s => new { s.ProjectNature, s.BankFunding, s.SelfFunding })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (project == null)
+        {
+            return null;
+        }
+
+        var doc = await _context.ContractAwards.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new
+            {
+                x.AdvancePaymentDone,
+                x.AdvancePaymentPercentage,
+                x.AdvancePaymentSelfAmount,
+                x.AdvancePaymentBankAmount,
+                x.ExecutionDurationMonths,
+                x.ExecutionDurationDays,
+                x.SiteHandoverMode,
+                x.SiteHandoverDate,
+                x.PenaltyAmount,
+                x.ProjectAssignmentId,
+                ContractorId = (int?)x.ProjectAssignment!.ContractorId,
+                ContractorName = x.ProjectAssignment!.Contractor!.ContractorName,
+                ContractTypeId = (int?)x.ProjectAssignment!.ContractTypeId,
+                x.ProjectAssignment!.ContractNumber,
+                x.ProjectAssignment!.ContractValue,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var details = new ContractAwardDetailsDto
+        {
+            ProjectNature = project.ProjectNature,
+            RequiresAdvancePayment = IsContractingProject(project.ProjectNature),
+            TotalCost = project.BankFunding + project.SelfFunding,
+            BankFunding = project.BankFunding,
+            SelfFunding = project.SelfFunding,
+        };
+
+        if (doc == null)
+        {
+            return details;
+        }
+
+        details.AdvancePaymentDone = doc.AdvancePaymentDone;
+        details.AdvancePaymentPercentage = doc.AdvancePaymentPercentage;
+        details.AdvancePaymentSelfAmount = doc.AdvancePaymentSelfAmount;
+        details.AdvancePaymentBankAmount = doc.AdvancePaymentBankAmount;
+        details.ExecutionDurationMonths = doc.ExecutionDurationMonths;
+        details.ExecutionDurationDays = doc.ExecutionDurationDays;
+        details.SiteHandoverMode = (int?)doc.SiteHandoverMode;
+        details.SiteHandoverDate = doc.SiteHandoverDate;
+        details.ContractualDeliveryDate = doc.SiteHandoverDate?
+            .AddMonths(doc.ExecutionDurationMonths ?? 0)
+            .AddDays(doc.ExecutionDurationDays ?? 0);
+        details.PenaltyAmount = doc.PenaltyAmount;
+        details.ContractorId = doc.ContractorId;
+        details.ContractorName = doc.ContractorName;
+        details.ContractTypeId = doc.ContractTypeId;
+        details.ContractNumber = doc.ContractNumber;
+        details.ContractValue = doc.ContractValue;
+
+        return details;
     }
 
     private async Task<bool> GetAdvancePaymentDoneAsync(int subProjectId, CancellationToken cancellationToken)
@@ -333,11 +515,92 @@ public class ProcurementService : IProcurementService
             [
                 new FileSlot<ContractAwardVersion>("award-order", "أمر الإسناد", v => v.AwardOrder, (v, f) => v.AwardOrder = f, required: true),
                 new FileSlot<ContractAwardVersion>("contract", "العقد", v => v.Contract, (v, f) => v.Contract = f, required: true),
+                // إثبات صرف الدفعة المقدمة — إلزاميته مشروطة بنوع المشروع، فيتحقق منها extraCompletionCheck
+                new FileSlot<ContractAwardVersion>("advance-payment-proof", "إثبات صرف الدفعة المقدمة", v => v.AdvancePaymentProof, (v, f) => v.AdvancePaymentProof = f, required: false),
             ],
-            extraCompletionCheck: doc => doc.AdvancePaymentDone
-                ? null
-                : "يجب تأكيد صرف الدفعة المقدمة 25% قبل إكمال هذه المرحلة"),
+            extraCompletionCheck: (doc, ct) => ValidateContractAwardForCompletionAsync(db, doc, ct)),
     };
+
+    /// <summary>«مقاولات» = أعمال تنفيذ تستحق دفعة مقدمة. «توريدات» لا يُصرف لها مقدَّم.</summary>
+    internal static bool IsContractingProject(string? projectNature) => projectNature == "مقاولات";
+
+    /// <summary>
+    /// قواعد إكمال الترسية: المقاول، المدة، تسليم الأرضية — ثم الدفعة المقدمة لمشروعات «مقاولات» فقط.
+    /// </summary>
+    private static async Task<string?> ValidateContractAwardForCompletionAsync(
+        AppDbContext db,
+        ContractAward doc,
+        CancellationToken ct)
+    {
+        var project = await db.SubProjects.AsNoTracking()
+            .Where(s => s.SubProjectId == doc.SubProjectId)
+            .Select(s => new { s.ProjectNature, s.BankFunding, s.SelfFunding })
+            .FirstOrDefaultAsync(ct);
+
+        if (project == null)
+        {
+            return "المشروع الفرعي غير موجود";
+        }
+
+        if (doc.ProjectAssignmentId == null)
+        {
+            return "يجب اختيار المقاول المسند إليه المشروع قبل إكمال الترسية";
+        }
+
+        if ((doc.ExecutionDurationMonths ?? 0) <= 0 && (doc.ExecutionDurationDays ?? 0) <= 0)
+        {
+            return "يجب تحديد المدة القصوى لتنفيذ المشروع";
+        }
+
+        if (doc.SiteHandoverMode == null)
+        {
+            return "يجب تحديد ما إذا كانت أرضية المشروع مُسلَّمة للمقاول أم لا";
+        }
+
+        if (!IsContractingProject(project.ProjectNature))
+        {
+            return null;
+        }
+
+        // من هنا: مشروع «مقاولات» — الدفعة المقدمة إلزامية
+        if (!doc.AdvancePaymentDone)
+        {
+            return "يجب تأكيد صرف الدفعة المقدمة للمقاول قبل إكمال هذه المرحلة";
+        }
+
+        var percentage = doc.AdvancePaymentPercentage ?? 0m;
+        if (percentage <= 0m || percentage > 100m)
+        {
+            return "نسبة الدفعة المقدمة يجب أن تكون بين 1% و100%";
+        }
+
+        var totalCost = project.BankFunding + project.SelfFunding;
+        var expected = Math.Round(totalCost * percentage / 100m, 2);
+        var self = doc.AdvancePaymentSelfAmount ?? 0m;
+        var bank = doc.AdvancePaymentBankAmount ?? 0m;
+
+        if (Math.Round(self + bank, 2) != expected)
+        {
+            return $"مجموع المصروف ذاتيًا وبنكيًا يجب أن يساوي قيمة الدفعة المقدمة ({expected:N2} ج.م)";
+        }
+
+        if (self > project.SelfFunding)
+        {
+            return $"المصروف من التمويل الذاتي يتجاوز المتاح ({project.SelfFunding:N2} ج.م)";
+        }
+
+        if (bank > project.BankFunding)
+        {
+            return $"المصروف من التمويل البنكي يتجاوز المتاح ({project.BankFunding:N2} ج.م)";
+        }
+
+        var latestHasProof = await db.ContractAwardVersions.AsNoTracking()
+            .Where(v => v.ContractAwardId == doc.Id && v.VersionNumber == doc.CurrentVersionNumber)
+            .Select(v => v.AdvancePaymentProof != null)
+            .FirstOrDefaultAsync(ct);
+
+        return latestHasProof ? null : "يجب رفع إثبات صرف الدفعة المقدمة قبل إكمال هذه المرحلة";
+    }
 
     // ------------------------------------------------------------------
     // تجريد المرحلة (مستند + إصدارات) بشكل عام على أنواع الكيانات
@@ -391,7 +654,12 @@ public class ProcurementService : IProcurementService
         private readonly Action<TVer, int> _setDocId;
         private readonly Func<int, Expression<Func<TVer, bool>>> _versionsOfDoc;
         private readonly IReadOnlyList<FileSlot<TVer>> _slots;
-        private readonly Func<TDoc, string?>? _extraCompletionCheck;
+
+        /// <summary>
+        /// تحقق إضافي عند الإكمال. غير متزامن لأن بعض القواعد تحتاج قراءة من القاعدة
+        /// (مثل نوع المشروع لتحديد إلزامية الدفعة المقدمة).
+        /// </summary>
+        private readonly Func<TDoc, CancellationToken, Task<string?>>? _extraCompletionCheck;
 
         public StageOps(
             AppDbContext db,
@@ -399,7 +667,7 @@ public class ProcurementService : IProcurementService
             Action<TVer, int> setDocId,
             Func<int, Expression<Func<TVer, bool>>> versionsOfDoc,
             IReadOnlyList<FileSlot<TVer>> slots,
-            Func<TDoc, string?>? extraCompletionCheck = null)
+            Func<TDoc, CancellationToken, Task<string?>>? extraCompletionCheck = null)
         {
             _db = db;
             Label = label;
@@ -528,7 +796,7 @@ public class ProcurementService : IProcurementService
 
                 if (_extraCompletionCheck != null)
                 {
-                    var error = _extraCompletionCheck(doc);
+                    var error = await _extraCompletionCheck(doc, ct);
                     if (error != null)
                     {
                         throw new BusinessRuleException(error);

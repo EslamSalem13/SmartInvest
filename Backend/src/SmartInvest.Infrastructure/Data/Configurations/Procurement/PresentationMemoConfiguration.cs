@@ -48,5 +48,6 @@ public class PresentationMemoVersionConfiguration : IEntityTypeConfiguration<Pre
                .OnDelete(DeleteBehavior.Restrict);
 
         builder.OwnsStoredFile(x => x.File, "File_", required: true);
+        builder.OwnsStoredFile(x => x.LegalAffairsCommitteeDecision, "LegalAffairsDecision_");
     }
 }
