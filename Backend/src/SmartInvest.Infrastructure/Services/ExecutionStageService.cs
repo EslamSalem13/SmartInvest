@@ -40,6 +40,39 @@ public class ExecutionStageService : IExecutionStageService
 
     public async Task<ExecutionStageDto> CreateAsync(int subProjectId, CreateExecutionStageDto dto, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+        {
+            throw new BusinessRuleException("اسم المرحلة مطلوب");
+        }
+        if (dto.Name.Trim().Length > 250)
+        {
+            throw new BusinessRuleException("اسم المرحلة يجب ألا يتجاوز 250 حرفًا");
+        }
+        if (dto.SelfFundingSpent < 0)
+        {
+            throw new BusinessRuleException("المصروف الذاتي لا يمكن أن يكون سالبًا");
+        }
+        if (dto.BankFundingSpent < 0)
+        {
+            throw new BusinessRuleException("المصروف البنكي لا يمكن أن يكون سالبًا");
+        }
+        if (dto.PhysicalProgressPercent < 0 || dto.PhysicalProgressPercent > 100)
+        {
+            throw new BusinessRuleException("نسبة التنفيذ العيني يجب أن تكون بين 0 و100");
+        }
+        if (dto.SelfFundingSpent > 0 && dto.SelfFundingProofFile == null)
+        {
+            throw new BusinessRuleException("إثبات الصرف الذاتي مطلوب عند تسجيل مبلغ ذاتي");
+        }
+        if (dto.BankFundingSpent > 0 && dto.BankFundingProofFile == null)
+        {
+            throw new BusinessRuleException("إثبات الصرف البنكي مطلوب عند تسجيل مبلغ بنكي");
+        }
+        if (dto.PhysicalProgressPercent > 0 && dto.PhysicalProgressProofFile == null)
+        {
+            throw new BusinessRuleException("إثبات التنفيذ العيني مطلوب عند تسجيل نسبة تنفيذ");
+        }
+
         var subProject = await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken)
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
 
