@@ -46,6 +46,9 @@ select.mini { border: 1.5px solid var(--line-strong); background: var(--surface)
 .kpi b.ok { color: var(--ok); }
 .kpi b.warn { color: var(--warn); }
 
+/* Warning text color for numeric values outside .kpi (e.g. contractor fines in procurement-workflow) */
+.tnum.warn { color: var(--warn); }
+
 /* بطاقة + جدول */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
 .card-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
