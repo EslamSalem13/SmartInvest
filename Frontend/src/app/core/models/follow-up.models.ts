@@ -20,8 +20,11 @@ export interface ExecutionStage {
   bankFundingSpent: number;
   hasSelfFundingProof: boolean;
   hasBankFundingProof: boolean;
+  selfFundingProofFileName: string | null;
+  bankFundingProofFileName: string | null;
   physicalProgressPercent: number;
   hasPhysicalProgressProof: boolean;
+  physicalProgressProofFileName: string | null;
   notes: string | null;
   penaltyAmount: number | null;
   penaltyPaid: boolean;

@@ -203,9 +203,16 @@ export class FollowUpList implements OnInit {
    */
   protected downloadProof(stage: ExecutionStage, key: 'self' | 'bank' | 'progress'): void {
     const label = key === 'self' ? 'ذاتي' : key === 'bank' ? 'بنكي' : 'تنفيذ-عيني';
+    const realName =
+      key === 'self'
+        ? stage.selfFundingProofFileName
+        : key === 'bank'
+          ? stage.bankFundingProofFileName
+          : stage.physicalProgressProofFileName;
+    const fileName = realName && realName.trim() ? realName : `${stage.name}-${label}`;
     this.followUp
       .downloadFile(stage.subProjectId, stage.id, key)
-      .subscribe((blob) => this.followUp.saveBlob(blob, `${stage.name}-${label}`));
+      .subscribe((blob) => this.followUp.saveBlob(blob, fileName));
   }
 
   protected money(value: number | null | undefined): string {

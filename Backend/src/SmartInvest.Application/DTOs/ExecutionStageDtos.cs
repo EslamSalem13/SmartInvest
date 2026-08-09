@@ -11,9 +11,12 @@ public class ExecutionStageDto
     public decimal BankFundingSpent { get; set; }
     public bool HasSelfFundingProof { get; set; }
     public bool HasBankFundingProof { get; set; }
+    public string? SelfFundingProofFileName { get; set; }
+    public string? BankFundingProofFileName { get; set; }
 
     public decimal PhysicalProgressPercent { get; set; }
     public bool HasPhysicalProgressProof { get; set; }
+    public string? PhysicalProgressProofFileName { get; set; }
 
     public string? Notes { get; set; }
     public decimal? PenaltyAmount { get; set; }
