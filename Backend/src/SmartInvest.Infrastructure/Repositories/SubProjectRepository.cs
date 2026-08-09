@@ -26,6 +26,9 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             .Include(x => x.ProjectAssignments).ThenInclude(a => a.Contractor)
             .Include(x => x.ProjectAssignments).ThenInclude(a => a.ContractType)
             .Include(x => x.FinancialYears).ThenInclude(fy => fy.FinancialYear)
+            // ProjectSpecifications + ProjectAssignments + FinancialYears كلها collections منفصلة —
+            // بدون AsSplitQuery الـ join الواحد بيتضاعف بعدد الصفوف في كل واحدة منهم (cartesian)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.SubProjectId == id, cancellationToken);
     }
 
@@ -59,6 +62,11 @@ public class SubProjectRepository : GenericRepository<SubProject>, ISubProjectRe
             .Include(x => x.ProjectAssignments).ThenInclude(a => a.Contractor)
             .Include(x => x.ProjectLevel)
             .Include(x => x.ComponentType)
+            // بدون AsSplitQuery، الـ ProjectAssignments بتتحط كـ derived table LEFT JOIN كامل
+            // (كل الجدول بدون فلترة) على كل صفحة نتائج — ده كان السبب الأساسي إن قائمة
+            // المشروعات بتاخد 25 ثانية. مع AsSplitQuery بيبقى استعلام منفصل بـ WHERE SubProjectId IN (...)
+            // مقتصر على صفحة النتائج بس.
+            .AsSplitQuery()
             .AsQueryable();
 
         if (mainProjectId.HasValue)

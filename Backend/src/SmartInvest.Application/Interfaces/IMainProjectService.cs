@@ -1,10 +1,11 @@
 ﻿using SmartInvest.Application.DTOs;
+using SmartInvest.Application.DTOs.Common;
 
 namespace SmartInvest.Application.Interfaces;
 
 public interface IMainProjectService
 {
-    Task<IReadOnlyList<MainProjectListItemDto>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<PagedResultDto<MainProjectListItemDto>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default);
 
     Task<MainProjectDetailDto> GetByIdAsync(int id, CancellationToken cancellationToken = default);
 

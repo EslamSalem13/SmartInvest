@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
+using SmartInvest.Application.DTOs.Common;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Domain.Entities;
 using SmartInvest.Domain.Interfaces;
@@ -22,10 +23,31 @@ public class MainProjectService : IMainProjectService
         _mapper = mapper;
     }
 
-    public async Task<IReadOnlyList<MainProjectListItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResultDto<MainProjectListItemDto>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var mainProjects = await _mainProjectRepository.GetAllWithDetailsAsync(cancellationToken);
-        return _mapper.Map<List<MainProjectListItemDto>>(mainProjects);
+        var (mainProjects, totalCount) = await _mainProjectRepository.GetAllWithDetailsAsync(page, pageSize, cancellationToken);
+        var dtos = _mapper.Map<List<MainProjectListItemDto>>(mainProjects);
+
+        var aggregates = await _mainProjectRepository.GetSubProjectAggregatesAsync(
+            mainProjects.Select(m => m.MainProjectId).ToList(), cancellationToken);
+
+        foreach (var dto in dtos)
+        {
+            if (aggregates.TryGetValue(dto.Id, out var agg))
+            {
+                dto.SubProjectsCount = agg.Count;
+                dto.TotalBankFunding = agg.BankSum;
+                dto.TotalSelfFunding = agg.SelfSum;
+            }
+        }
+
+        return new PagedResultDto<MainProjectListItemDto>
+        {
+            Items = dtos,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+        };
     }
 
     public async Task<MainProjectDetailDto> GetByIdAsync(int id, CancellationToken cancellationToken = default)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartInvest.Application.DTOs;
+using SmartInvest.Application.DTOs.Common;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Domain.Common;
 
@@ -19,9 +20,13 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<MainProjectListItemDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResultDto<MainProjectListItemDto>>> GetAll(
+        [FromQuery] int page, [FromQuery] int pageSize, CancellationToken cancellationToken)
     {
-        var result = await _mainProjectService.GetAllAsync(cancellationToken);
+        var effectivePage = page <= 0 ? 1 : page;
+        var effectivePageSize = pageSize <= 0 ? 2000 : pageSize;
+
+        var result = await _mainProjectService.GetAllAsync(effectivePage, effectivePageSize, cancellationToken);
         return Ok(result);
     }
 

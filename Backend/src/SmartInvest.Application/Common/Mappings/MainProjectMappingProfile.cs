@@ -26,17 +26,12 @@ public class MainProjectMappingProfile : Profile
             .ForMember(
                 dest => dest.MainProgramName,
                 opt => opt.MapFrom(src => src.SubProgram.MainProgram.ProgramName))
-            .ForMember(
-                dest => dest.SubProjectsCount,
-                opt => opt.MapFrom(src => src.SubProjects.Count))
-            .ForMember(
-                dest => dest.TotalBankFunding,
-                opt => opt.MapFrom(src =>
-                    src.SubProjects.Sum(sp => sp.BankFunding)))
-            .ForMember(
-                dest => dest.TotalSelfFunding,
-                opt => opt.MapFrom(src =>
-                    src.SubProjects.Sum(sp => sp.SelfFunding)));
+            // SubProjectsCount/TotalBankFunding/TotalSelfFunding عمدًا مش متعرّفين هنا —
+            // src.SubProjects مش محمّل (شوف MainProjectRepository.GetAllWithDetailsAsync)،
+            // القيم دي بتتحط يدويًا في MainProjectService.GetAllAsync من استعلام GROUP BY منفصل
+            .ForMember(dest => dest.SubProjectsCount, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalBankFunding, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalSelfFunding, opt => opt.Ignore());
 
         CreateMap<MainProject, MainProjectDetailDto>()
             .ForMember(

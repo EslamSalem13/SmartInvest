@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   CreateMainProject,
@@ -23,7 +23,9 @@ export class ProjectsService {
 
   // ===== المشاريع الرئيسية =====
   getMainProjects(): Observable<MainProjectListItem[]> {
-    return this.http.get<MainProjectListItem[]>(`${this.base}/mainprojects`);
+    return this.http
+      .get<PagedResult<MainProjectListItem>>(`${this.base}/mainprojects`, { params: { pageSize: 2000 } })
+      .pipe(map((r) => r.items));
   }
 
   getMainProject(id: number): Observable<MainProjectDetail> {
