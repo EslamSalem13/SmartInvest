@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -17,7 +18,7 @@ import {
 
 @Component({
   selector: 'app-procurement-workflow',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, DecimalPipe],
   templateUrl: './procurement-workflow.html',
   styleUrl: './financial.css',
 })
@@ -100,6 +101,27 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly awardEditable = computed(
     () => this.isStaff() && !this.stageDetail()?.isCompleted,
   );
+
+  /**
+   * ملف المقاول المختار (الغرامات + هل نتعامل معه تاني + آخر ملاحظة).
+   * لا يُشتق من contractors() لأن /api/contractors (القائمة) لا يحسب totalFines/unpaidFines/notes —
+   * هذه الحقول تُحسب فقط في GetByIdAsync، لذا نجلبها مباشرة عند تغيّر المقاول المختار.
+   */
+  protected readonly selectedContractorProfile = signal<Contractor | null>(null);
+
+  constructor() {
+    effect(() => {
+      const id = this.aContractorId();
+      if (id == null) {
+        this.selectedContractorProfile.set(null);
+        return;
+      }
+      this.contractorsService.getById(id).subscribe({
+        next: (full) => this.selectedContractorProfile.set(full),
+        error: () => this.selectedContractorProfile.set(null),
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.reload();

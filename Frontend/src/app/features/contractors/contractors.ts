@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ContractorsService } from '../../core/services/contractors.service';
@@ -9,7 +10,7 @@ type StatusFilter = 'all' | 'active' | 'inactive';
 
 @Component({
   selector: 'app-contractors',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, DatePipe],
   templateUrl: './contractors.html',
   styleUrl: './contractors.css',
 })
@@ -95,6 +96,66 @@ export class Contractors {
 
   protected retryDetail(id: number): void {
     this.loadDetail(id);
+  }
+
+  // ===== هل نتعامل معه تاني؟ =====
+  protected setWillWorkAgain(contractor: Contractor, value: boolean | null): void {
+    this.contractorsService.setWillWorkAgain(contractor.id, value).subscribe({
+      next: (updated) => {
+        this.contractors.update((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+      },
+    });
+  }
+
+  // ===== ملاحظات المقاول =====
+  // مسودة نص لكل مقاول على حدة (Map مفتاحها id المقاول)، لأن عدة صفوف يمكن أن تكون
+  // مفتوحة في نفس الوقت (expandedIds مجموعة) — إشارة نص واحدة مشتركة كانت ستُظهر
+  // نفس المسودة في كل الصفوف المفتوحة معًا.
+  protected readonly noteDrafts = signal<Map<number, string>>(new Map());
+  protected readonly savingNoteIds = signal<Set<number>>(new Set());
+
+  protected noteDraft(id: number): string {
+    return this.noteDrafts().get(id) ?? '';
+  }
+
+  protected setNoteDraft(id: number, value: string): void {
+    const next = new Map(this.noteDrafts());
+    next.set(id, value);
+    this.noteDrafts.set(next);
+  }
+
+  protected isSavingNote(id: number): boolean {
+    return this.savingNoteIds().has(id);
+  }
+
+  protected addNote(contractor: Contractor): void {
+    const text = this.noteDraft(contractor.id).trim();
+    if (!text || this.isSavingNote(contractor.id)) return;
+    this.savingNoteIds.update((s) => {
+      const n = new Set(s);
+      n.add(contractor.id);
+      return n;
+    });
+    this.contractorsService.addNote(contractor.id, text, null).subscribe({
+      next: (note) => {
+        this.savingNoteIds.update((s) => {
+          const n = new Set(s);
+          n.delete(contractor.id);
+          return n;
+        });
+        this.setNoteDraft(contractor.id, '');
+        this.contractors.update((list) =>
+          list.map((c) => (c.id === contractor.id ? { ...c, notes: [note, ...c.notes] } : c)),
+        );
+      },
+      error: () => {
+        this.savingNoteIds.update((s) => {
+          const n = new Set(s);
+          n.delete(contractor.id);
+          return n;
+        });
+      },
+    });
   }
 
   private loadDetail(id: number): void {

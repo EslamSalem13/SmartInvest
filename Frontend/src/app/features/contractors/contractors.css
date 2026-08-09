@@ -68,6 +68,17 @@ tr.sub-row td { background: var(--surface-2); white-space: normal; }
 .assigned-list a:hover { text-decoration: underline; }
 .assigned-list .muted { color: var(--muted); font-weight: 400; }
 
+/* ملف المقاول الموسّع — الغرامات، هل نتعامل معه تاني، الملاحظات */
+.contractor-detail { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line-strong); }
+.fines-row, .wwa-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.fines-row span:first-child, .wwa-row span:first-child { color: var(--muted); font-weight: 700; flex-shrink: 0; }
+.notes-list { display: flex; flex-direction: column; gap: 6px; }
+.note-item { display: flex; flex-direction: column; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 11px; }
+.note-item span { font-size: 12.5px; }
+.note-item small { color: var(--muted); font-size: 11px; }
+.note-add { display: flex; gap: 8px; }
+.note-add input { flex: 1; min-width: 0; }
+
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 800; background: var(--bad-bg); color: #b32a39; }
 .pill.ok { background: var(--ok-bg); color: #0f7a41; }
 .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }

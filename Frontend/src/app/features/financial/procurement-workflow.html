@@ -126,6 +126,32 @@
                           }
                         </select>
                       </div>
+                      @if (selectedContractorProfile(); as profile) {
+                        <div class="si-fld full contractor-summary">
+                          <div class="cs-row">
+                            <span>هل نتعامل معه تاني؟</span>
+                            @if (profile.willWorkAgain === true) {
+                              <span class="chip ok-chip">نعم</span>
+                            } @else if (profile.willWorkAgain === false) {
+                              <span class="chip warn-chip">لا</span>
+                            } @else {
+                              <span class="chip">لم يُقيَّم بعد</span>
+                            }
+                          </div>
+                          @if (profile.totalFines > 0) {
+                            <div class="cs-row">
+                              <span>إجمالي الغرامات</span>
+                              <b class="tnum warn">{{ profile.totalFines | number }} ج.م ({{ profile.unpaidFines | number }} غير مسددة)</b>
+                            </div>
+                          }
+                          @if (profile.notes.length > 0) {
+                            <div class="cs-row">
+                              <span>آخر ملاحظة</span>
+                              <span>{{ profile.notes[0].text }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
                       <div class="si-fld">
                         <label>نوع العقد <span class="req">*</span></label>
                         <select [ngModel]="aContractTypeId()" (ngModelChange)="aContractTypeId.set($event)" [disabled]="!awardEditable()">

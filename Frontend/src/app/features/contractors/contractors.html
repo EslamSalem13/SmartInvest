@@ -84,15 +84,59 @@
                       </span>
                     } @else if (!isDetailLoaded(c.id)) {
                       <span class="empty-subs"><span class="spinner"></span> جاري التحميل…</span>
-                    } @else if (c.assignedSubProjects.length === 0) {
-                      <span class="empty-subs">لا توجد مشروعات فرعية مسندة إلى هذا المقاول.</span>
                     } @else {
-                      <div class="assigned-list">
-                        @for (sp of c.assignedSubProjects; track sp.id) {
-                          <a [routerLink]="['/app/projects', sp.id]" (click)="$event.stopPropagation()">
-                            {{ sp.name }} <span class="muted">— {{ sp.mainProjectName }}</span>
-                          </a>
+                      @if (c.assignedSubProjects.length === 0) {
+                        <span class="empty-subs">لا توجد مشروعات فرعية مسندة إلى هذا المقاول.</span>
+                      } @else {
+                        <div class="assigned-list">
+                          @for (sp of c.assignedSubProjects; track sp.id) {
+                            <a [routerLink]="['/app/projects', sp.id]" (click)="$event.stopPropagation()">
+                              {{ sp.name }} <span class="muted">— {{ sp.mainProjectName }}</span>
+                            </a>
+                          }
+                        </div>
+                      }
+
+                      <div class="contractor-detail">
+                        @if (c.totalFines > 0) {
+                          <div class="fines-row">
+                            <span>إجمالي الغرامات</span>
+                            <b class="tnum warn">{{ c.totalFines }} ج.م ({{ c.unpaidFines }} غير مسددة)</b>
+                          </div>
                         }
+
+                        <div class="wwa-row">
+                          <span>نتعامل معه تاني؟</span>
+                          @if (isManager()) {
+                            <button class="si-btn sm" [class.primary]="c.willWorkAgain === true" (click)="setWillWorkAgain(c, true); $event.stopPropagation()">نعم</button>
+                            <button class="si-btn sm" [class.danger]="c.willWorkAgain === false" (click)="setWillWorkAgain(c, false); $event.stopPropagation()">لا</button>
+                          } @else if (c.willWorkAgain === true) {
+                            <span class="chip ok-chip">نعم</span>
+                          } @else if (c.willWorkAgain === false) {
+                            <span class="chip warn-chip">لا</span>
+                          } @else {
+                            <span class="chip">لم يُقيَّم بعد</span>
+                          }
+                        </div>
+
+                        <div class="notes-list">
+                          @for (n of c.notes; track n.id) {
+                            <div class="note-item">
+                              <span>{{ n.text }}</span>
+                              <small>{{ n.createdAt | date: 'yyyy/MM/dd' }} @if (n.isAiGenerated) { · AI }</small>
+                            </div>
+                          } @empty {
+                            <span class="empty-subs">لا توجد ملاحظات بعد.</span>
+                          }
+                        </div>
+                        <div class="note-add" (click)="$event.stopPropagation()">
+                          <input
+                            [ngModel]="noteDraft(c.id)"
+                            (ngModelChange)="setNoteDraft(c.id, $event)"
+                            placeholder="أضف ملاحظة…"
+                          />
+                          <button class="si-btn sm primary" [disabled]="isSavingNote(c.id)" (click)="addNote(c)">إضافة</button>
+                        </div>
                       </div>
                     }
                   </td>

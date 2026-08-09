@@ -215,3 +215,9 @@ td.notes { color: var(--muted); max-width: 240px; }
 .ab-item b { font-size: 13.5px; color: var(--green-900); }
 .inline-check { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .inline-check input { accent-color: var(--green-700); width: 16px; height: 16px; }
+
+/* ملخص ملف المقاول — يظهر عند اختياره في خطوة الإسناد */
+.contractor-summary { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 13px; display: flex; flex-direction: column; gap: 7px; }
+.contractor-summary .cs-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; }
+.contractor-summary .cs-row > span:first-child { color: var(--muted); font-weight: 700; flex-shrink: 0; }
+.contractor-summary .cs-row b { font-size: 13px; }
