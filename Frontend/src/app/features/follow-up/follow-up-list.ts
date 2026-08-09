@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FollowUpService } from '../../core/services/follow-up.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ExecutionStage, FollowUpListItem } from '../../core/models/follow-up.models';
 import { FinancialYear } from '../../core/models/project.models';
 
@@ -15,6 +16,9 @@ import { FinancialYear } from '../../core/models/project.models';
 export class FollowUpList implements OnInit {
   private readonly followUp = inject(FollowUpService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly auth = inject(AuthService);
+
+  protected readonly isManager = this.auth.isManager;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -194,6 +198,43 @@ export class FollowUpList implements OnInit {
     this.followUp.markComplete(item.subProjectId, stage.id).subscribe({
       next: () => this.loadStages(item.subProjectId),
     });
+  }
+
+  protected readonly editingPenaltyStageId = signal<number | null>(null);
+  protected readonly penaltyAmountDraft = signal<number | null>(null);
+  protected readonly penaltyPaidDraft = signal(false);
+  protected readonly savingPenalty = signal(false);
+
+  protected startEditPenalty(stage: ExecutionStage): void {
+    this.editingPenaltyStageId.set(stage.id);
+    this.penaltyAmountDraft.set(stage.penaltyAmount);
+    this.penaltyPaidDraft.set(stage.penaltyPaid);
+  }
+
+  protected cancelEditPenalty(): void {
+    this.editingPenaltyStageId.set(null);
+  }
+
+  protected updatePenaltyAmountDraft(value: number | string): void {
+    this.penaltyAmountDraft.set(value === '' || value == null ? null : Number(value));
+  }
+
+  protected savePenalty(stage: ExecutionStage): void {
+    const item = this.selectedItem();
+    if (!item || this.savingPenalty()) return;
+    this.savingPenalty.set(true);
+    this.followUp
+      .setPenalty(item.subProjectId, stage.id, this.penaltyAmountDraft(), this.penaltyPaidDraft())
+      .subscribe({
+        next: () => {
+          this.savingPenalty.set(false);
+          this.editingPenaltyStageId.set(null);
+          this.loadStages(item.subProjectId);
+        },
+        error: () => {
+          this.savingPenalty.set(false);
+        },
+      });
   }
 
   /**

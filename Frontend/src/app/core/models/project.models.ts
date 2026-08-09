@@ -103,6 +103,7 @@ export interface SubProjectDetail {
   bankFunding: number;
   selfFunding: number;
   totalCost: number;
+  overrunPercentage: number | null;
   executiveAgencyId: number | null;
   executiveAgencyName: string | null;
   contractorName: string | null;
@@ -165,7 +166,9 @@ export interface CreateSubProject {
   greenInvestmentLink?: string | null;
 }
 
-export type UpdateSubProject = Omit<CreateSubProject, 'mainProjectId'>;
+export type UpdateSubProject = Omit<CreateSubProject, 'mainProjectId'> & {
+  overrunPercentage?: number | null;
+};
 
 export interface SubProjectSearchParams {
   mainProjectId?: number;

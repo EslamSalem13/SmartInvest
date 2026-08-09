@@ -214,6 +214,12 @@ interface MeasurementRow {
                 </div>
                 <div class="money-total">الإجمالي: {{ selfFunding().toLocaleString('en-US') }} ج.م</div>
               </div>
+              @if (edit()) {
+                <div class="si-fld">
+                  <label>نسبة السماح بتجاوز الميزانية (%)</label>
+                  <input type="number" min="0" max="100" step="0.01" [ngModel]="overrunPercentage()" (ngModelChange)="updateOverrunPercentage($event)" placeholder="بدون تجاوز" />
+                </div>
+              }
               <div class="si-fld full">
                 <label>ملاحظات / وصف</label>
                 <textarea [ngModel]="description()" (ngModelChange)="description.set($event)" placeholder="أي ملاحظات إضافية…"></textarea>
@@ -384,6 +390,12 @@ export class SubProjectForm {
   protected updateSelfFundingPart(part: keyof BudgetParts, value: number | string): void {
     this.selfFundingParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
   }
+
+  protected readonly overrunPercentage = signal<number | null>(null);
+
+  protected updateOverrunPercentage(value: number | string): void {
+    this.overrunPercentage.set(value === '' || value == null ? null : Number(value));
+  }
   protected readonly description = signal('');
   protected readonly executiveAgencyId = signal<number | null>(null);
   private originalExecutiveAgencyId: number | null = null;
@@ -519,6 +531,7 @@ export class SubProjectForm {
           this.statusId.set(d.statusId);
           this.bankFundingParts.set(splitBudget(d.bankFunding));
           this.selfFundingParts.set(splitBudget(d.selfFunding));
+          this.overrunPercentage.set(d.overrunPercentage);
           this.description.set(d.description ?? '');
           this.executiveAgencyId.set(d.executiveAgencyId);
           this.originalExecutiveAgencyId = d.executiveAgencyId;
@@ -651,6 +664,7 @@ export class SubProjectForm {
     this.statusId.set(null);
     this.bankFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
     this.selfFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
+    this.overrunPercentage.set(null);
     this.description.set('');
     this.executiveAgencyId.set(null);
     this.originalExecutiveAgencyId = null;
@@ -748,7 +762,7 @@ export class SubProjectForm {
 
     const editing = this.edit();
     const req = editing
-      ? this.projectsService.updateSubProject(editing.id, base)
+      ? this.projectsService.updateSubProject(editing.id, { ...base, overrunPercentage: this.overrunPercentage() })
       : this.projectsService.createSubProject({ ...base, mainProjectId: (mainProjectId ?? this.mainProjectId())! });
 
     req.subscribe({

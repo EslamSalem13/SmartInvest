@@ -141,6 +141,7 @@ public class SubProjectService : ISubProjectService
         subProject.StatusId = dto.StatusId;
         subProject.BankFunding = dto.BankFunding;
         subProject.SelfFunding = dto.SelfFunding;
+        subProject.OverrunPercentage = dto.OverrunPercentage;
         subProject.Latitude = dto.Latitude;
         subProject.Longitude = dto.Longitude;
         subProject.ProjectDescription = dto.Description;

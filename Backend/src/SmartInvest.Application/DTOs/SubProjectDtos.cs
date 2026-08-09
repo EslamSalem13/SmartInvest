@@ -101,6 +101,9 @@ public class SubProjectDetailDto
     public decimal SelfFunding { get; set; }
     public decimal TotalCost { get; set; }
 
+    /// <summary>نسبة السماح بتجاوز الميزانية أثناء التنفيذ (مثال: 10 تعني 10%) — null تعني عدم السماح بأي تجاوز.</summary>
+    public decimal? OverrunPercentage { get; set; }
+
     public string? ContractorName { get; set; }
     public string? ContractTypeName { get; set; }
     public string? ContractNumber { get; set; }
@@ -149,6 +152,7 @@ public class UpdateSubProjectDto
     public int StatusId { get; set; }
     public decimal BankFunding { get; set; }
     public decimal SelfFunding { get; set; }
+    public decimal? OverrunPercentage { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public string? Description { get; set; }

@@ -133,7 +133,33 @@
                           <button type="button" class="file-lnk" title="تنزيل إثبات التنفيذ العيني" (click)="downloadProof(s, 'progress')">📎</button>
                         }
                       </td>
-                      <td class="tnum">{{ s.penaltyAmount != null ? money(s.penaltyAmount) : '—' }}</td>
+                      <td class="tnum penalty-cell">
+                        @if (editingPenaltyStageId() === s.id) {
+                          <div class="penalty-edit">
+                            <input
+                              type="number"
+                              min="0"
+                              [ngModel]="penaltyAmountDraft()"
+                              (ngModelChange)="updatePenaltyAmountDraft($event)"
+                              placeholder="بدون غرامة"
+                            />
+                            <label class="paid-chk">
+                              <input type="checkbox" [ngModel]="penaltyPaidDraft()" (ngModelChange)="penaltyPaidDraft.set($event)" />
+                              مدفوعة
+                            </label>
+                            <button class="si-btn primary sm" [disabled]="savingPenalty()" (click)="savePenalty(s)">حفظ</button>
+                            <button class="si-btn sm" (click)="cancelEditPenalty()">إلغاء</button>
+                          </div>
+                        } @else {
+                          {{ s.penaltyAmount != null ? money(s.penaltyAmount) : '—' }}
+                          @if (s.penaltyAmount != null) {
+                            <span class="chip" [class.warn-chip]="!s.penaltyPaid">{{ s.penaltyPaid ? 'مدفوعة' : 'غير مدفوعة' }}</span>
+                          }
+                          @if (isManager()) {
+                            <button type="button" class="file-lnk" title="تعديل الغرامة" (click)="startEditPenalty(s)">✏️</button>
+                          }
+                        }
+                      </td>
                       <td>
                         @if (s.isCompleted) {
                           <span class="st-pill ok">مكتملة</span>
