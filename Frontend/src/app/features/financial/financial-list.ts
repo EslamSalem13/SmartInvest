@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FinancialService } from '../../core/services/financial.service';
@@ -27,18 +27,67 @@ export class FinancialList implements OnInit {
     [...this.financialYears()].sort((a, b) => b.startDate.localeCompare(a.startDate)),
   );
 
+  /** فلتر تقدم الطرح (0..6) — اختيار متعدد؛ مجموعة فارغة تعني بدون فلترة */
+  protected readonly stageCountFilter = signal<Set<number>>(new Set());
+  protected readonly stageCountOptions = [0, 1, 2, 3, 4, 5, 6];
+
+  protected toggleStageCount(n: number): void {
+    this.stageCountFilter.update((current) => {
+      const next = new Set(current);
+      if (next.has(n)) {
+        next.delete(n);
+      } else {
+        next.add(n);
+      }
+      return next;
+    });
+  }
+
   protected readonly filtered = computed(() => {
     const term = this.search().trim();
-    if (!term) {
-      return this.items();
-    }
-    return this.items().filter(
-      (x) =>
+    const stages = this.stageCountFilter();
+
+    return this.items().filter((x) => {
+      const matchesTerm =
+        !term ||
         x.subProjectName.includes(term) ||
         (x.subProjectCode ?? '').includes(term) ||
-        x.mainProjectName.includes(term),
-    );
+        x.mainProjectName.includes(term);
+      const matchesStages = stages.size === 0 || stages.has(x.completedStages);
+      return matchesTerm && matchesStages;
+    });
   });
+
+  // ===== pagination =====
+  protected readonly page = signal(1);
+  protected readonly pageSize = 10;
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filtered().length / this.pageSize)),
+  );
+  protected readonly pagedItems = computed<ProcurementSubProjectListItem[]>(() => {
+    const start = (this.page() - 1) * this.pageSize;
+    return this.filtered().slice(start, start + this.pageSize);
+  });
+  protected readonly rangeStart = computed(() =>
+    this.filtered().length === 0 ? 0 : (this.page() - 1) * this.pageSize + 1,
+  );
+  protected readonly rangeEnd = computed(() =>
+    Math.min(this.page() * this.pageSize, this.filtered().length),
+  );
+
+  protected goToPage(p: number): void {
+    if (p >= 1 && p <= this.totalPages()) {
+      this.page.set(p);
+    }
+  }
+
+  constructor() {
+    effect(() => {
+      this.search();
+      this.stageCountFilter();
+      this.page.set(1);
+    });
+  }
 
   protected readonly kpiTotal = computed(() => this.items().length);
   protected readonly kpiDone = computed(

@@ -8,6 +8,15 @@
 .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 select.mini { border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm); padding: 10px 14px; min-height: 44px; font-family: inherit; font-weight: 700; font-size: 13px; color: var(--ink); }
 
+/* ترقيم الصفحات — نفس نمط .tblfoot/.pager في projects.css (الأنماط بالكومبوننت لا تتجاوز حدوده) */
+.tblfoot { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.tblfoot .muted { color: var(--muted); font-size: 12.5px; flex: 1; }
+.pager { display: flex; gap: 5px; flex-wrap: wrap; }
+.pager button { min-width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); font-weight: 700; color: var(--ink); transition: background .15s var(--ease), color .15s var(--ease); }
+.pager button:hover:not(:disabled) { background: var(--surface-2); }
+.pager button.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; border-color: var(--green-800); }
+.pager button:disabled { opacity: .5; cursor: default; }
+
 .state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: 48px; color: var(--muted); box-shadow: var(--shadow-sm); }
 .state.error { color: #b32a39; border-color: #F3C6CC; background: var(--bad-bg); }
 .spinner { width: 16px; height: 16px; border: 2px solid var(--line-strong); border-top-color: var(--green-700); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }

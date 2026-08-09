@@ -47,6 +47,21 @@
           (ngModelChange)="search.set($event)"
         />
       </div>
+      <div class="memo-filters">
+        <span class="lbl">تقدم الطرح:</span>
+        <div class="filter-tabs">
+          @for (n of stageCountOptions; track n) {
+            <button
+              type="button"
+              class="ftab"
+              [class.on]="stageCountFilter().has(n)"
+              (click)="toggleStageCount(n)"
+            >
+              {{ n }}/6
+            </button>
+          }
+        </div>
+      </div>
       <div class="tbl-wrap">
         <table>
           <thead>
@@ -60,7 +75,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (item of filtered(); track item.subProjectId) {
+            @for (item of pagedItems(); track item.subProjectId) {
               <tr>
                 <td>{{ item.subProjectName }}</td>
                 <td>
@@ -95,6 +110,16 @@
             }
           </tbody>
         </table>
+      </div>
+      <div class="tblfoot">
+        <span class="muted">عرض {{ rangeStart() }}–{{ rangeEnd() }} من أصل {{ filtered().length }} مشروع فرعي</span>
+        <div class="pager">
+          <button (click)="goToPage(page() - 1)" [disabled]="page() === 1">‹</button>
+          @for (p of [].constructor(totalPages()); track $index) {
+            <button [class.on]="page() === $index + 1" (click)="goToPage($index + 1)">{{ $index + 1 }}</button>
+          }
+          <button (click)="goToPage(page() + 1)" [disabled]="page() === totalPages()">›</button>
+        </div>
       </div>
     </div>
   }
