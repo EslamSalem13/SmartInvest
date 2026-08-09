@@ -88,6 +88,9 @@ public class ContractAwardDetailsDto
     public int? SiteHandoverMode { get; set; }
     public DateTime? SiteHandoverDate { get; set; }
 
+    /// <summary>اسم ملف إثبات تسليم الأرضية — null يعني لم يُرفع بعد.</summary>
+    public string? SiteHandoverProofFileName { get; set; }
+
     /// <summary>تاريخ التسليم المستحق — محسوب من تاريخ تسليم الأرضية + المدة.</summary>
     public DateTime? ContractualDeliveryDate { get; set; }
 
@@ -118,12 +121,6 @@ public class SetContractAwardDetailsDto
     public int? ContractTypeId { get; set; }
     public string? ContractNumber { get; set; }
     public decimal? ContractValue { get; set; }
-}
-
-/// <summary>تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ.</summary>
-public class SetSiteHandoverDto
-{
-    public DateTime HandoverDate { get; set; }
 }
 
 public class ProcurementStageDetailDto : ProcurementStageDto

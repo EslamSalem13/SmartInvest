@@ -28,5 +28,7 @@ public interface IProcurementService
     Task SetContractAwardDetailsAsync(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken = default);
 
     /// <summary>تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ.</summary>
-    Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, CancellationToken cancellationToken = default);
+    Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, FileUploadDto proofFile, CancellationToken cancellationToken = default);
+
+    Task<FileDownloadDto> DownloadSiteHandoverProofAsync(int subProjectId, CancellationToken cancellationToken = default);
 }

@@ -19,6 +19,8 @@ public class ContractAwardConfiguration : IEntityTypeConfiguration<ContractAward
                .WithMany()
                .HasForeignKey(x => x.ProjectAssignmentId)
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.OwnsStoredFile(x => x.SiteHandoverProofFile, "SiteHandoverProof_");
     }
 }
 

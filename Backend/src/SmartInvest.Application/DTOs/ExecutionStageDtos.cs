@@ -5,7 +5,14 @@ public class ExecutionStageDto
     public int Id { get; set; }
     public int SubProjectId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public DateTime Deadline { get; set; }
+    /// <summary>null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية.</summary>
+    public DateTime? Deadline { get; set; }
+
+    /// <summary>مرحلة التسليم النهائي المُدارة تلقائيًا — مقفولة في الواجهة.</summary>
+    public bool IsFinalDelivery { get; set; }
+
+    /// <summary>موعد هذه المرحلة يتجاوز تاريخ التسليم التعاقدي — تحذير فقط، لا يمنع الحفظ.</summary>
+    public bool ExceedsContractualDeadline { get; set; }
 
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }

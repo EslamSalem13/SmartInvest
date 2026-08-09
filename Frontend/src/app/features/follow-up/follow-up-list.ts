@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { FollowUpService } from '../../core/services/follow-up.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
+import { FinancialService } from '../../core/services/financial.service';
+import { ToastService } from '../../core/services/toast.service';
 import { ExecutionStage, FollowUpListItem } from '../../core/models/follow-up.models';
 import { FinancialYear } from '../../core/models/project.models';
 
@@ -17,6 +19,8 @@ export class FollowUpList implements OnInit {
   private readonly followUp = inject(FollowUpService);
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
+  private readonly financial = inject(FinancialService);
+  private readonly toast = inject(ToastService);
 
   protected readonly isManager = this.auth.isManager;
 
@@ -113,7 +117,7 @@ export class FollowUpList implements OnInit {
     this.loadStages(item.subProjectId);
   }
 
-  private loadStages(subProjectId: number): void {
+  protected loadStages(subProjectId: number): void {
     this.stagesLoading.set(true);
     this.followUp.getStages(subProjectId).subscribe({
       next: (stages) => {
@@ -121,6 +125,65 @@ export class FollowUpList implements OnInit {
         this.stagesLoading.set(false);
       },
       error: () => this.stagesLoading.set(false),
+    });
+  }
+
+  protected readonly showHandover = signal(false);
+  protected readonly handoverDate = signal('');
+  protected readonly handoverSaving = signal(false);
+  protected handoverFile: File | null = null;
+
+  /** مرحلة التسليم النهائي بلا موعد = الأرضية لم تُسلَّم بعد */
+  protected readonly awaitingHandover = computed(() =>
+    this.stages().some((s) => s.isFinalDelivery && s.deadline == null),
+  );
+
+  /** مرحلة التسليم النهائي بموعد محسوب = تم تسجيل تسليم سابقًا، فالإجراء المتاح الآن تصحيحه */
+  protected readonly canCorrectHandover = computed(() =>
+    this.stages().some((s) => s.isFinalDelivery && s.deadline != null),
+  );
+
+  protected openHandover(): void {
+    this.handoverDate.set('');
+    this.handoverFile = null;
+    this.showHandover.set(true);
+  }
+
+  protected closeHandover(): void {
+    this.showHandover.set(false);
+  }
+
+  protected onHandoverFileChange(event: Event): void {
+    this.handoverFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected saveHandover(): void {
+    const item = this.selectedItem();
+    if (!item || this.handoverSaving()) {
+      return;
+    }
+    if (!this.handoverDate()) {
+      this.toast.error('برجاء تحديد تاريخ تسليم الأرضية');
+      return;
+    }
+    if (!this.handoverFile) {
+      this.toast.error('برجاء رفع إثبات تسليم الأرضية');
+      return;
+    }
+
+    this.handoverSaving.set(true);
+    this.financial.setSiteHandover(item.subProjectId, this.handoverDate(), this.handoverFile).subscribe({
+      next: () => {
+        this.handoverSaving.set(false);
+        this.showHandover.set(false);
+        this.toast.success('تم تسجيل تسليم الأرضية — تم احتساب الموعد النهائي');
+        this.loadStages(item.subProjectId);
+        this.load();
+      },
+      error: (err) => {
+        this.handoverSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر تسجيل تسليم الأرضية');
+      },
     });
   }
 
@@ -196,7 +259,26 @@ export class FollowUpList implements OnInit {
     const item = this.selectedItem();
     if (!item) return;
     this.followUp.markComplete(item.subProjectId, stage.id).subscribe({
-      next: () => this.loadStages(item.subProjectId),
+      next: () => {
+        this.toast.success('تم إنهاء المرحلة');
+        this.loadStages(item.subProjectId);
+        this.load();
+      },
+      error: (err) => this.toast.error(err?.error?.message ?? 'تعذر إنهاء المرحلة'),
+    });
+  }
+
+  /** عكس إنهاء مرحلة عن طريق الخطأ — مدير التخطيط فقط */
+  protected reopenStage(stage: ExecutionStage): void {
+    const item = this.selectedItem();
+    if (!item) return;
+    this.followUp.reopenStage(item.subProjectId, stage.id).subscribe({
+      next: () => {
+        this.toast.success('تم إعادة فتح المرحلة');
+        this.loadStages(item.subProjectId);
+        this.load();
+      },
+      error: (err) => this.toast.error(err?.error?.message ?? 'تعذر إعادة فتح المرحلة'),
     });
   }
 

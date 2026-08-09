@@ -229,3 +229,7 @@ td.notes { color: var(--muted); max-width: 240px; }
 .penalty-edit input[type="number"] { width: 90px; border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm); padding: 6px 9px; font-family: inherit; font-size: 12.5px; background: var(--surface); color: var(--ink); }
 .paid-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
 .paid-chk input { accent-color: var(--green-700); width: 14px; height: 14px; }
+
+/* مرحلة التسليم النهائي المُدارة تلقائيًا — مميزة ومقفولة */
+.final-row { background: var(--surface-2); }
+.final-row td { font-weight: 700; }

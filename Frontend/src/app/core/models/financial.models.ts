@@ -38,6 +38,7 @@ export interface ContractAwardDetails {
   /** 1 = مُسلَّمة وقت الترسية، 2 = لم تُسلَّم بعد */
   siteHandoverMode: number | null;
   siteHandoverDate: string | null;
+  siteHandoverProofFileName: string | null;
   contractualDeliveryDate: string | null;
 
   penaltyAmount: number | null;

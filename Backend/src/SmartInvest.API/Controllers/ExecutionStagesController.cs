@@ -95,6 +95,15 @@ public class ExecutionStagesController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>عكس إنهاء المرحلة عن طريق الخطأ — مدير التخطيط فقط.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/reopen")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<ActionResult<ExecutionStageDto>> Reopen(int subProjectId, int stageId, CancellationToken cancellationToken)
+    {
+        var result = await _executionStageService.ReopenAsync(subProjectId, stageId, cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/penalty")]
     [Authorize(Roles = Roles.PlanningManager)]
     public async Task<ActionResult<ExecutionStageDto>> SetPenalty(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken)

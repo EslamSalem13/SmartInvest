@@ -51,6 +51,13 @@ export class FollowUpService {
     );
   }
 
+  reopenStage(subProjectId: number, stageId: number): Observable<ExecutionStage> {
+    return this.http.put<ExecutionStage>(
+      `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/reopen`,
+      {},
+    );
+  }
+
   setPenalty(
     subProjectId: number,
     stageId: number,

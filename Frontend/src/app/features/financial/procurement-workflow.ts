@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
+import { ToastService } from '../../core/services/toast.service';
 import { ContractorsService } from '../../core/services/contractors.service';
 import { ContractTypesService } from '../../core/services/contract-types.service';
 import { Roles } from '../../core/models/auth.models';
@@ -28,6 +29,7 @@ export class ProcurementWorkflow implements OnInit {
   private readonly contractorsService = inject(ContractorsService);
   private readonly contractTypesService = inject(ContractTypesService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   protected readonly subProjectId = Number(this.route.snapshot.paramMap.get('id'));
 
@@ -82,6 +84,10 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly aPenaltyAmount = signal<number | null>(null);
   protected readonly awardSaving = signal(false);
   protected readonly awardError = signal<string | null>(null);
+
+  protected readonly aHandoverDate = signal<string>('');
+  protected readonly aHandoverSaving = signal(false);
+  protected aHandoverFile: File | null = null;
 
   /** قيمة الدفعة المقدمة بالجنيه — تظهر تلقائيًا بمجرد كتابة النسبة */
   protected readonly advanceAmount = computed(() => {
@@ -157,6 +163,7 @@ export class ProcurementWorkflow implements OnInit {
     this.aDurationMonths.set(details.executionDurationMonths);
     this.aDurationDays.set(details.executionDurationDays);
     this.aHandoverMode.set(details.siteHandoverMode);
+    this.aHandoverDate.set(details.siteHandoverDate?.slice(0, 10) ?? '');
     this.aPenaltyAmount.set(details.penaltyAmount);
   }
 
@@ -184,6 +191,7 @@ export class ProcurementWorkflow implements OnInit {
       .subscribe({
         next: () => {
           this.awardSaving.set(false);
+          this.toast.success('تم حفظ بيانات الترسية');
           this.reload();
         },
         error: (err) => {
@@ -191,6 +199,45 @@ export class ProcurementWorkflow implements OnInit {
           this.awardError.set(err?.error?.message ?? 'تعذر حفظ بيانات الترسية');
         },
       });
+  }
+
+  protected onHandoverFileChange(event: Event): void {
+    this.aHandoverFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected saveHandover(): void {
+    if (this.aHandoverSaving()) {
+      return;
+    }
+    if (!this.aHandoverDate()) {
+      this.toast.error('برجاء تحديد تاريخ تسليم الأرضية');
+      return;
+    }
+    if (!this.aHandoverFile) {
+      this.toast.error('برجاء رفع إثبات تسليم الأرضية');
+      return;
+    }
+
+    this.aHandoverSaving.set(true);
+    this.financial.setSiteHandover(this.subProjectId, this.aHandoverDate(), this.aHandoverFile).subscribe({
+      next: () => {
+        this.aHandoverSaving.set(false);
+        this.aHandoverFile = null;
+        this.toast.success('تم تسجيل تسليم الأرضية');
+        this.reload();
+      },
+      error: (err) => {
+        this.aHandoverSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر تسجيل تسليم الأرضية');
+      },
+    });
+  }
+
+  protected downloadHandoverProof(name: string): void {
+    this.financial.downloadSiteHandoverProof(this.subProjectId).subscribe({
+      next: (blob) => this.financial.saveBlob(blob, name),
+      error: () => this.toast.error('تعذر تنزيل إثبات تسليم الأرضية'),
+    });
   }
 
   protected money(value: number | null | undefined): string {
@@ -264,6 +311,11 @@ export class ProcurementWorkflow implements OnInit {
     this.uploadFiles.set({});
     this.uploadError.set(null);
     this.showUpload.set(true);
+    // النموذج بيتفتح تحت أقسام تانية طويلة (بيانات الترسية، تسليم الأرضية…) فمش بيبان للمستخدم
+    // غير لو دوّر لتحت — نسكرول له فور ما يترسم
+    setTimeout(() => {
+      document.querySelector('.upload-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   protected closeUpload(): void {
@@ -372,11 +424,12 @@ export class ProcurementWorkflow implements OnInit {
     this.financial.completeStage(this.subProjectId, detail.stage).subscribe({
       next: () => {
         this.busy.set(false);
+        this.toast.success('تم إكمال المرحلة');
         this.reload();
       },
       error: (err) => {
         this.busy.set(false);
-        alert(err?.error?.message ?? 'تعذر إكمال المرحلة');
+        this.toast.error(err?.error?.message ?? 'تعذر إكمال المرحلة');
       },
     });
   }
@@ -390,11 +443,12 @@ export class ProcurementWorkflow implements OnInit {
     this.financial.reopenStage(this.subProjectId, detail.stage).subscribe({
       next: () => {
         this.busy.set(false);
+        this.toast.success('تم إعادة فتح المرحلة');
         this.reload();
       },
       error: (err) => {
         this.busy.set(false);
-        alert(err?.error?.message ?? 'تعذر إعادة فتح المرحلة');
+        this.toast.error(err?.error?.message ?? 'تعذر إعادة فتح المرحلة');
       },
     });
   }

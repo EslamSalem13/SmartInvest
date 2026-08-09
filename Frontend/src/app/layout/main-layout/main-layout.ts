@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { Roles } from '../../core/models/auth.models';
+import { ToastHost } from '../../shared/toast-host';
 
 interface NavItem {
   label: string;
@@ -16,7 +17,7 @@ const ALLOWED_AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastHost],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.css',
 })

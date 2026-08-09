@@ -15,7 +15,14 @@ public class ExecutionStage
     public virtual SubProject SubProject { get; set; } = null!;
 
     public string Name { get; set; } = string.Empty;
-    public DateTime Deadline { get; set; }
+    public DateTime? Deadline { get; set; }
+
+    /// <summary>
+    /// مرحلة التسليم النهائي المُدارة تلقائيًا — تُنشأ عند إكمال الترسية ويُعاد حساب موعدها
+    /// من تاريخ تسليم الأرضية + مدة التنفيذ. لا يملك المستخدم إنشاءها أو تعديل موعدها.
+    /// Deadline تكون null طالما لم تُسلَّم الأرضية بعد (لا يوجد تاريخ حقيقي يُحسب منه).
+    /// </summary>
+    public bool IsFinalDelivery { get; set; }
 
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }

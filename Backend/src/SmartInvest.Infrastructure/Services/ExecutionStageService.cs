@@ -16,6 +16,8 @@ public class ExecutionStageService : IExecutionStageService
     private readonly ISubProjectRepository _subProjectRepository;
     private readonly IUnitOfWork _unitOfWork;
 
+    public const string FinalDeliveryStageName = "التسليم النهائي";
+
     public ExecutionStageService(
         AppDbContext context,
         IGenericRepository<ExecutionStage> stageRepository,
@@ -32,10 +34,12 @@ public class ExecutionStageService : IExecutionStageService
     {
         var stages = await _context.ExecutionStages.AsNoTracking()
             .Where(s => s.SubProjectId == subProjectId)
-            .OrderBy(s => s.CreatedAt)
+            .OrderBy(s => s.IsFinalDelivery)
+            .ThenBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return stages.Select(ToDto).ToList();
+        var contractualDeliveryDate = await GetContractualDeliveryDateAsync(subProjectId, cancellationToken);
+        return stages.Select(s => ToDto(s, contractualDeliveryDate)).ToList();
     }
 
     public async Task<ExecutionStageDto> CreateAsync(int subProjectId, CreateExecutionStageDto dto, CancellationToken cancellationToken = default)
@@ -77,7 +81,9 @@ public class ExecutionStageService : IExecutionStageService
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
 
         var award = await _context.ContractAwards.AsNoTracking()
-            .FirstOrDefaultAsync(a => a.SubProjectId == subProjectId, cancellationToken);
+            .Where(a => a.SubProjectId == subProjectId)
+            .Select(a => new { a.IsCompleted })
+            .FirstOrDefaultAsync(cancellationToken);
         if (award is not { IsCompleted: true })
         {
             throw new BusinessRuleException("لا يمكن إضافة مرحلة تنفيذ قبل اكتمال مرحلة العقد والترسية");
@@ -132,7 +138,7 @@ public class ExecutionStageService : IExecutionStageService
         await _stageRepository.AddAsync(stage, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(stage);
+        return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
     public async Task<ExecutionStageDto> MarkCompleteAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default)
@@ -144,7 +150,19 @@ public class ExecutionStageService : IExecutionStageService
         _stageRepository.Update(stage);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(stage);
+        return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
+    }
+
+    public async Task<ExecutionStageDto> ReopenAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default)
+    {
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, cancellationToken);
+        stage.IsCompleted = false;
+        stage.CompletedAt = null;
+
+        _stageRepository.Update(stage);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
     public async Task<ExecutionStageDto> SetPenaltyAsync(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken = default)
@@ -156,7 +174,7 @@ public class ExecutionStageService : IExecutionStageService
         _stageRepository.Update(stage);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ToDto(stage);
+        return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
     public async Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, string fileKey, CancellationToken cancellationToken = default)
@@ -187,7 +205,21 @@ public class ExecutionStageService : IExecutionStageService
             mainProjectId: null, mainProgramId, subProgramId, markazId, priorityId,
             statusId: null, financialYearId, searchTerm, page: 1, pageSize: 2000, cancellationToken);
 
-        var approved = subProjects.Where(s => s.IsApproved).ToList();
+        // متابعة المشروعات للمشروعات المُسندة فعلًا لمقاول — أي التي اكتملت ترسيتها.
+        // إكمال الترسية يستلزم بالفعل إكمال المراحل الخمس السابقة، فهذا يكافئ 6/6.
+        var approvedIds = subProjects.Where(s => s.IsApproved).Select(s => s.SubProjectId).ToList();
+        if (approvedIds.Count == 0)
+        {
+            return [];
+        }
+
+        var awardedIds = (await _context.ContractAwards.AsNoTracking()
+                .Where(a => a.IsCompleted && approvedIds.Contains(a.SubProjectId))
+                .Select(a => a.SubProjectId)
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+
+        var approved = subProjects.Where(s => s.IsApproved && awardedIds.Contains(s.SubProjectId)).ToList();
         if (approved.Count == 0)
         {
             return [];
@@ -207,6 +239,7 @@ public class ExecutionStageService : IExecutionStageService
                     Deadline = s.Deadline,
                     IsCompleted = s.IsCompleted,
                     CreatedAt = s.CreatedAt,
+                    IsFinalDelivery = s.IsFinalDelivery,
                 })
                 .ToListAsync(cancellationToken))
             .GroupBy(s => s.SubProjectId)
@@ -229,9 +262,16 @@ public class ExecutionStageService : IExecutionStageService
                 ? 0
                 : Math.Round(stages.Sum(x => x.SelfFundingSpent + x.BankFundingSpent) / s.TotalCost * 100, 2);
 
-            var latestPhysical = stages.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.ExecutionStageId).FirstOrDefault()?.PhysicalProgressPercent ?? 0;
+            var latestPhysical = stages
+                .Where(x => !x.IsFinalDelivery)
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.ExecutionStageId)
+                .FirstOrDefault()?.PhysicalProgressPercent ?? 0;
 
-            var nextDeadline = stages.Where(x => !x.IsCompleted).OrderBy(x => x.Deadline).FirstOrDefault()?.Deadline;
+            var nextDeadline = stages
+                .Where(x => !x.IsCompleted && x.Deadline != null)
+                .OrderBy(x => x.Deadline)
+                .FirstOrDefault()?.Deadline;
 
             contractorNameByProject.TryGetValue(s.SubProjectId, out var contractorName);
 
@@ -251,6 +291,46 @@ public class ExecutionStageService : IExecutionStageService
         }).ToList();
     }
 
+    public async Task SyncFinalDeliveryStageAsync(int subProjectId, CancellationToken cancellationToken = default)
+    {
+        var award = await _context.ContractAwards.AsNoTracking()
+            .Where(a => a.SubProjectId == subProjectId)
+            .Select(a => new { a.IsCompleted, a.SiteHandoverDate, a.ExecutionDurationMonths, a.ExecutionDurationDays })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (award is not { IsCompleted: true })
+        {
+            return;
+        }
+
+        var deadline = ComputeContractualDeliveryDate(
+            award.SiteHandoverDate, award.ExecutionDurationMonths, award.ExecutionDurationDays);
+
+        var stage = await _context.ExecutionStages
+            .FirstOrDefaultAsync(s => s.SubProjectId == subProjectId && s.IsFinalDelivery, cancellationToken);
+
+        if (stage == null)
+        {
+            stage = new ExecutionStage
+            {
+                SubProjectId = subProjectId,
+                Name = FinalDeliveryStageName,
+                IsFinalDelivery = true,
+                Deadline = deadline,
+            };
+            await _stageRepository.AddAsync(stage, cancellationToken);
+        }
+        else
+        {
+            // الاسم والموعد فقط يُداران تلقائيًا — الصرف والنسبة والغرامة تبقى كما سجّلها الموظف
+            stage.Name = FinalDeliveryStageName;
+            stage.Deadline = deadline;
+            _stageRepository.Update(stage);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<ExecutionStage> GetOwnedStageAsync(int subProjectId, int stageId, CancellationToken cancellationToken)
     {
         var stage = await _stageRepository.GetByIdAsync(stageId, cancellationToken);
@@ -262,6 +342,19 @@ public class ExecutionStageService : IExecutionStageService
         return stage;
     }
 
+    /// <summary>تاريخ التسليم التعاقدي المحسوب — null لو الترسية غير مكتملة أو الأرضية لم تُسلَّم.</summary>
+    private async Task<DateTime?> GetContractualDeliveryDateAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var award = await _context.ContractAwards.AsNoTracking()
+            .Where(a => a.SubProjectId == subProjectId && a.IsCompleted)
+            .Select(a => new { a.SiteHandoverDate, a.ExecutionDurationMonths, a.ExecutionDurationDays })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return award == null
+            ? null
+            : ComputeContractualDeliveryDate(award.SiteHandoverDate, award.ExecutionDurationMonths, award.ExecutionDurationDays);
+    }
+
     /// <summary>إسقاط خفيف لصفوف قائمة المتابعة — يتجنب تحميل بايتات ملفات الإثبات (varbinary(max)) لكل مرحلة.</summary>
     private sealed class FollowUpStageProjection
     {
@@ -270,9 +363,10 @@ public class ExecutionStageService : IExecutionStageService
         public decimal SelfFundingSpent { get; set; }
         public decimal BankFundingSpent { get; set; }
         public decimal PhysicalProgressPercent { get; set; }
-        public DateTime Deadline { get; set; }
+        public DateTime? Deadline { get; set; }
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsFinalDelivery { get; set; }
     }
 
     private static StoredFile ToStoredFile(FileUploadDto dto) => new()
@@ -283,12 +377,21 @@ public class ExecutionStageService : IExecutionStageService
         Content = dto.Content,
     };
 
-    private static ExecutionStageDto ToDto(ExecutionStage s) => new()
+    private static DateTime? ComputeContractualDeliveryDate(DateTime? handoverDate, int? months, int? days) =>
+        handoverDate?.AddMonths(months ?? 0).AddDays(days ?? 0);
+
+    private static ExecutionStageDto ToDto(ExecutionStage s, DateTime? contractualDeliveryDate) => new()
     {
         Id = s.ExecutionStageId,
         SubProjectId = s.SubProjectId,
         Name = s.Name,
         Deadline = s.Deadline,
+        IsFinalDelivery = s.IsFinalDelivery,
+        // مرحلة التسليم النهائي هي المرجع نفسه، فلا تُقارن بذاتها
+        ExceedsContractualDeadline = !s.IsFinalDelivery
+            && s.Deadline != null
+            && contractualDeliveryDate != null
+            && s.Deadline > contractualDeliveryDate,
         SelfFundingSpent = s.SelfFundingSpent,
         BankFundingSpent = s.BankFundingSpent,
         HasSelfFundingProof = s.SelfFundingProofFile != null,

@@ -15,7 +15,10 @@ export interface ExecutionStage {
   id: number;
   subProjectId: number;
   name: string;
-  deadline: string;
+  /** null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية */
+  deadline: string | null;
+  isFinalDelivery: boolean;
+  exceedsContractualDeadline: boolean;
   selfFundingSpent: number;
   bankFundingSpent: number;
   hasSelfFundingProof: boolean;

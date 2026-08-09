@@ -86,6 +86,8 @@
                       </button>
                       @if (stageDetail()!.currentVersionNumber > 0) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المرحلة</button>
+                      } @else {
+                        <span class="si-note-inline">ارفع إصدارًا يحتوي على المستندات المطلوبة أولًا — زر "إكمال المرحلة" يظهر بعدها</span>
                       }
                     } @else {
                       <span class="si-note-inline">المرحلة مكتملة — الإصدارات للقراءة فقط.</span>
@@ -235,6 +237,37 @@
                         <div class="si-fld">
                           <label>تاريخ التسليم المستحق</label>
                           <input [value]="dateStr(aw.contractualDeliveryDate)" disabled />
+                        </div>
+                      }
+                      @if (aw.siteHandoverProofFileName) {
+                        <div class="si-fld full">
+                          <label>إثبات تسليم الأرضية</label>
+                          <button type="button" class="file-lnk" (click)="downloadHandoverProof(aw.siteHandoverProofFileName!)">
+                            📎 {{ aw.siteHandoverProofFileName }}
+                          </button>
+                        </div>
+                      }
+                      @if (aHandoverMode() === 1 && awardEditable()) {
+                        <div class="si-fld full">
+                          <label>تسجيل تسليم الأرضية <span class="req">*</span></label>
+                          @if (aw.siteHandoverMode !== 1) {
+                            <div class="si-err">احفظ بيانات الترسية أولًا (زر "حفظ بيانات الترسية" أسفل الصفحة) قبل تسجيل تسليم الأرضية</div>
+                          } @else {
+                            <div class="si-grid">
+                              <div class="si-fld">
+                                <label>تاريخ التسليم</label>
+                                <input type="date" [ngModel]="aHandoverDate()" (ngModelChange)="aHandoverDate.set($event)" />
+                              </div>
+                              <div class="si-fld">
+                                <label>إثبات التسليم (PDF أو صورة)</label>
+                                <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
+                              </div>
+                            </div>
+                            <button class="si-btn sm" [disabled]="aHandoverSaving()" (click)="saveHandover()">
+                              @if (aHandoverSaving()) { جاري الحفظ… } @else { حفظ تسليم الأرضية }
+                            </button>
+                            <span class="hint">مطلوب قبل إكمال الترسية عندما تكون الأرضية مُسلَّمة للمقاول</span>
+                          }
                         </div>
                       }
                     </div>

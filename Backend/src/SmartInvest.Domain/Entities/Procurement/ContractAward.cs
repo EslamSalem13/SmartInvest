@@ -55,6 +55,9 @@ namespace SmartInvest.Domain.Entities
         /// </summary>
         public DateTime? SiteHandoverDate { get; set; }
 
+        /// <summary>إثبات تسليم الأرضية للمقاول (PDF أو صورة) — إلزامي عند تسجيل التسليم.</summary>
+        public StoredFile? SiteHandoverProofFile { get; set; }
+
         /// <summary>
         /// تاريخ التسليم النهائي المستحق — محسوب وغير مخزَّن،
         /// حتى لا يتعارض مع تصحيح تاريخ تسليم الأرضية بعد إدخاله.

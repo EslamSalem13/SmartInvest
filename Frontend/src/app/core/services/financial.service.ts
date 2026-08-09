@@ -93,11 +93,22 @@ export class FinancialService {
     );
   }
 
-  /** تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ */
-  setSiteHandover(subProjectId: number, handoverDate: string): Observable<void> {
+  /** تسجيل تسليم الأرضية — multipart: التاريخ + ملف الإثبات */
+  setSiteHandover(subProjectId: number, handoverDate: string, proof: File): Observable<void> {
+    const form = new FormData();
+    form.append('handoverDate', handoverDate);
+    form.append('proof', proof, proof.name);
     return this.http.put<void>(
       `${this.base}/subprojects/${subProjectId}/procurement/contract-award/site-handover`,
-      { handoverDate },
+      form,
+    );
+  }
+
+  /** تنزيل إثبات تسليم الأرضية كـ Blob (رابط مباشر يفشل بـ 401 لأنه لا يمر على auth.interceptor) */
+  downloadSiteHandoverProof(subProjectId: number): Observable<Blob> {
+    return this.http.get(
+      `${this.base}/subprojects/${subProjectId}/procurement/contract-award/site-handover/proof`,
+      { responseType: 'blob' },
     );
   }
 

@@ -18,11 +18,13 @@ namespace SmartInvest.Infrastructure.Services;
 public class ProcurementService : IProcurementService
 {
     private readonly AppDbContext _context;
+    private readonly IExecutionStageService _executionStageService;
     private readonly Dictionary<ProcurementStage, IStageOps> _stages;
 
-    public ProcurementService(AppDbContext context)
+    public ProcurementService(AppDbContext context, IExecutionStageService executionStageService)
     {
         _context = context;
+        _executionStageService = executionStageService;
         _stages = BuildStages(context);
     }
 
@@ -33,7 +35,8 @@ public class ProcurementService : IProcurementService
     public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
     {
         return await _context.SubProjects.AsNoTracking()
-            .Where(s => financialYearId == null || s.FinancialYears.Any(y => y.FinancialYearId == financialYearId))
+            .Where(s => s.IsApproved
+                && (financialYearId == null || s.FinancialYears.Any(y => y.FinancialYearId == financialYearId)))
             .OrderBy(s => s.SubProjectId)
             .Select(s => new ProcurementSubProjectListItemDto
             {
@@ -58,9 +61,14 @@ public class ProcurementService : IProcurementService
     {
         var sub = await _context.SubProjects.AsNoTracking()
             .Where(s => s.SubProjectId == subProjectId)
-            .Select(s => new { s.SubProjectName, s.SubProjectCode })
+            .Select(s => new { s.SubProjectName, s.SubProjectCode, s.IsApproved })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
+
+        if (!sub.IsApproved)
+        {
+            throw new BusinessRuleException("لا يمكن بدء مراحل الطرح قبل اعتماد المشروع الفرعي");
+        }
 
         var overview = new ProcurementOverviewDto
         {
@@ -186,7 +194,7 @@ public class ProcurementService : IProcurementService
 
             if (stage == ProcurementStage.ContractAward)
             {
-                await StampSiteHandoverOnAwardAsync(subProjectId, cancellationToken);
+                await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
             }
 
             return;
@@ -232,7 +240,7 @@ public class ProcurementService : IProcurementService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, CancellationToken cancellationToken = default)
+    public async Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, FileUploadDto proofFile, CancellationToken cancellationToken = default)
     {
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
 
@@ -240,13 +248,53 @@ public class ProcurementService : IProcurementService
             .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken)
             ?? throw new NotFoundException("لم تبدأ مرحلة الترسية بعد");
 
-        if (!doc.IsCompleted)
+        if (doc.SiteHandoverMode == null)
+        {
+            throw new BusinessRuleException("يجب تحديد حالة أرضية المشروع في بيانات الترسية أولاً");
+        }
+
+        // «لم تُسلَّم بعد» تعني أن التسليم يحدث بعد الترسية — تسجيله قبل اكتمالها بلا معنى.
+        // أما «مُسلَّمة وقت الترسية» فتُسجَّل أثناء المرحلة السادسة نفسها قبل إكمالها.
+        if (doc.SiteHandoverMode == SiteHandoverMode.Pending && !doc.IsCompleted)
         {
             throw new BusinessRuleException("لا يمكن تسجيل تسليم الأرضية قبل إكمال الترسية");
         }
 
+        if (proofFile == null || proofFile.Content.Length == 0)
+        {
+            throw new BusinessRuleException("إثبات تسليم الأرضية مطلوب");
+        }
+
         doc.SiteHandoverDate = handoverDate;
+        doc.SiteHandoverProofFile = new StoredFile
+        {
+            FileName = proofFile.FileName,
+            FileExtension = proofFile.FileExtension,
+            FileSize = proofFile.FileSize,
+            Content = proofFile.Content,
+        };
+
         await _context.SaveChangesAsync(cancellationToken);
+
+        // الموعد النهائي يُحسب من تاريخ التسليم، فأي تغيير هنا يجب أن ينعكس على مرحلة التسليم النهائي
+        await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
+    }
+
+    public async Task<FileDownloadDto> DownloadSiteHandoverProofAsync(int subProjectId, CancellationToken cancellationToken = default)
+    {
+        var doc = await _context.ContractAwards.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken)
+            ?? throw new NotFoundException("لم تبدأ مرحلة الترسية بعد");
+
+        var file = doc.SiteHandoverProofFile
+            ?? throw new NotFoundException("لم يُرفع إثبات تسليم الأرضية بعد");
+
+        return new FileDownloadDto
+        {
+            FileName = file.FileName,
+            FileExtension = file.FileExtension,
+            Content = file.Content,
+        };
     }
 
     private async Task<ContractAward> GetEditableContractAwardAsync(int subProjectId, CancellationToken cancellationToken)
@@ -319,11 +367,19 @@ public class ProcurementService : IProcurementService
 
     private async Task EnsureSubProjectExistsAsync(int subProjectId, CancellationToken cancellationToken)
     {
-        var exists = await _context.SubProjects.AsNoTracking()
-            .AnyAsync(s => s.SubProjectId == subProjectId, cancellationToken);
-        if (!exists)
+        var isApproved = await _context.SubProjects.AsNoTracking()
+            .Where(s => s.SubProjectId == subProjectId)
+            .Select(s => (bool?)s.IsApproved)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (isApproved == null)
         {
             throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
+        }
+
+        if (isApproved == false)
+        {
+            throw new BusinessRuleException("لا يمكن العمل على مراحل الطرح قبل اعتماد المشروع الفرعي");
         }
     }
 
@@ -353,22 +409,6 @@ public class ProcurementService : IProcurementService
         }
     }
 
-    /// <summary>
-    /// عند إكمال الترسية: لو الأرضية مُسلَّمة بالفعل، يبدأ العد من تاريخ الإكمال.
-    /// أما وضع "لم تُسلَّم بعد" فيترك التاريخ فارغًا حتى يُسجَّل من متابعة المشروعات.
-    /// </summary>
-    private async Task StampSiteHandoverOnAwardAsync(int subProjectId, CancellationToken cancellationToken)
-    {
-        var doc = await _context.ContractAwards
-            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken);
-
-        if (doc?.SiteHandoverMode == SiteHandoverMode.AtAward && doc.SiteHandoverDate == null)
-        {
-            doc.SiteHandoverDate = DateTime.UtcNow;
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-    }
-
     private async Task<ContractAwardDetailsDto?> GetContractAwardDetailsAsync(int subProjectId, CancellationToken cancellationToken)
     {
         var project = await _context.SubProjects.AsNoTracking()
@@ -393,6 +433,7 @@ public class ProcurementService : IProcurementService
                 x.ExecutionDurationDays,
                 x.SiteHandoverMode,
                 x.SiteHandoverDate,
+                SiteHandoverProofFileName = x.SiteHandoverProofFile == null ? null : x.SiteHandoverProofFile.FileName,
                 x.PenaltyAmount,
                 x.ProjectAssignmentId,
                 ContractorId = (int?)x.ProjectAssignment!.ContractorId,
@@ -425,6 +466,7 @@ public class ProcurementService : IProcurementService
         details.ExecutionDurationDays = doc.ExecutionDurationDays;
         details.SiteHandoverMode = (int?)doc.SiteHandoverMode;
         details.SiteHandoverDate = doc.SiteHandoverDate;
+        details.SiteHandoverProofFileName = doc.SiteHandoverProofFileName;
         details.ContractualDeliveryDate = doc.SiteHandoverDate?
             .AddMonths(doc.ExecutionDurationMonths ?? 0)
             .AddDays(doc.ExecutionDurationDays ?? 0);
@@ -555,6 +597,19 @@ public class ProcurementService : IProcurementService
         if (doc.SiteHandoverMode == null)
         {
             return "يجب تحديد ما إذا كانت أرضية المشروع مُسلَّمة للمقاول أم لا";
+        }
+
+        if (doc.SiteHandoverMode == SiteHandoverMode.AtAward)
+        {
+            if (doc.SiteHandoverDate == null)
+            {
+                return "يجب تسجيل تاريخ تسليم الأرضية قبل إكمال الترسية";
+            }
+
+            if (doc.SiteHandoverProofFile == null)
+            {
+                return "يجب رفع إثبات تسليم الأرضية قبل إكمال الترسية";
+            }
         }
 
         if (!IsContractingProject(project.ProjectNature))

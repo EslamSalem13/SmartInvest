@@ -90,6 +90,12 @@
             <p>{{ item.mainProjectName }}</p>
           </div>
           <button class="si-btn primary sm" (click)="openAddStage()">+ مرحلة جديدة</button>
+          @if (awaitingHandover()) {
+            <button class="si-btn sm" (click)="openHandover()">تسجيل تسليم الأرضية</button>
+          }
+          @if (canCorrectHandover()) {
+            <button class="si-btn sm" (click)="openHandover()">تصحيح تاريخ تسليم الأرضية</button>
+          }
           <button class="si-x" (click)="closeStages()">×</button>
         </div>
         <div class="si-modal-body">
@@ -112,9 +118,21 @@
                 </thead>
                 <tbody>
                   @for (s of stages(); track s.id) {
-                    <tr>
-                      <td>{{ s.name }}</td>
-                      <td class="tnum">{{ s.deadline | date: 'yyyy/MM/dd' }}</td>
+                    <tr [class.final-row]="s.isFinalDelivery">
+                      <td>
+                        {{ s.name }}
+                        @if (s.isFinalDelivery) { <span class="chip lock-chip">تلقائية</span> }
+                      </td>
+                      <td class="tnum" [class.warn]="s.exceedsContractualDeadline">
+                        @if (s.deadline) {
+                          {{ s.deadline | date: 'yyyy/MM/dd' }}
+                          @if (s.exceedsContractualDeadline) {
+                            <span class="chip warn-chip" title="يتجاوز تاريخ التسليم التعاقدي">تجاوز</span>
+                          }
+                        } @else {
+                          <span class="wait">بانتظار تسليم الأرضية</span>
+                        }
+                      </td>
                       <td class="tnum">
                         {{ money(s.selfFundingSpent) }}
                         @if (s.hasSelfFundingProof) {
@@ -163,6 +181,9 @@
                       <td>
                         @if (s.isCompleted) {
                           <span class="st-pill ok">مكتملة</span>
+                          @if (isManager()) {
+                            <button type="button" class="file-lnk" title="إعادة فتح المرحلة" (click)="reopenStage(s)">↺</button>
+                          }
                         } @else {
                           <button class="si-btn sm" (click)="completeStage(s)">إنهاء</button>
                         }
@@ -237,6 +258,35 @@
             @if (savingStage()) { جاري الحفظ… } @else { حفظ المرحلة }
           </button>
           <button class="si-btn" (click)="closeAddStage()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (showHandover()) {
+    <div class="si-overlay" (click)="closeHandover()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>تسجيل تسليم الأرضية</h3><p>تبدأ مدة التنفيذ من هذا التاريخ</p></div>
+          <button class="si-x" (click)="closeHandover()">×</button>
+        </div>
+        <div class="si-modal-body">
+          <div class="si-grid">
+            <div class="si-fld">
+              <label>تاريخ التسليم <span class="req">*</span></label>
+              <input type="date" [ngModel]="handoverDate()" (ngModelChange)="handoverDate.set($event)" />
+            </div>
+            <div class="si-fld">
+              <label>إثبات التسليم <span class="req">*</span></label>
+              <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
+            </div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn primary" [disabled]="handoverSaving()" (click)="saveHandover()">
+            @if (handoverSaving()) { جاري الحفظ… } @else { حفظ }
+          </button>
+          <button class="si-btn" (click)="closeHandover()">إلغاء</button>
         </div>
       </div>
     </div>

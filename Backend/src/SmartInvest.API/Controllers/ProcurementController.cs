@@ -118,13 +118,28 @@ public class ProcurementController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>تسجيل تسليم أرضية المشروع للمقاول — تبدأ عندها مدة التنفيذ.</summary>
+    /// <summary>تسجيل تسليم أرضية المشروع للمقاول — multipart/form-data: handoverDate + ملف proof.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/site-handover")]
     [Authorize(Roles = Roles.PlanningStaff)]
-    public async Task<IActionResult> SetSiteHandover(int subProjectId, SetSiteHandoverDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetSiteHandover(
+        int subProjectId,
+        [FromForm] DateTime handoverDate,
+        CancellationToken cancellationToken)
     {
-        await _procurementService.SetSiteHandoverAsync(subProjectId, dto.HandoverDate, cancellationToken);
+        var file = Request.Form.Files.FirstOrDefault(f => f.Name == "proof" && f.Length > 0)
+            ?? throw new BusinessRuleException("إثبات تسليم الأرضية مطلوب");
+
+        var proof = await FileRequestHelpers.ToUploadDtoAsync(file, cancellationToken);
+        await _procurementService.SetSiteHandoverAsync(subProjectId, handoverDate, proof, cancellationToken);
         return NoContent();
+    }
+
+    /// <summary>تنزيل إثبات تسليم الأرضية.</summary>
+    [HttpGet("api/subprojects/{subProjectId:int}/procurement/contract-award/site-handover/proof")]
+    public async Task<IActionResult> DownloadSiteHandoverProof(int subProjectId, CancellationToken cancellationToken)
+    {
+        var file = await _procurementService.DownloadSiteHandoverProofAsync(subProjectId, cancellationToken);
+        return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 
     private static ProcurementStage ParseStage(string stage)
