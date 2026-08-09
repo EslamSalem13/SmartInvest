@@ -197,6 +197,17 @@ public class ExecutionStageService : IExecutionStageService
 
         var stagesByProject = (await _context.ExecutionStages.AsNoTracking()
                 .Where(s => subProjectIds.Contains(s.SubProjectId))
+                .Select(s => new FollowUpStageProjection
+                {
+                    SubProjectId = s.SubProjectId,
+                    ExecutionStageId = s.ExecutionStageId,
+                    SelfFundingSpent = s.SelfFundingSpent,
+                    BankFundingSpent = s.BankFundingSpent,
+                    PhysicalProgressPercent = s.PhysicalProgressPercent,
+                    Deadline = s.Deadline,
+                    IsCompleted = s.IsCompleted,
+                    CreatedAt = s.CreatedAt,
+                })
                 .ToListAsync(cancellationToken))
             .GroupBy(s => s.SubProjectId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -249,6 +260,19 @@ public class ExecutionStageService : IExecutionStageService
         }
 
         return stage;
+    }
+
+    /// <summary>إسقاط خفيف لصفوف قائمة المتابعة — يتجنب تحميل بايتات ملفات الإثبات (varbinary(max)) لكل مرحلة.</summary>
+    private sealed class FollowUpStageProjection
+    {
+        public int SubProjectId { get; set; }
+        public int ExecutionStageId { get; set; }
+        public decimal SelfFundingSpent { get; set; }
+        public decimal BankFundingSpent { get; set; }
+        public decimal PhysicalProgressPercent { get; set; }
+        public DateTime Deadline { get; set; }
+        public bool IsCompleted { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     private static StoredFile ToStoredFile(FileUploadDto dto) => new()
