@@ -49,7 +49,7 @@ public class FinancialYearsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _financialYearService.DeleteAsync(id, cancellationToken);

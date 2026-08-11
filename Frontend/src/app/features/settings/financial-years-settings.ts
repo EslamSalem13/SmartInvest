@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import { FinancialYear } from '../../core/models/project.models';
 import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
 
@@ -14,6 +15,7 @@ import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
 export class FinancialYearsSettings {
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   protected readonly isManager = this.auth.isManager;
 
   protected readonly years = signal<FinancialYear[]>([]);
@@ -30,6 +32,10 @@ export class FinancialYearsSettings {
   protected readonly formIsClosed = signal(false);
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
+
+  protected readonly deleteTarget = signal<FinancialYear | null>(null);
+  protected readonly deleting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
 
   constructor() {
     this.load();
@@ -109,5 +115,36 @@ export class FinancialYearsSettings {
 
   protected money(value: number | null | undefined): string {
     return (value ?? 0).toLocaleString('en-US');
+  }
+
+  protected openDeleteConfirm(year: FinancialYear): void {
+    this.deleteError.set(null);
+    this.deleteTarget.set(year);
+  }
+
+  protected closeDeleteConfirm(): void {
+    if (this.deleting()) return;
+    this.deleteTarget.set(null);
+  }
+
+  protected confirmDelete(): void {
+    if (this.deleting()) return;
+    const target = this.deleteTarget();
+    if (!target) return;
+
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    this.financialYearsService.delete(target.id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.deleteTarget.set(null);
+        this.years.update((list) => list.filter((y) => y.id !== target.id));
+        this.toast.success('تم حذف السنة المالية بنجاح');
+      },
+      error: (err) => {
+        this.deleting.set(false);
+        this.deleteError.set(err?.error?.message ?? 'تعذّر حذف السنة المالية');
+      },
+    });
   }
 }

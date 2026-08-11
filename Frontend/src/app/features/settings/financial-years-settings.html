@@ -33,7 +33,8 @@
               <td>
                 @if (isManager()) {
                   <div class="acts">
-                    <button class="act" title="تعديل" (click)="openEdit(year)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                    <button class="act" title="تعديل" aria-label="تعديل السنة المالية {{ year.name }}" (click)="openEdit(year)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                    <button class="act danger" title="حذف السنة المالية" aria-label="حذف السنة المالية {{ year.name }}" (click)="openDeleteConfirm(year)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M10 11v6M14 11v6" /></svg></button>
                   </div>
                 }
               </td>
@@ -82,6 +83,47 @@
             @if (saving()) { <span class="mini-sp"></span> جاري الحفظ… } @else { حفظ التعديلات }
           </button>
           <button class="si-btn" [disabled]="saving()" (click)="closeForm()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (deleteTarget(); as target) {
+    <div class="si-overlay" (click)="closeDeleteConfirm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(480px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>حذف السنة المالية</h3></div>
+          @if (!deleting()) {
+            <button class="si-x" (click)="closeDeleteConfirm()" aria-label="إغلاق">×</button>
+          }
+        </div>
+        <div class="si-modal-body">
+          @if (deleteError()) { <div class="si-err">{{ deleteError() }}</div> }
+          <div class="si-grid" style="grid-template-columns:1fr">
+            <div class="si-fld">
+              <label>اسم السنة المالية</label>
+              <input [value]="target.name" disabled />
+            </div>
+            <div class="si-fld">
+              <label>تاريخ البداية</label>
+              <input [value]="target.startDate.slice(0, 10)" disabled />
+            </div>
+            <div class="si-fld">
+              <label>تاريخ النهاية</label>
+              <input [value]="target.endDate.slice(0, 10)" disabled />
+            </div>
+            <div class="si-fld">
+              <label>الموازنة</label>
+              <input [value]="money(target.budget) + ' ج.م'" disabled />
+            </div>
+          </div>
+          <div class="si-err">سيتم حذف السنة المالية نهائيًا. لا يمكن التراجع عن هذا الإجراء.</div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn danger" [disabled]="deleting()" (click)="confirmDelete()">
+            @if (deleting()) { <span class="mini-sp"></span> جاري الحذف… } @else { حذف السنة }
+          </button>
+          <button class="si-btn" [disabled]="deleting()" (click)="closeDeleteConfirm()">إلغاء</button>
         </div>
       </div>
     </div>
