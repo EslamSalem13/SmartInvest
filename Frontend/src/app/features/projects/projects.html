@@ -34,10 +34,21 @@
   <div class="kpis">
     <div class="kpi"><span class="lab">إجمالي المشاريع الفرعية</span><b class="val tnum">{{ kpiTotal() }}</b></div>
     <div class="kpi ok"><span class="lab">المعتمدة</span><b class="val tnum">{{ kpiApproved() }}</b></div>
-    <div class="kpi warn"><span class="lab">بانتظار الاعتماد</span><b class="val tnum">{{ kpiPending() }}</b></div>
-    <div class="kpi bad"><span class="lab">متعثرة</span><b class="val tnum">{{ kpiStalled() }}</b></div>
+    <div class="kpi warn"><span class="lab">المقترحة</span><b class="val tnum">{{ kpiPending() }}</b></div>
+    <!-- <div class="kpi bad"><span class="lab">متعثرة</span><b class="val tnum">{{ kpiStalled() }}</b></div> -->
     <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum">{{ money(kpiBank()) }} <small>ج.م</small></b></div>
     <div class="kpi gold"><span class="lab">إجمالي تمويل ذاتي</span><b class="val tnum">{{ money(kpiSelf()) }} <small>ج.م</small></b></div>
+    <div class="kpi gold"><span class="lab">الإجمالي</span><b class="val tnum">{{ money(kpiTotalFunding()) }} <small>ج.م</small></b></div>
+    <button
+      type="button"
+      class="kpi ok kpi-btn"
+      [disabled]="selectedYearId() == null"
+      (click)="openAvailabilityModal()"
+      aria-label="عرض سجل الإتاحات البنكية"
+    >
+      <span class="lab">المتاح</span>
+      <b class="val tnum">{{ selectedYearId() == null ? '—' : money(kpiAvailable()) + ' ' }}<small>@if (selectedYearId() != null) { ج.م }</small></b>
+    </button>
   </div>
 
   <!-- الفلاتر -->
@@ -221,6 +232,104 @@
             @if (savingYear()) { جاري الإضافة… } @else { إضافة السنة }
           </button>
           <button class="si-btn" (click)="closeAddYear()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- سجل الإتاحات البنكية -->
+  @if (showAvailabilityModal()) {
+    <div class="si-overlay" (click)="closeAvailabilityModal()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(640px,100%)">
+        <div class="si-modal-head">
+          <div class="grow">
+            <h3>سجل الإتاحات البنكية</h3>
+            <p>{{ selectedYear()?.name }}</p>
+          </div>
+          <button class="si-x" (click)="closeAvailabilityModal()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          <div class="avail-summary">
+            <div class="avail-stat"><span class="lab">إجمالي التمويل البنكي</span><b class="tnum">{{ money(availabilityData()?.totalBankFunding ?? 0) }} ج.م</b></div>
+            <div class="avail-stat"><span class="lab">إجمالي المتاح</span><b class="tnum">{{ money(availabilityData()?.totalAvailable ?? 0) }} ج.م</b></div>
+            <div class="avail-stat"><span class="lab">المتبقي الممكن إتاحته</span><b class="tnum">{{ money(availabilityData()?.remainingAvailable ?? 0) }} ج.م</b></div>
+          </div>
+
+          @if (!showAddAvailabilityForm()) {
+            <button type="button" class="si-btn" (click)="openAddAvailabilityForm()">
+              <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+              إضافة إتاحة
+            </button>
+          }
+
+          @if (showAddAvailabilityForm()) {
+            <div class="avail-add-form">
+              @if (addAvailabilityError()) { <div class="si-err">{{ addAvailabilityError() }}</div> }
+              <div class="si-grid">
+                <div class="si-fld">
+                  <label>القيمة (بالألف جنيه) <span class="req">*</span></label>
+                  <input type="number" min="0" step="0.01" [ngModel]="newAvailabilityThousands()" (ngModelChange)="updateNewAvailabilityThousands($event)" placeholder="0" />
+                  <div class="hint">القيمة بالجنيه: {{ newAvailabilityTotal().toLocaleString('en-US') }} ج.م</div>
+                </div>
+                <div class="si-fld">
+                  <label>تاريخ استلام الإتاحة <span class="req">*</span></label>
+                  <input type="date" [ngModel]="newAvailabilityDate()" (ngModelChange)="newAvailabilityDate.set($event)" />
+                </div>
+                <div class="si-fld full">
+                  <label>ملاحظات (اختياري)</label>
+                  <textarea [ngModel]="newAvailabilityNotes()" (ngModelChange)="newAvailabilityNotes.set($event)" placeholder="أي ملاحظات إضافية…"></textarea>
+                </div>
+                <div class="si-fld full">
+                  <label>مستندات الإثبات <span class="req">*</span></label>
+                  <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" (change)="onAvailabilityFilesSelected($event)" aria-label="اختيار مستندات الإثبات" />
+                  @if (newAvailabilityFiles().length > 0) {
+                    <ul class="avail-file-list">
+                      @for (f of newAvailabilityFiles(); track $index; let i = $index) {
+                        <li>{{ f.name }} <button type="button" class="si-x sm" (click)="removeAvailabilityFile(i)" aria-label="إزالة الملف">×</button></li>
+                      }
+                    </ul>
+                  }
+                </div>
+              </div>
+              <div class="avail-add-actions">
+                <button class="si-btn primary" [disabled]="savingAvailability()" (click)="submitAvailability()">
+                  @if (savingAvailability()) { جاري الحفظ… } @else { حفظ الإتاحة }
+                </button>
+                <button class="si-btn" [disabled]="savingAvailability()" (click)="closeAddAvailabilityForm()">إلغاء</button>
+              </div>
+            </div>
+          }
+
+          <div class="avail-list">
+            @if (availabilityLoading()) {
+              <div class="state"><span class="spinner"></span> جاري تحميل الإتاحات…</div>
+            } @else if (availabilityError()) {
+              <div class="state error">{{ availabilityError() }}</div>
+            } @else if (!availabilityData() || availabilityData()!.items.length === 0) {
+              <div class="state">لا توجد إتاحات مسجلة بعد.</div>
+            } @else {
+              @for (a of availabilityData()!.items; track a.id) {
+                <div class="avail-row">
+                  <div class="avail-row-main">
+                    <b class="tnum">{{ money(a.amount) }} ج.م</b>
+                    <span class="avail-dates">استلام: {{ dateOnly(a.receivedDate) }} · تسجيل: {{ dateOnly(a.createdAt) }}</span>
+                  </div>
+                  @if (a.notes) { <p class="avail-notes">{{ a.notes }}</p> }
+                  <div class="avail-docs">
+                    @for (doc of a.documents; track doc.id) {
+                      <button type="button" class="avail-doc-btn" (click)="downloadAvailabilityDocument(a.id, doc)">
+                        <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16" /></svg>
+                        {{ doc.fileName }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn" (click)="closeAvailabilityModal()">إغلاق</button>
         </div>
       </div>
     </div>

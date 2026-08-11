@@ -216,6 +216,28 @@ export interface SubProjectFinancialYear {
   isClosed: boolean;
 }
 
+export interface BankAvailabilityDocument {
+  id: number;
+  fileName: string;
+}
+
+export interface BankAvailability {
+  id: number;
+  financialYearId: number;
+  amount: number;
+  receivedDate: string;
+  createdAt: string;
+  notes: string | null;
+  documents: BankAvailabilityDocument[];
+}
+
+export interface BankAvailabilityList {
+  totalAvailable: number;
+  totalBankFunding: number;
+  remainingAvailable: number;
+  items: BankAvailability[];
+}
+
 export interface Plan {
   planId: number;
   planName: string;

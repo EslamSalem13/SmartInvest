@@ -7,8 +7,11 @@ import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { BankAvailabilitiesService } from '../../core/services/bank-availabilities.service';
 import { thousandsToEgp } from '../../core/utils/budget.util';
 import {
+  BankAvailabilityDocument,
+  BankAvailabilityList,
   FinancialYear,
   Lookup,
   MainProjectListItem,
@@ -37,6 +40,7 @@ export class Projects {
   private readonly agenciesService = inject(AgenciesService);
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly bankAvailabilitiesService = inject(BankAvailabilitiesService);
 
   protected readonly isManager = this.auth.isManager;
   protected readonly agencies = signal<string[]>([]);
@@ -85,9 +89,144 @@ export class Projects {
   protected readonly kpiStalled = computed(() => this.subs().filter((s) => this.isStalled(s)).length);
   protected readonly kpiBank = computed(() => this.subs().reduce((a, s) => a + s.bankFunding, 0));
   protected readonly kpiSelf = computed(() => this.subs().reduce((a, s) => a + s.selfFunding, 0));
+  protected readonly kpiTotalFunding = computed(() => this.kpiBank() + this.kpiSelf());
+  protected readonly kpiAvailable = computed(() => this.availabilityData()?.totalAvailable ?? 0);
 
   protected isStalled(s: SubProjectListItem): boolean {
     return s.isApproved && s.statusName === 'متعثر';
+  }
+
+  // ===== الإتاحات البنكية =====
+  protected readonly availabilityData = signal<BankAvailabilityList | null>(null);
+  protected readonly availabilityLoading = signal(false);
+  protected readonly availabilityError = signal<string | null>(null);
+  protected readonly selectedYear = computed(() => this.financialYears().find((y) => y.id === this.selectedYearId()) ?? null);
+
+  protected readonly showAvailabilityModal = signal(false);
+  protected readonly showAddAvailabilityForm = signal(false);
+  protected readonly newAvailabilityThousands = signal<number | null>(null);
+  protected readonly newAvailabilityTotal = computed(() => thousandsToEgp(this.newAvailabilityThousands()));
+  protected readonly newAvailabilityDate = signal('');
+  protected readonly newAvailabilityNotes = signal('');
+  protected readonly newAvailabilityFiles = signal<File[]>([]);
+  protected readonly addAvailabilityError = signal<string | null>(null);
+  protected readonly savingAvailability = signal(false);
+
+  private loadAvailability(): void {
+    const yearId = this.selectedYearId();
+    if (yearId == null) {
+      this.availabilityData.set(null);
+      return;
+    }
+    this.availabilityLoading.set(true);
+    this.availabilityError.set(null);
+    this.bankAvailabilitiesService.getForFinancialYear(yearId).subscribe({
+      next: (data) => {
+        this.availabilityData.set(data);
+        this.availabilityLoading.set(false);
+      },
+      error: () => {
+        this.availabilityError.set('تعذّر تحميل الإتاحات البنكية');
+        this.availabilityLoading.set(false);
+      },
+    });
+  }
+
+  protected openAvailabilityModal(): void {
+    if (this.selectedYearId() == null) return;
+    this.showAvailabilityModal.set(true);
+    this.loadAvailability();
+  }
+
+  protected closeAvailabilityModal(): void {
+    if (this.savingAvailability()) return;
+    this.showAvailabilityModal.set(false);
+    this.showAddAvailabilityForm.set(false);
+  }
+
+  protected openAddAvailabilityForm(): void {
+    this.newAvailabilityThousands.set(null);
+    this.newAvailabilityDate.set('');
+    this.newAvailabilityNotes.set('');
+    this.newAvailabilityFiles.set([]);
+    this.addAvailabilityError.set(null);
+    this.showAddAvailabilityForm.set(true);
+  }
+
+  protected closeAddAvailabilityForm(): void {
+    if (this.savingAvailability()) return;
+    this.showAddAvailabilityForm.set(false);
+  }
+
+  protected updateNewAvailabilityThousands(value: number | string): void {
+    if (value === '' || value == null) {
+      this.newAvailabilityThousands.set(null);
+      return;
+    }
+    const num = Number(value);
+    this.newAvailabilityThousands.set(Number.isNaN(num) || num < 0 ? null : num);
+  }
+
+  protected onAvailabilityFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.newAvailabilityFiles.set(input.files ? Array.from(input.files) : []);
+    input.value = '';
+  }
+
+  protected removeAvailabilityFile(index: number): void {
+    this.newAvailabilityFiles.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  protected submitAvailability(): void {
+    if (this.savingAvailability()) return;
+    const yearId = this.selectedYearId();
+    if (yearId == null) return;
+
+    const amount = this.newAvailabilityTotal();
+    if (amount <= 0) {
+      this.addAvailabilityError.set('برجاء إدخال قيمة إتاحة أكبر من صفر');
+      return;
+    }
+    if (!this.newAvailabilityDate()) {
+      this.addAvailabilityError.set('برجاء إدخال تاريخ استلام الإتاحة');
+      return;
+    }
+    if (this.newAvailabilityFiles().length === 0) {
+      this.addAvailabilityError.set('برجاء إرفاق مستند إثبات واحد على الأقل');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set('amount', String(amount));
+    formData.set('receivedDate', this.newAvailabilityDate());
+    if (this.newAvailabilityNotes().trim()) {
+      formData.set('notes', this.newAvailabilityNotes().trim());
+    }
+    for (const file of this.newAvailabilityFiles()) {
+      formData.append('documents', file, file.name);
+    }
+
+    this.savingAvailability.set(true);
+    this.addAvailabilityError.set(null);
+    this.bankAvailabilitiesService.create(yearId, formData).subscribe({
+      next: () => {
+        this.savingAvailability.set(false);
+        this.showAddAvailabilityForm.set(false);
+        this.loadAvailability();
+      },
+      error: (err) => {
+        this.savingAvailability.set(false);
+        this.addAvailabilityError.set(err?.error?.message ?? 'تعذّر إضافة الإتاحة البنكية');
+      },
+    });
+  }
+
+  protected downloadAvailabilityDocument(availabilityId: number, doc: BankAvailabilityDocument): void {
+    const yearId = this.selectedYearId();
+    if (yearId == null) return;
+    this.bankAvailabilitiesService
+      .downloadDocument(yearId, availabilityId, doc.id)
+      .subscribe((blob) => this.bankAvailabilitiesService.saveBlob(blob, doc.fileName));
   }
 
   // ===== الفلترة والتجميع =====
@@ -216,6 +355,7 @@ export class Projects {
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.loadAvailability();
     forkJoin({
       mains: this.projectsService.getMainProjects(),
       subs: this.projectsService.searchSubProjects({
@@ -274,6 +414,10 @@ export class Projects {
 
   protected money(value: number): string {
     return (value ?? 0).toLocaleString('en-US');
+  }
+
+  protected dateOnly(value: string): string {
+    return value ? value.slice(0, 10) : '';
   }
 
   // ===== modals actions =====
