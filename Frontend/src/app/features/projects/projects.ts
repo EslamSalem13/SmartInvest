@@ -8,8 +8,10 @@ import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { BankAvailabilitiesService } from '../../core/services/bank-availabilities.service';
-import { thousandsToEgp } from '../../core/utils/budget.util';
+import { ToastService } from '../../core/services/toast.service';
+import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
 import {
+  BankAvailability,
   BankAvailabilityDocument,
   BankAvailabilityList,
   FinancialYear,
@@ -41,6 +43,7 @@ export class Projects {
   private readonly auth = inject(AuthService);
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly bankAvailabilitiesService = inject(BankAvailabilitiesService);
+  private readonly toast = inject(ToastService);
 
   protected readonly isManager = this.auth.isManager;
   protected readonly agencies = signal<string[]>([]);
@@ -101,16 +104,24 @@ export class Projects {
   protected readonly availabilityLoading = signal(false);
   protected readonly availabilityError = signal<string | null>(null);
   protected readonly selectedYear = computed(() => this.financialYears().find((y) => y.id === this.selectedYearId()) ?? null);
+  protected readonly canDeleteAvailability = this.auth.isManager;
 
   protected readonly showAvailabilityModal = signal(false);
   protected readonly showAddAvailabilityForm = signal(false);
+  protected readonly editingAvailability = signal<BankAvailability | null>(null);
   protected readonly newAvailabilityThousands = signal<number | null>(null);
   protected readonly newAvailabilityTotal = computed(() => thousandsToEgp(this.newAvailabilityThousands()));
   protected readonly newAvailabilityDate = signal('');
   protected readonly newAvailabilityNotes = signal('');
   protected readonly newAvailabilityFiles = signal<File[]>([]);
+  protected readonly keptDocuments = signal<BankAvailabilityDocument[]>([]);
+  protected readonly finalDocumentCount = computed(() => this.keptDocuments().length + this.newAvailabilityFiles().length);
   protected readonly addAvailabilityError = signal<string | null>(null);
   protected readonly savingAvailability = signal(false);
+  protected readonly dragActive = signal(false);
+
+  protected readonly deleteTarget = signal<BankAvailability | null>(null);
+  protected readonly deletingAvailability = signal(false);
 
   private loadAvailability(): void {
     const yearId = this.selectedYearId();
@@ -139,16 +150,31 @@ export class Projects {
   }
 
   protected closeAvailabilityModal(): void {
-    if (this.savingAvailability()) return;
+    if (this.savingAvailability() || this.deletingAvailability()) return;
     this.showAvailabilityModal.set(false);
     this.showAddAvailabilityForm.set(false);
+    this.editingAvailability.set(null);
+    this.deleteTarget.set(null);
   }
 
   protected openAddAvailabilityForm(): void {
+    this.editingAvailability.set(null);
     this.newAvailabilityThousands.set(null);
     this.newAvailabilityDate.set('');
     this.newAvailabilityNotes.set('');
     this.newAvailabilityFiles.set([]);
+    this.keptDocuments.set([]);
+    this.addAvailabilityError.set(null);
+    this.showAddAvailabilityForm.set(true);
+  }
+
+  protected openEditAvailabilityForm(a: BankAvailability): void {
+    this.editingAvailability.set(a);
+    this.newAvailabilityThousands.set(egpToThousands(a.amount));
+    this.newAvailabilityDate.set(this.dateOnly(a.receivedDate));
+    this.newAvailabilityNotes.set(a.notes ?? '');
+    this.newAvailabilityFiles.set([]);
+    this.keptDocuments.set([...a.documents]);
     this.addAvailabilityError.set(null);
     this.showAddAvailabilityForm.set(true);
   }
@@ -156,6 +182,7 @@ export class Projects {
   protected closeAddAvailabilityForm(): void {
     if (this.savingAvailability()) return;
     this.showAddAvailabilityForm.set(false);
+    this.editingAvailability.set(null);
   }
 
   protected updateNewAvailabilityThousands(value: number | string): void {
@@ -167,14 +194,48 @@ export class Projects {
     this.newAvailabilityThousands.set(Number.isNaN(num) || num < 0 ? null : num);
   }
 
+  protected removeKeptDocument(documentId: number): void {
+    this.keptDocuments.update((list) => list.filter((d) => d.id !== documentId));
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.dragActive.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.dragActive.set(false);
+  }
+
+  protected onFileDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.dragActive.set(false);
+    if (event.dataTransfer?.files?.length) {
+      this.addAvailabilityFiles(Array.from(event.dataTransfer.files));
+    }
+  }
+
   protected onAvailabilityFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.newAvailabilityFiles.set(input.files ? Array.from(input.files) : []);
+    if (input.files?.length) {
+      this.addAvailabilityFiles(Array.from(input.files));
+    }
     input.value = '';
+  }
+
+  private addAvailabilityFiles(files: File[]): void {
+    this.newAvailabilityFiles.update((existing) => [...existing, ...files]);
   }
 
   protected removeAvailabilityFile(index: number): void {
     this.newAvailabilityFiles.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  protected formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} بايت`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} كيلوبايت`;
+    return `${(bytes / 1024 / 1024).toFixed(2)} ميجابايت`;
   }
 
   protected submitAvailability(): void {
@@ -191,7 +252,7 @@ export class Projects {
       this.addAvailabilityError.set('برجاء إدخال تاريخ استلام الإتاحة');
       return;
     }
-    if (this.newAvailabilityFiles().length === 0) {
+    if (this.finalDocumentCount() === 0) {
       this.addAvailabilityError.set('برجاء إرفاق مستند إثبات واحد على الأقل');
       return;
     }
@@ -206,12 +267,35 @@ export class Projects {
       formData.append('documents', file, file.name);
     }
 
+    const editing = this.editingAvailability();
     this.savingAvailability.set(true);
     this.addAvailabilityError.set(null);
+
+    if (editing) {
+      for (const doc of this.keptDocuments()) {
+        formData.append('keepDocumentIds', String(doc.id));
+      }
+      this.bankAvailabilitiesService.update(yearId, editing.id, formData).subscribe({
+        next: () => {
+          this.savingAvailability.set(false);
+          this.showAddAvailabilityForm.set(false);
+          this.editingAvailability.set(null);
+          this.toast.success('تم حفظ تعديلات الإتاحة البنكية');
+          this.loadAvailability();
+        },
+        error: (err) => {
+          this.savingAvailability.set(false);
+          this.addAvailabilityError.set(err?.error?.message ?? 'تعذّر حفظ تعديلات الإتاحة');
+        },
+      });
+      return;
+    }
+
     this.bankAvailabilitiesService.create(yearId, formData).subscribe({
       next: () => {
         this.savingAvailability.set(false);
         this.showAddAvailabilityForm.set(false);
+        this.toast.success('تم إضافة الإتاحة البنكية');
         this.loadAvailability();
       },
       error: (err) => {
@@ -227,6 +311,36 @@ export class Projects {
     this.bankAvailabilitiesService
       .downloadDocument(yearId, availabilityId, doc.id)
       .subscribe((blob) => this.bankAvailabilitiesService.saveBlob(blob, doc.fileName));
+  }
+
+  protected openDeleteConfirm(a: BankAvailability): void {
+    this.deleteTarget.set(a);
+  }
+
+  protected closeDeleteConfirm(): void {
+    if (this.deletingAvailability()) return;
+    this.deleteTarget.set(null);
+  }
+
+  protected confirmDeleteAvailability(): void {
+    if (this.deletingAvailability()) return;
+    const target = this.deleteTarget();
+    const yearId = this.selectedYearId();
+    if (!target || yearId == null) return;
+
+    this.deletingAvailability.set(true);
+    this.bankAvailabilitiesService.delete(yearId, target.id).subscribe({
+      next: () => {
+        this.deletingAvailability.set(false);
+        this.deleteTarget.set(null);
+        this.toast.success('تم حذف الإتاحة البنكية');
+        this.loadAvailability();
+      },
+      error: (err) => {
+        this.deletingAvailability.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذّر حذف الإتاحة البنكية');
+      },
+    });
   }
 
   // ===== الفلترة والتجميع =====

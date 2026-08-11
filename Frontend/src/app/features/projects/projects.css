@@ -76,26 +76,51 @@ button.kpi-btn:focus-visible { outline: 2px solid var(--green-700); outline-offs
 button.kpi-btn:disabled { cursor: not-allowed; opacity: .6; }
 button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); border-color: var(--line); }
 
-/* نافذة سجل الإتاحات البنكية */
+/* نافذة سجل الإتاحات البنكية — الترويسة والتذييل ثابتان (من .si-modal-head/.si-modal-foot العامة)،
+   وقائمة الإتاحات وحدها تتمرّر داخل ارتفاع محدود حتى لا يضيع ملخص التمويل ونموذج الإضافة عند التمرير. */
+.avail-modal .si-modal-body { display: flex; flex-direction: column; }
 .avail-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .avail-stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
 .avail-stat .lab { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
 .avail-stat b { font-size: 15px; color: var(--green-800); font-weight: 800; }
 
-.avail-add-form { margin-top: 14px; padding: 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-lg); animation: si-pop .16s var(--ease); }
+.avail-add-form { margin-top: 14px; padding: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-lg); animation: si-pop .16s var(--ease); flex: 0 0 auto; }
+.avail-form-title { font-size: var(--text-base); color: var(--green-900); margin-bottom: 12px; }
 .avail-add-actions { display: flex; gap: 8px; margin-top: 10px; }
 .avail-file-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.avail-file-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; font-size: 12.5px; }
+.avail-file-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: 12.5px; }
+.avail-file-name { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avail-file-name svg { flex: 0 0 auto; color: var(--green-700); }
+.avail-file-size { color: var(--muted); font-weight: 600; }
 
-.avail-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+/* منطقة السحب والإفلات لرفع المستندات */
+.avail-dropzone {
+  margin-top: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 22px 14px; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--muted); text-align: center;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.avail-dropzone svg { color: var(--green-600); }
+.avail-dropzone p { font-size: 13px; font-weight: 700; color: var(--ink); margin: 0; }
+.avail-dropzone-or { font-size: 11px; color: var(--muted); }
+.avail-dropzone-hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.avail-dropzone.active { border-color: var(--green-600); background: var(--green-50); }
+
+.avail-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; max-height: 40vh; overflow-y: auto; padding-inline-end: 6px; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.avail-list::-webkit-scrollbar { width: 7px; }
+.avail-list::-webkit-scrollbar-track { background: transparent; }
+.avail-list::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
 .avail-row { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--surface); }
 .avail-row-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .avail-row-main b { color: var(--green-800); font-size: 14.5px; }
+.avail-row-acts { display: flex; align-items: center; gap: 8px; }
 .avail-dates { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .avail-notes { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
 .avail-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .avail-doc-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--green-700); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12px; font-weight: 700; transition: background .15s var(--ease); }
 .avail-doc-btn:hover { background: var(--green-100); }
+.avail-delete-msg { font-size: 13.5px; color: var(--ink); line-height: 1.8; }
+.avail-delete-msg b { color: var(--green-800); }
 
 /* الفلاتر */
 .filterbar { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm); flex-wrap: wrap; }
@@ -160,6 +185,8 @@ tr.sub-row .sname { font-weight: 600; }
 .act svg { width: 15px; height: 15px; }
 .act.approve { color: var(--ok); border-color: #BFE6CD; }
 .act.approve:hover { background: var(--ok-bg); }
+.act.danger { color: var(--bad); border-color: #F3C6CC; }
+.act.danger:hover { background: var(--bad-bg); }
 
 /* pagination */
 .tblfoot { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); }

@@ -240,7 +240,7 @@
   <!-- سجل الإتاحات البنكية -->
   @if (showAvailabilityModal()) {
     <div class="si-overlay" (click)="closeAvailabilityModal()">
-      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(640px,100%)">
+      <div class="si-modal avail-modal" (click)="$event.stopPropagation()" style="width:min(720px,100%)">
         <div class="si-modal-head">
           <div class="grow">
             <h3>سجل الإتاحات البنكية</h3>
@@ -264,6 +264,7 @@
 
           @if (showAddAvailabilityForm()) {
             <div class="avail-add-form">
+              <h4 class="avail-form-title">{{ editingAvailability() ? 'تعديل إتاحة بنكية' : 'إضافة إتاحة بنكية' }}</h4>
               @if (addAvailabilityError()) { <div class="si-err">{{ addAvailabilityError() }}</div> }
               <div class="si-grid">
                 <div class="si-fld">
@@ -281,11 +282,54 @@
                 </div>
                 <div class="si-fld full">
                   <label>مستندات الإثبات <span class="req">*</span></label>
-                  <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" (change)="onAvailabilityFilesSelected($event)" aria-label="اختيار مستندات الإثبات" />
+
+                  @if (keptDocuments().length > 0) {
+                    <ul class="avail-file-list">
+                      @for (doc of keptDocuments(); track doc.id) {
+                        <li>
+                          <span class="avail-file-name">
+                            <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></svg>
+                            {{ doc.fileName }}
+                          </span>
+                          <button type="button" class="si-x sm" (click)="removeKeptDocument(doc.id)" title="إزالة المستند" aria-label="إزالة المستند {{ doc.fileName }}">×</button>
+                        </li>
+                      }
+                    </ul>
+                  }
+
+                  <div
+                    class="avail-dropzone"
+                    [class.active]="dragActive()"
+                    (dragover)="onDragOver($event)"
+                    (dragleave)="onDragLeave($event)"
+                    (drop)="onFileDrop($event)"
+                  >
+                    <svg viewBox="0 0 24 24" width="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0-4 4m4-4 4 4" /><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
+                    <p>اسحب وأفلت المستندات هنا</p>
+                    <span class="avail-dropzone-or">أو</span>
+                    <button type="button" class="si-btn" (click)="availFileInput.click()">اختيار المستندات</button>
+                    <input
+                      #availFileInput
+                      type="file"
+                      multiple
+                      hidden
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                      (change)="onAvailabilityFilesSelected($event)"
+                      aria-label="اختيار مستندات الإثبات"
+                    />
+                    <span class="avail-dropzone-hint">PDF، صور، Word أو Excel — حتى 10 ميجابايت لكل ملف</span>
+                  </div>
+
                   @if (newAvailabilityFiles().length > 0) {
                     <ul class="avail-file-list">
                       @for (f of newAvailabilityFiles(); track $index; let i = $index) {
-                        <li>{{ f.name }} <button type="button" class="si-x sm" (click)="removeAvailabilityFile(i)" aria-label="إزالة الملف">×</button></li>
+                        <li>
+                          <span class="avail-file-name">
+                            <svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></svg>
+                            {{ f.name }} <span class="avail-file-size">({{ formatFileSize(f.size) }})</span>
+                          </span>
+                          <button type="button" class="si-x sm" (click)="removeAvailabilityFile(i)" title="إزالة الملف" aria-label="إزالة الملف {{ f.name }}">×</button>
+                        </li>
                       }
                     </ul>
                   }
@@ -293,9 +337,17 @@
               </div>
               <div class="avail-add-actions">
                 <button class="si-btn primary" [disabled]="savingAvailability()" (click)="submitAvailability()">
-                  @if (savingAvailability()) { جاري الحفظ… } @else { حفظ الإتاحة }
+                  @if (savingAvailability()) {
+                    جاري الحفظ…
+                  } @else if (editingAvailability()) {
+                    حفظ التعديلات
+                  } @else {
+                    حفظ الإتاحة
+                  }
                 </button>
-                <button class="si-btn" [disabled]="savingAvailability()" (click)="closeAddAvailabilityForm()">إلغاء</button>
+                <button class="si-btn" [disabled]="savingAvailability()" (click)="closeAddAvailabilityForm()">
+                  {{ editingAvailability() ? 'إلغاء التعديل' : 'إلغاء' }}
+                </button>
               </div>
             </div>
           }
@@ -312,7 +364,17 @@
                 <div class="avail-row">
                   <div class="avail-row-main">
                     <b class="tnum">{{ money(a.amount) }} ج.م</b>
-                    <span class="avail-dates">استلام: {{ dateOnly(a.receivedDate) }} · تسجيل: {{ dateOnly(a.createdAt) }}</span>
+                    <div class="avail-row-acts">
+                      <span class="avail-dates">استلام: {{ dateOnly(a.receivedDate) }} · تسجيل: {{ dateOnly(a.createdAt) }}</span>
+                      <button type="button" class="act" title="تعديل الإتاحة" aria-label="تعديل الإتاحة بقيمة {{ money(a.amount) }} جنيه" (click)="openEditAvailabilityForm(a)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      </button>
+                      @if (canDeleteAvailability()) {
+                        <button type="button" class="act danger" title="حذف الإتاحة" aria-label="حذف الإتاحة بقيمة {{ money(a.amount) }} جنيه" (click)="openDeleteConfirm(a)">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M10 11v6M14 11v6" /></svg>
+                        </button>
+                      }
+                    </div>
                   </div>
                   @if (a.notes) { <p class="avail-notes">{{ a.notes }}</p> }
                   <div class="avail-docs">
@@ -330,6 +392,31 @@
         </div>
         <div class="si-modal-foot">
           <button class="si-btn" (click)="closeAvailabilityModal()">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- تأكيد حذف إتاحة بنكية -->
+  @if (deleteTarget()) {
+    <div class="si-overlay" (click)="closeDeleteConfirm()">
+      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(440px,100%)">
+        <div class="si-modal-head">
+          <div class="grow"><h3>تأكيد حذف الإتاحة</h3><p>هذا الإجراء نهائي ولا يمكن التراجع عنه</p></div>
+          <button class="si-x" (click)="closeDeleteConfirm()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          <p class="avail-delete-msg">
+            سيتم حذف الإتاحة البنكية بقيمة <b class="tnum">{{ money(deleteTarget()!.amount) }} ج.م</b>
+            المسجّلة بتاريخ استلام <b class="tnum">{{ dateOnly(deleteTarget()!.receivedDate) }}</b>
+            وكل مستنداتها المرفقة ({{ deleteTarget()!.documents.length }}) نهائيًا.
+          </p>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn danger" [disabled]="deletingAvailability()" (click)="confirmDeleteAvailability()">
+            @if (deletingAvailability()) { جاري الحذف… } @else { تأكيد الحذف }
+          </button>
+          <button class="si-btn" [disabled]="deletingAvailability()" (click)="closeDeleteConfirm()">إلغاء</button>
         </div>
       </div>
     </div>

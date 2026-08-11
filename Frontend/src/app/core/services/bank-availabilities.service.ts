@@ -17,6 +17,14 @@ export class BankAvailabilitiesService {
     return this.http.post<BankAvailability>(`${this.base}/${financialYearId}/bank-availabilities`, formData);
   }
 
+  update(financialYearId: number, availabilityId: number, formData: FormData): Observable<BankAvailability> {
+    return this.http.put<BankAvailability>(`${this.base}/${financialYearId}/bank-availabilities/${availabilityId}`, formData);
+  }
+
+  delete(financialYearId: number, availabilityId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${financialYearId}/bank-availabilities/${availabilityId}`);
+  }
+
   /** تنزيل مستند كـ Blob عبر HttpClient (يمر بمصدّق auth.interceptor) — نفس نمط FollowUpService.downloadFile. */
   downloadDocument(financialYearId: number, availabilityId: number, documentId: number): Observable<Blob> {
     return this.http.get(`${this.base}/${financialYearId}/bank-availabilities/${availabilityId}/documents/${documentId}`, {
