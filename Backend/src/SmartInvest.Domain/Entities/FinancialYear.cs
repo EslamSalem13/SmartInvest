@@ -16,5 +16,6 @@ namespace SmartInvest.Domain.Entities
         public decimal? Budget { get; set; }
         public virtual ICollection<Plan> Plans { get; set; }
         public virtual ICollection<SubProjectFinancialYear> SubProjectFinancialYears { get; set; }
+        public virtual ICollection<BankAvailability> BankAvailabilities { get; set; }
     }
 }

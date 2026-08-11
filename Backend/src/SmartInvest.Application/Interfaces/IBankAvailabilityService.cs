@@ -1,0 +1,12 @@
+using SmartInvest.Application.DTOs;
+
+namespace SmartInvest.Application.Interfaces;
+
+public interface IBankAvailabilityService
+{
+    Task<BankAvailabilityListDto> GetForFinancialYearAsync(int financialYearId, CancellationToken cancellationToken = default);
+
+    Task<BankAvailabilityDto> CreateAsync(int financialYearId, CreateBankAvailabilityDto dto, CancellationToken cancellationToken = default);
+
+    Task<FileDownloadDto> DownloadDocumentAsync(int financialYearId, int availabilityId, int documentId, CancellationToken cancellationToken = default);
+}

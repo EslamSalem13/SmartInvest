@@ -12,6 +12,7 @@ public class FinancialYearService : IFinancialYearService
     private readonly IGenericRepository<FinancialYear> _financialYearRepository;
     private readonly IGenericRepository<SubProjectFinancialYear> _subProjectFinancialYearRepository;
     private readonly IGenericRepository<Plan> _planRepository;
+    private readonly IGenericRepository<BankAvailability> _bankAvailabilityRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
@@ -19,12 +20,14 @@ public class FinancialYearService : IFinancialYearService
         IGenericRepository<FinancialYear> financialYearRepository,
         IGenericRepository<SubProjectFinancialYear> subProjectFinancialYearRepository,
         IGenericRepository<Plan> planRepository,
+        IGenericRepository<BankAvailability> bankAvailabilityRepository,
         IUnitOfWork unitOfWork,
         IMapper mapper)
     {
         _financialYearRepository = financialYearRepository;
         _subProjectFinancialYearRepository = subProjectFinancialYearRepository;
         _planRepository = planRepository;
+        _bankAvailabilityRepository = bankAvailabilityRepository;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
@@ -88,6 +91,12 @@ public class FinancialYearService : IFinancialYearService
         if (linkedPlans.Count > 0)
         {
             throw new BusinessRuleException("لا يمكن حذف السنة المالية لوجود خطط مرتبطة بها");
+        }
+
+        var linkedAvailabilities = await _bankAvailabilityRepository.FindAsync(x => x.FinancialYearId == id, cancellationToken);
+        if (linkedAvailabilities.Count > 0)
+        {
+            throw new BusinessRuleException("لا يمكن حذف السنة المالية لوجود إتاحات بنكية مسجلة عليها");
         }
 
         _financialYearRepository.Remove(year);

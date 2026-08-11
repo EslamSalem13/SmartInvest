@@ -79,6 +79,7 @@ public static class DependencyInjection
         // Financial Management (دورة التعاقدات)
         services.AddScoped<IProcurementService, Services.ProcurementService>();
         services.AddScoped<IPresentationMemoService, Services.PresentationMemoService>();
+        services.AddScoped<IBankAvailabilityService, Services.BankAvailabilityService>();
 
         return services;
     }

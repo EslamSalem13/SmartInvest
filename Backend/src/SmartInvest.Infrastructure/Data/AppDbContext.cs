@@ -22,6 +22,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<MainProgram> MainPrograms { get; set; }
     public DbSet<SubProgram> SubPrograms { get; set; }
     public DbSet<FinancialYear> FinancialYears { get; set; }
+    public DbSet<BankAvailability> BankAvailabilities => Set<BankAvailability>();
+    public DbSet<BankAvailabilityDocument> BankAvailabilityDocuments => Set<BankAvailabilityDocument>();
     public DbSet<Measurement> Measurements => Set<Measurement>();
     public DbSet<Unit> Units => Set<Unit>();
 
