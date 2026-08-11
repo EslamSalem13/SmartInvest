@@ -63,7 +63,7 @@
                 <td>{{ u.email }}</td>
                 <td>
                   <span class="badge" [class.mgr]="u.role === Roles.PlanningManager">
-                    {{ u.role === Roles.PlanningManager ? '👑' : '👤' }} {{ roleLabel(u.role) }}
+                    {{ roleLabel(u.role) }}
                   </span>
                 </td>
                 <td><span class="pill" [class.ok]="u.isActive">{{ u.isActive ? 'نشط' : 'غير نشط' }}</span></td>

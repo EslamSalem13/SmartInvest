@@ -99,11 +99,13 @@
 
 .feats {
   list-style: none;
-  margin: 34px 0 0;
+  margin: 20px 100px;
   padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  align-items:flex-start;
+
   gap: 15px;
 }
 .feats li {
