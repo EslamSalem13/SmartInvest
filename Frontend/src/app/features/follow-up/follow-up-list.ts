@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { FollowUpService } from '../../core/services/follow-up.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -21,6 +22,7 @@ export class FollowUpList implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly financial = inject(FinancialService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly isManager = this.auth.isManager;
 
@@ -55,11 +57,19 @@ export class FollowUpList implements OnInit {
   protected readonly selectedItem = signal<FollowUpListItem | null>(null);
 
   ngOnInit(): void {
+    const yearIdRaw = this.route.snapshot.queryParamMap.get('financialYearId');
+    const yearId = yearIdRaw != null ? Number(yearIdRaw) : NaN;
+    if (!Number.isNaN(yearId)) {
+      this.selectedYearId.set(yearId);
+    }
+
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
         const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        if (sorted.length > 0) {
+        const selected = this.selectedYearId();
+        if ((selected == null || !years.some((y) => y.id === selected)) && sorted.length > 0) {
+          // لا توجد سنة مختارة، أو السنة القادمة من الرابط (financialYearId) غير صحيحة — نرجع للافتراضي.
           this.selectedYearId.set(sorted[0].id);
         }
         this.load();

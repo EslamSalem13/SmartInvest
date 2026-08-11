@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
@@ -44,6 +44,9 @@ export class Projects {
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly bankAvailabilitiesService = inject(BankAvailabilitiesService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+
+  private pendingOpenAvailability = false;
 
   protected readonly isManager = this.auth.isManager;
   protected readonly agencies = signal<string[]>([]);
@@ -455,6 +458,7 @@ export class Projects {
   protected readonly showImportWizard = signal(false);
 
   constructor() {
+    this.applyQueryParams();
     this.loadFinancialYears();
     this.loadLookups();
     effect(() => {
@@ -464,6 +468,24 @@ export class Projects {
       this.fAgency(); this.fMarkaz(); this.fPriority(); this.fFunding();
       this.page.set(1);
     });
+  }
+
+  /** يقرأ financialYearId / approval / openAvailability من رابط الدخول (مثل روابط لوحة التحكم). */
+  private applyQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+
+    const yearIdRaw = params.get('financialYearId');
+    const yearId = yearIdRaw != null ? Number(yearIdRaw) : NaN;
+    if (!Number.isNaN(yearId)) {
+      this.selectedYearId.set(yearId);
+    }
+
+    const approval = params.get('approval');
+    if (approval === 'approved' || approval === 'pending' || approval === 'stalled') {
+      this.approvalFilter.set(approval);
+    }
+
+    this.pendingOpenAvailability = params.get('openAvailability') === 'true';
   }
 
   protected load(): void {
@@ -495,10 +517,18 @@ export class Projects {
       next: (years) => {
         this.financialYears.set(years);
         const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        if (this.selectedYearId() == null && sorted.length > 0) {
+        const selected = this.selectedYearId();
+        if ((selected == null || !years.some((y) => y.id === selected)) && sorted.length > 0) {
+          // لا توجد سنة مختارة، أو السنة القادمة من الرابط (financialYearId) غير صحيحة — نرجع للافتراضي.
           this.selectedYearId.set(sorted[0].id);
         }
         this.load();
+        if (this.pendingOpenAvailability) {
+          this.pendingOpenAvailability = false;
+          if (this.selectedYearId() != null) {
+            this.openAvailabilityModal();
+          }
+        }
       },
       error: () => {
         this.load();

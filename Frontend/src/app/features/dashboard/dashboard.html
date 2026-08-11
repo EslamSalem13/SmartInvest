@@ -1,0 +1,307 @@
+<div class="page">
+  <header class="page-head">
+    <div>
+      <h1>لوحة التحكم</h1>
+      <p>مرحبًا، {{ auth.user()?.fullName }} — ملخص أداء الخطة الاستثمارية</p>
+    </div>
+    <div class="grow"></div>
+    <div class="head-tools">
+      @if (sortedYears().length > 0) {
+        <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)" aria-label="اختيار السنة المالية">
+          @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
+        </select>
+      }
+    </div>
+  </header>
+
+  @if (loading() && !overview()) {
+    <div class="skeletons">
+      <div class="kpis">
+        @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="skeleton kpi-skel"></div> }
+      </div>
+      <div class="charts-grid">
+        @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="skeleton chart-skel"></div> }
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="state error">
+      {{ error() }}
+      <button class="si-btn" (click)="load()">إعادة المحاولة</button>
+    </div>
+  } @else if (overview(); as data) {
+    <!-- كروت المؤشرات -->
+    <div class="kpis">
+      <a class="kpi" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()" aria-label="عرض كل المشروعات">
+        <div class="kpi-top">
+          <span class="lab">إجمالي المشروعات</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg></span>
+        </div>
+        <b class="val" [title]="data.projectMetrics.totalSubProjects">{{ data.projectMetrics.totalSubProjects }}</b>
+        <span class="sub">عبر السنة المالية المختارة</span>
+      </a>
+
+      <a class="kpi ok" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams('approved')" aria-label="عرض المشروعات المعتمدة">
+        <div class="kpi-top">
+          <span class="lab">المعتمدة</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6 9 17l-5-5" /></svg></span>
+        </div>
+        <b class="val" [title]="data.projectMetrics.approvedCount">{{ data.projectMetrics.approvedCount }}</b>
+        <span class="sub">نسبة الاعتماد {{ percent(data.projectMetrics.approvalRate) }}</span>
+      </a>
+
+      <a class="kpi warn" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams('pending')" aria-label="عرض المشروعات قيد المراجعة">
+        <div class="kpi-top">
+          <span class="lab">قيد المراجعة</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg></span>
+        </div>
+        <b class="val" [title]="data.projectMetrics.proposedCount">{{ data.projectMetrics.proposedCount }}</b>
+        <span class="sub">بانتظار الاعتماد</span>
+      </a>
+
+      <a class="kpi bad" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams('stalled')" aria-label="عرض المشروعات المتعثرة">
+        <div class="kpi-top">
+          <span class="lab">المتعثرة</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg></span>
+        </div>
+        <b class="val" [title]="data.projectMetrics.stalledCount">{{ data.projectMetrics.stalledCount }}</b>
+        <span class="sub">تحتاج متابعة عاجلة</span>
+      </a>
+
+      <a class="kpi gold" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()" aria-label="عرض إجمالي التمويل في صفحة المشروعات">
+        <div class="kpi-top">
+          <span class="lab">إجمالي التمويل</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></span>
+        </div>
+        <b class="val" [title]="money(data.financialMetrics.totalFunding) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalFunding) }} <small>ج.م</small></b>
+        <span class="sub">بنكي {{ compactMoney(data.financialMetrics.bankFunding) }} · ذاتي {{ compactMoney(data.financialMetrics.selfFunding) }}</span>
+      </a>
+
+      <a class="kpi gold" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams(undefined, true)" aria-label="عرض سجل الإتاحات البنكية">
+        <div class="kpi-top">
+          <span class="lab">إجمالي المتاح</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M6 15h4" /></svg></span>
+        </div>
+        <b class="val" [title]="money(data.financialMetrics.totalBankAvailabilities) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalBankAvailabilities) }} <small>ج.م</small></b>
+        <span class="sub">{{ percent(data.financialMetrics.availabilityRateOfBankFunding) }} من التمويل البنكي</span>
+      </a>
+
+      <a class="kpi info" [routerLink]="['/app/follow-up']" [queryParams]="followUpQueryParams()" aria-label="عرض إجمالي المنصرف في صفحة متابعة المشروعات">
+        <div class="kpi-top">
+          <span class="lab">إجمالي المنصرف</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12l7 7 7-7" /></svg></span>
+        </div>
+        <b class="val" [title]="money(data.financialMetrics.totalSpent) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalSpent) }} <small>ج.م</small></b>
+        <span class="sub">{{ percent(data.financialMetrics.spentRateOfTotalFunding) }} من إجمالي التمويل</span>
+      </a>
+
+      <a class="kpi" [routerLink]="['/app/follow-up']" [queryParams]="followUpQueryParams()" aria-label="عرض متوسط التنفيذ في صفحة متابعة المشروعات">
+        <div class="kpi-top">
+          <span class="lab">متوسط التنفيذ</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9" /><path d="M12 12 16 8" /></svg></span>
+        </div>
+        <b class="val">{{ percent(data.projectMetrics.averagePhysicalProgress) }}</b>
+        <span class="sub">{{ data.projectMetrics.inProgressCount }} مشروع قيد التنفيذ</span>
+      </a>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>توزيع التمويل: بنكي مقابل ذاتي</h3>
+        @if (hasFundingData()) {
+          <div #fundingChart class="chart-box"></div>
+        } @else {
+          <div class="chart-empty">لا توجد بيانات تمويل لعرضها</div>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h3>نسبة الإتاحات من التمويل البنكي</h3>
+        <div #availabilityGaugeChart class="chart-box"></div>
+      </div>
+
+      <div class="chart-card">
+        <h3>توزيع المشروعات حسب الحالة</h3>
+        @if (hasStatusData()) {
+          <div #statusChart class="chart-box"></div>
+        } @else {
+          <div class="chart-empty">لا توجد مشروعات لعرضها</div>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h3>توزيع المشروعات حسب الأولوية</h3>
+        @if (hasPriorityData()) {
+          <div #priorityChart class="chart-box"></div>
+        } @else {
+          <div class="chart-empty">لا توجد بيانات أولويات لعرضها</div>
+        }
+      </div>
+
+      <div class="chart-card wide">
+        <h3>التمويل حسب البرامج الرئيسية</h3>
+        @if (hasProgramData()) {
+          <div #programFundingChart class="chart-box tall"></div>
+        } @else {
+          <div class="chart-empty">لا توجد بيانات برامج لعرضها</div>
+        }
+      </div>
+
+      <div class="chart-card wide">
+        <h3>التراكم الزمني للإتاحات البنكية</h3>
+        @if (hasTimelineData()) {
+          <div #availabilityTimelineChart class="chart-box"></div>
+        } @else {
+          <div class="chart-empty">لا توجد إتاحات مسجلة لهذه السنة بعد</div>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h3>توزيع المشروعات حسب المركز</h3>
+        @if (hasMarkazData()) {
+          <div #markazChart class="chart-box tall"></div>
+        } @else {
+          <div class="chart-empty">لا توجد بيانات مراكز لعرضها</div>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h3>توزيع نسب التنفيذ</h3>
+        @if (hasProgressData()) {
+          <div #progressChart class="chart-box"></div>
+        } @else {
+          <div class="chart-empty">لا توجد مشروعات قيد التنفيذ بعد</div>
+        }
+      </div>
+    </div>
+
+    <!-- الأقسام التفصيلية -->
+    <div class="details-grid">
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>المشروعات المتعثرة</h3>
+          <a class="detail-view-all" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams('stalled')">عرض الكل</a>
+        </div>
+        @if (data.details.stalledProjects.length === 0) {
+          <p class="detail-empty">لا توجد مشروعات متعثرة حاليًا.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (p of data.details.stalledProjects; track p.subProjectId) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
+                  <span class="detail-row-name">{{ p.subProjectName }}</span>
+                  <span class="detail-meta">{{ p.mainProjectName }} · {{ money(p.totalCost) }} ج.م</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>مراحل تنفيذ متأخرة</h3>
+          <a class="detail-view-all" [routerLink]="['/app/follow-up']" [queryParams]="followUpQueryParams()">عرض الكل</a>
+        </div>
+        @if (data.details.overdueStages.length === 0) {
+          <p class="detail-empty">لا توجد مراحل متأخرة حاليًا.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (s of data.details.overdueStages; track s.executionStageId) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects', s.subProjectId]" [title]="s.subProjectName">
+                  <span class="detail-row-name">{{ s.subProjectName }}</span>
+                  <span class="detail-meta bad-text">{{ s.stageName }} — الموعد {{ dateOnly(s.deadline) }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>أحدث الإتاحات البنكية</h3>
+          <a class="detail-view-all" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams(undefined, true)">عرض الكل</a>
+        </div>
+        @if (data.details.recentAvailabilities.length === 0) {
+          <p class="detail-empty">لا توجد إتاحات مسجلة بعد.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (a of data.details.recentAvailabilities; track a.id) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams(undefined, true)" title="عرض سجل الإتاحات البنكية">
+                  <span class="detail-row-name tnum">{{ money(a.amount) }} ج.م</span>
+                  <span class="detail-meta">استلام {{ dateOnly(a.receivedDate) }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>أعلى المشروعات تمويلًا</h3>
+          <a class="detail-view-all" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()">عرض الكل</a>
+        </div>
+        @if (data.details.topFundedProjects.length === 0) {
+          <p class="detail-empty">لا توجد مشروعات لعرضها.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (p of data.details.topFundedProjects; track p.subProjectId) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
+                  <span class="detail-row-name">{{ p.subProjectName }}</span>
+                  <span class="detail-meta">{{ money(p.totalCost) }} ج.م</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>مشروعات بانتظار الاعتماد</h3>
+          <a class="detail-view-all" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams('pending')">عرض الكل</a>
+        </div>
+        @if (data.details.pendingApprovalProjects.length === 0) {
+          <p class="detail-empty">لا توجد مشروعات بانتظار الاعتماد.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (p of data.details.pendingApprovalProjects; track p.subProjectId) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
+                  <span class="detail-row-name">{{ p.subProjectName }}</span>
+                  <span class="detail-meta">{{ p.mainProjectName }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-head">
+          <h3>أحدث المشروعات</h3>
+          <a class="detail-view-all" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()">عرض الكل</a>
+        </div>
+        @if (data.details.recentProjects.length === 0) {
+          <p class="detail-empty">لا توجد مشروعات لعرضها.</p>
+        } @else {
+          <ul class="detail-list">
+            @for (p of data.details.recentProjects; track p.subProjectId) {
+              <li>
+                <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
+                  <span class="detail-row-name">{{ p.subProjectName }}</span>
+                  <span class="detail-meta">{{ p.mainProjectName }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  }
+</div>
