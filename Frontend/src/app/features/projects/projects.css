@@ -54,13 +54,27 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .kpi.bad::before { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-bg); }
 .kpi.gold::before { background: var(--gold); box-shadow: 0 0 0 4px var(--gold-100); }
 .kpi .lab { position: relative; z-index: 1; color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
-.kpi .val { position: relative; z-index: 1; display: block; font-size: var(--text-xl); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--green-900); }
+.kpi .val { position: relative; z-index: 1; display: block; font-size: clamp(15px, 1.6vw + 10px, var(--text-xl)); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--green-900); overflow-wrap: anywhere; }
 .kpi .val small { font-size: 11px; color: var(--muted); font-weight: 700; }
 
-/* بطاقة "المتاح" — زر تفاعلي بنفس شكل .kpi */
-.kpi-btn { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; text-align: start; }
-.kpi-btn:focus-visible { outline: 2px solid var(--green-600); outline-offset: 2px; }
-.kpi-btn:disabled { cursor: not-allowed; opacity: .6; }
+/* بطاقة "المتاح" — عنصر button يحمل class="kpi gold kpi-btn" فيرث كل تصميم .kpi تلقائيًا؛
+   .kpi-btn هنا لا تلمس background/border/padding/radius/shadow نهائيًا حتى لا تكسر تصميم .kpi،
+   وتقتصر فقط على إبطال الشكل الافتراضي لعنصر button وجعله يملأ خلية الـ grid بالكامل. */
+button.kpi-btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+button.kpi-btn:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
+button.kpi-btn:disabled { cursor: not-allowed; opacity: .6; }
+button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); border-color: var(--line); }
 
 /* نافذة سجل الإتاحات البنكية */
 .avail-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
