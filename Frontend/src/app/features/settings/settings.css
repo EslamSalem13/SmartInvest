@@ -14,3 +14,9 @@
   text-decoration: none;
 }
 .back:hover { text-decoration: underline; }
+
+@media (max-width: 768px) {
+  .page { padding: 18px 16px; }
+  .page-head, .page-head > div { width: 100%; }
+  .back { width: 100%; }
+}

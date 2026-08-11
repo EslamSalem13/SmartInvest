@@ -25,3 +25,9 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .si-check input { width: 16px; height: 16px; }
 
 .budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--green-700); text-align: end; }
+
+@media (max-width: 768px) {
+  .lookup-panel, .panel-head, .panel-head > div { width: 100%; min-width: 0; }
+  .panel-head { align-items: stretch; flex-direction: column; }
+  .state { padding: 24px 16px; }
+}

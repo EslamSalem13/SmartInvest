@@ -23,8 +23,8 @@
   } @else if (filtered().length === 0) {
     <div class="state">لا توجد عناصر مطابقة.</div>
   } @else {
-    <div class="tbl-wrap">
-      <table>
+    <div class="tbl-wrap si-responsive-table-wrap">
+      <table class="si-responsive-table">
         <thead>
           <tr>
             <th>{{ nameLabel() }}</th>
@@ -35,9 +35,9 @@
         <tbody>
           @for (item of filtered(); track item.id) {
             <tr>
-              <td><b>{{ item.name }}</b></td>
-              @if (hasParent()) { <td>{{ item.parentName }}</td> }
-              <td>
+              <td [attr.data-label]="nameLabel()"><b>{{ item.name }}</b></td>
+              @if (hasParent()) { <td [attr.data-label]="parentLabel()">{{ item.parentName }}</td> }
+              <td data-label="إجراءات">
                 @if (isManager()) {
                   <div class="acts">
                     <button class="act" title="تعديل" (click)="openEdit(item)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>

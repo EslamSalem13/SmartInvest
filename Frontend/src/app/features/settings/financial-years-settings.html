@@ -10,8 +10,8 @@
   } @else if (years().length === 0) {
     <div class="state">لا توجد سنوات مالية بعد.</div>
   } @else {
-    <div class="tbl-wrap">
-      <table>
+    <div class="tbl-wrap si-responsive-table-wrap">
+      <table class="si-responsive-table">
         <thead>
           <tr>
             <th>السنة المالية</th>
@@ -25,12 +25,12 @@
         <tbody>
           @for (year of years(); track year.id) {
             <tr>
-              <td><b>{{ year.name }}</b></td>
-              <td class="tnum">{{ year.startDate.slice(0, 10) }}</td>
-              <td class="tnum">{{ year.endDate.slice(0, 10) }}</td>
-              <td class="tnum">{{ money(year.budget) }} ج.م</td>
-              <td>{{ year.isClosed ? 'مقفولة' : 'مفتوحة' }}</td>
-              <td>
+              <td data-label="السنة المالية"><b>{{ year.name }}</b></td>
+              <td class="tnum" data-label="البداية">{{ year.startDate.slice(0, 10) }}</td>
+              <td class="tnum" data-label="النهاية">{{ year.endDate.slice(0, 10) }}</td>
+              <td class="tnum" data-label="الموازنة">{{ money(year.budget) }} ج.م</td>
+              <td data-label="الحالة">{{ year.isClosed ? 'مقفولة' : 'مفتوحة' }}</td>
+              <td data-label="إجراءات">
                 @if (isManager()) {
                   <div class="acts">
                     <button class="act" title="تعديل" aria-label="تعديل السنة المالية {{ year.name }}" (click)="openEdit(year)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>

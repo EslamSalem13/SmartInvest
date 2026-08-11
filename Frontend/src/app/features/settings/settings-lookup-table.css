@@ -21,3 +21,11 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .act svg { width: 15px; height: 15px; }
 .act.danger { color: var(--bad); border-color: #F3C6CC; }
 .act.danger:hover { background: var(--bad-bg); }
+
+@media (max-width: 768px) {
+  .lookup-panel, .panel-head, .panel-head > div, .search { width: 100%; min-width: 0; }
+  .panel-head { align-items: stretch; flex-direction: column; }
+  .panel-head .si-btn { width: 100%; margin-inline-start: 0; }
+  .search input { min-width: 0; }
+  .state { padding: 24px 16px; }
+}
