@@ -9,7 +9,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { BankAvailabilitiesService } from '../../core/services/bank-availabilities.service';
 import { ToastService } from '../../core/services/toast.service';
-import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
+import { egpToThousands, formatEgpAsThousands, thousandsToEgp } from '../../core/utils/budget.util';
 import {
   BankAvailability,
   BankAvailabilityDocument,
@@ -528,6 +528,10 @@ export class Projects {
 
   protected money(value: number): string {
     return (value ?? 0).toLocaleString('en-US');
+  }
+
+  protected thousandsLabel(value: number): string {
+    return formatEgpAsThousands(value);
   }
 
   protected dateOnly(value: string): string {

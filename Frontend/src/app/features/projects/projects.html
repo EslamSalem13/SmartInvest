@@ -36,9 +36,9 @@
     <div class="kpi ok"><span class="lab">المعتمدة</span><b class="val tnum">{{ kpiApproved() }}</b></div>
     <div class="kpi warn"><span class="lab">المقترحة</span><b class="val tnum">{{ kpiPending() }}</b></div>
     <!-- <div class="kpi bad"><span class="lab">متعثرة</span><b class="val tnum">{{ kpiStalled() }}</b></div> -->
-    <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum">{{ money(kpiBank()) }} <small>ج.م</small></b></div>
-    <div class="kpi gold"><span class="lab">إجمالي تمويل ذاتي</span><b class="val tnum">{{ money(kpiSelf()) }} <small>ج.م</small></b></div>
-    <div class="kpi gold"><span class="lab">الإجمالي</span><b class="val tnum">{{ money(kpiTotalFunding()) }} <small>ج.م</small></b></div>
+    <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum" [title]="money(kpiBank()) + ' ج.م'">{{ thousandsLabel(kpiBank()) }}</b></div>
+    <div class="kpi gold"><span class="lab">إجمالي تمويل ذاتي</span><b class="val tnum" [title]="money(kpiSelf()) + ' ج.م'">{{ thousandsLabel(kpiSelf()) }}</b></div>
+    <div class="kpi gold"><span class="lab">الإجمالي</span><b class="val tnum" [title]="money(kpiTotalFunding()) + ' ج.م'">{{ thousandsLabel(kpiTotalFunding()) }}</b></div>
     <button
       type="button"
       class="kpi gold kpi-btn"

@@ -13,3 +13,13 @@ export function egpToThousands(egp: number | null | undefined): number | null {
   }
   return Math.round(egp) / 1000;
 }
+
+/**
+ * يعرض قيمة مخزّنة بالجنيه الكامل كنص "بالألف جنيه" — للعرض فقط، لا يُستخدم عند الحفظ
+ * ولا يغيّر القيمة الأصلية القادمة من الـ API. يحتفظ بالكسور العشرية (حتى 3 منازل) دون
+ * أصفار زائدة، مثل: 703500000 → "703,500 ألف ج.م"، 125500 → "125.5 ألف ج.م".
+ */
+export function formatEgpAsThousands(value: number | null | undefined): string {
+  const thousands = (value ?? 0) / 1000;
+  return `${thousands.toLocaleString('en-US', { maximumFractionDigits: 3 })} ألف ج.م`;
+}
