@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IProcurementService, Services.ProcurementService>();
         services.AddScoped<IPresentationMemoService, Services.PresentationMemoService>();
         services.AddScoped<IBankAvailabilityService, Services.BankAvailabilityService>();
+        services.AddScoped<IDashboardService, Services.DashboardService>();
 
         return services;
     }
