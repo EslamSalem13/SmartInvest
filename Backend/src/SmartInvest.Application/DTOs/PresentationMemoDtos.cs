@@ -15,6 +15,12 @@ public class PresentationMemoDto
     public bool IsCompleted { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<MemoSubProjectDto> SubProjects { get; set; } = [];
+
+    /// <summary>طريقة التعاقد — رقم من <c>ContractingMethod</c>، فارغ للمذكرات القديمة.</summary>
+    public int? ContractingMethod { get; set; }
+
+    /// <summary>التسمية العربية لطريقة التعاقد — للعرض المباشر في القوائم.</summary>
+    public string? ContractingMethodLabel { get; set; }
 }
 
 public class PresentationMemoDetailDto : PresentationMemoDto
@@ -26,12 +32,14 @@ public class CreatePresentationMemoDto
 {
     public string Title { get; set; } = string.Empty;
     public List<int> SubProjectIds { get; set; } = [];
+    public int? ContractingMethod { get; set; }
 }
 
 public class UpdatePresentationMemoDto
 {
     public string Title { get; set; } = string.Empty;
     public List<int> SubProjectIds { get; set; } = [];
+    public int? ContractingMethod { get; set; }
 }
 
 public class UploadMemoVersionDto

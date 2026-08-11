@@ -242,20 +242,20 @@
             </div>
           </div>
           <div class="card">
-            <div class="card-head"><h3>مذكرات العرض</h3></div>
+            <div class="card-head"><h3>مذكرة العرض الفعّالة</h3></div>
             <div class="tbl-wrap si-responsive-table-wrap">
               <table class="si-responsive-table">
                 <thead><tr><th>المذكرة</th><th>الحالة</th></tr></thead>
                 <tbody>
-                  @for (m of procurementOverview()!.presentationMemos; track m.id) {
+                  @if (procurementOverview()!.activePresentationMemo; as m) {
                     <tr>
                       <td data-label="المذكرة">{{ m.title }}</td>
                       <td data-label="الحالة">
                         @if (m.isCompleted) { <span class="st-pill ok">مكتملة ✓</span> } @else { <span class="wait">قيد الإعداد</span> }
                       </td>
                     </tr>
-                  } @empty {
-                    <tr><td colspan="2" class="empty si-table-empty">لا توجد مذكرات مرتبطة.</td></tr>
+                  } @else {
+                    <tr><td colspan="2" class="empty si-table-empty">لا توجد مذكرة مرتبطة.</td></tr>
                   }
                 </tbody>
               </table>

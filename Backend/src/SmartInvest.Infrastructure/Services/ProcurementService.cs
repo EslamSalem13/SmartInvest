@@ -34,7 +34,7 @@ public class ProcurementService : IProcurementService
 
     public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
     {
-        return await _context.SubProjects.AsNoTracking()
+        var items = await _context.SubProjects.AsNoTracking()
             .Where(s => s.IsApproved
                 && (financialYearId == null || s.FinancialYears.Any(y => y.FinancialYearId == financialYearId)))
             .OrderBy(s => s.SubProjectId)
@@ -55,6 +55,56 @@ public class ProcurementService : IProcurementService
                 HasPresentationMemo = _context.PresentationMemoSubProjects.Any(m => m.SubProjectId == s.SubProjectId),
             })
             .ToListAsync(cancellationToken);
+
+        await AttachActiveMemosAsync(items, cancellationToken);
+        return items;
+    }
+
+    /// <summary>
+    /// يملأ بيانات المذكرة الفعّالة لكل مشروع عبر استعلام منفصل ثم دمج في الذاكرة.
+    /// ضم جدول الروابط داخل الاستعلام الرئيسي يُضاعف الصفوف (cartesian join) — وهو ما جرى تفاديه سابقًا.
+    /// </summary>
+    private async Task AttachActiveMemosAsync(
+        List<ProcurementSubProjectListItemDto> items,
+        CancellationToken cancellationToken)
+    {
+        var subProjectIds = items.Where(i => i.HasPresentationMemo).Select(i => i.SubProjectId).ToList();
+        if (subProjectIds.Count == 0)
+        {
+            return;
+        }
+
+        var links = await _context.PresentationMemoSubProjects.AsNoTracking()
+            .Where(x => subProjectIds.Contains(x.SubProjectId))
+            .Select(x => new
+            {
+                x.SubProjectId,
+                MemoId = x.PresentationMemo.Id,
+                x.PresentationMemo.Title,
+                x.PresentationMemo.CreatedAt,
+                x.PresentationMemo.ContractingMethod,
+            })
+            .ToListAsync(cancellationToken);
+
+        // الفعّالة = الأحدث إنشاءً، وعند التساوي الأعلى Id — ترتيب حتمي لا يتذبذب بين الطلبات
+        var activeBySubProject = links
+            .GroupBy(x => x.SubProjectId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.MemoId).First());
+
+        foreach (var item in items)
+        {
+            if (!activeBySubProject.TryGetValue(item.SubProjectId, out var active))
+            {
+                continue;
+            }
+
+            item.ActiveMemoId = active.MemoId;
+            item.ActiveMemoTitle = active.Title;
+            item.ContractingMethod = (int?)active.ContractingMethod;
+            item.ContractingMethodLabel = ContractingMethodLabels.ToLabel(active.ContractingMethod);
+        }
     }
 
     public async Task<ProcurementOverviewDto> GetOverviewAsync(int subProjectId, CancellationToken cancellationToken = default)
@@ -75,8 +125,11 @@ public class ProcurementService : IProcurementService
             SubProjectId = subProjectId,
             SubProjectName = sub.SubProjectName,
             SubProjectCode = sub.SubProjectCode,
-            PresentationMemos = await _context.PresentationMemoSubProjects.AsNoTracking()
+            // الفعّالة فقط: الأحدث إنشاءً، وعند التساوي الأعلى Id
+            ActivePresentationMemo = await _context.PresentationMemoSubProjects.AsNoTracking()
                 .Where(x => x.SubProjectId == subProjectId)
+                .OrderByDescending(x => x.PresentationMemo.CreatedAt)
+                .ThenByDescending(x => x.PresentationMemo.Id)
                 .Select(x => new PresentationMemoBriefDto
                 {
                     Id = x.PresentationMemo.Id,
@@ -84,7 +137,7 @@ public class ProcurementService : IProcurementService
                     CurrentVersionNumber = x.PresentationMemo.CurrentVersionNumber,
                     IsCompleted = x.PresentationMemo.IsCompleted,
                 })
-                .ToListAsync(cancellationToken),
+                .FirstOrDefaultAsync(cancellationToken),
         };
 
         bool? previousCompleted = true;
@@ -131,6 +184,7 @@ public class ProcurementService : IProcurementService
     public async Task<ProcurementVersionDto> UploadVersionAsync(int subProjectId, ProcurementStage stage, UploadProcurementVersionDto dto, CancellationToken cancellationToken = default)
     {
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+        await EnsureHasPresentationMemoAsync(subProjectId, cancellationToken);
         await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
 
         var ops = _stages[stage];
@@ -380,6 +434,21 @@ public class ProcurementService : IProcurementService
         if (isApproved == false)
         {
             throw new BusinessRuleException("لا يمكن العمل على مراحل الطرح قبل اعتماد المشروع الفرعي");
+        }
+    }
+
+    /// <summary>
+    /// لا تبدأ أي مرحلة طرح لمشروع بلا مذكرة عرض مرفقة.
+    /// يكفي أن تكون مرفقة — لا يُشترط اكتمالها، حتى لا يتعطّل تجهيز الطرح بانتظار لجنة الشؤون القانونية.
+    /// </summary>
+    private async Task EnsureHasPresentationMemoAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var hasMemo = await _context.PresentationMemoSubProjects.AsNoTracking()
+            .AnyAsync(x => x.SubProjectId == subProjectId, cancellationToken);
+
+        if (!hasMemo)
+        {
+            throw new BusinessRuleException("لا يمكن بدء مراحل الطرح قبل إرفاق مذكرة عرض للمشروع");
         }
     }
 

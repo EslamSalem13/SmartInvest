@@ -142,7 +142,9 @@ public class ProcurementOverviewDto
     public int SubProjectId { get; set; }
     public string SubProjectName { get; set; } = string.Empty;
     public string? SubProjectCode { get; set; }
-    public List<PresentationMemoBriefDto> PresentationMemos { get; set; } = [];
+    /// <summary>مذكرة العرض الفعّالة — الأحدث وحدها، وليست كل المذكرات المرتبطة تاريخيًا.</summary>
+    public PresentationMemoBriefDto? ActivePresentationMemo { get; set; }
+
     public List<ProcurementStageDto> Stages { get; set; } = [];
 }
 
@@ -156,6 +158,16 @@ public class ProcurementSubProjectListItemDto
     public int CompletedStages { get; set; }
     public int TotalStages { get; set; }
     public bool HasPresentationMemo { get; set; }
+
+    // ===== مذكرة العرض الفعّالة =====
+    // المشروع قد يكون مرتبطًا بأكثر من مذكرة تاريخيًا، لكن الفعّالة هي الأحدث وحدها.
+
+    public int? ActiveMemoId { get; set; }
+    public string? ActiveMemoTitle { get; set; }
+
+    /// <summary>نوع التعاقد المأخوذ من المذكرة الفعّالة.</summary>
+    public int? ContractingMethod { get; set; }
+    public string? ContractingMethodLabel { get; set; }
 }
 
 public class UploadProcurementVersionDto

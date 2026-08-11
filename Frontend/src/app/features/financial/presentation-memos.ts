@@ -7,6 +7,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { Roles } from '../../core/models/auth.models';
 import { FinancialYear } from '../../core/models/project.models';
 import {
+  CONTRACTING_METHODS,
   PresentationMemo,
   PresentationMemoDetail,
   ProcurementSubProjectListItem,
@@ -32,6 +33,8 @@ export class PresentationMemos implements OnInit {
   /** السنة المالية — المذكرة تُبنى من مشروعات السنة المفتوحة حاليًا فقط */
   protected readonly financialYears = signal<FinancialYear[]>([]);
   protected readonly selectedYearId = signal<number | null>(null);
+  protected readonly yearsLoading = signal(true);
+  protected readonly yearsError = signal(false);
   protected readonly sortedYears = computed(() =>
     [...this.financialYears()].sort((a, b) => b.startDate.localeCompare(a.startDate)),
   );
@@ -88,9 +91,13 @@ export class PresentationMemos implements OnInit {
   /** بحث داخل قائمة المشروعات في النموذج */
   protected readonly pickerSearch = signal('');
 
+  protected readonly contractingMethods = CONTRACTING_METHODS;
+  protected readonly fContractingMethod = signal<number | null>(null);
+
   /**
-   * المشروعات المعروضة في النموذج. المشروع المُختار يظل ظاهرًا دائمًا حتى لو
-   * لم يطابق البحث — وإلا اختفى اختيار المستخدم من أمامه قبل الحفظ.
+   * المشروعات المعروضة في النموذج — مطابقة البحث فقط.
+   * لا نُبقي المُحدَّد ظاهرًا رغم عدم مطابقته، لأن ذلك يُبطل الفلترة بمجرد
+   * استخدام "تحديد الكل". عدّاد المحدَّد بالأسفل يمنع ضياع اختيار خارج البحث.
    */
   protected readonly filteredSubProjects = computed(() => {
     const term = this.pickerSearch().trim();
@@ -98,12 +105,40 @@ export class PresentationMemos implements OnInit {
       return this.subProjects();
     }
     return this.subProjects().filter(
-      (sub) =>
-        this.isChecked(sub.subProjectId) ||
-        sub.subProjectName.includes(term) ||
-        (sub.subProjectCode ?? '').includes(term),
+      (sub) => sub.subProjectName.includes(term) || (sub.subProjectCode ?? '').includes(term),
     );
   });
+
+  protected readonly selectedCount = computed(() => this.fSubProjectIds().length);
+
+  /** هل كل المعروض حاليًا مُحدَّد؟ يحدد ما إذا كان الزر "تحديد الكل" أم "إلغاء التحديد". */
+  protected readonly allFilteredSelected = computed(() => {
+    const filtered = this.filteredSubProjects();
+    if (filtered.length === 0) {
+      return false;
+    }
+    const selected = new Set(this.fSubProjectIds());
+    return filtered.every((sub) => selected.has(sub.subProjectId));
+  });
+
+  /**
+   * تحديد/إلغاء تحديد نتائج البحث الحالية فقط — تراكميًا.
+   * يسمح بالبحث بكلمة ثم تحديد كل نتائجها، ثم البحث بكلمة أخرى دون فقد الأولى.
+   */
+  protected toggleSelectAllFiltered(): void {
+    const filteredIds = this.filteredSubProjects().map((sub) => sub.subProjectId);
+    if (filteredIds.length === 0) {
+      return;
+    }
+
+    const current = new Set(this.fSubProjectIds());
+    if (this.allFilteredSelected()) {
+      filteredIds.forEach((id) => current.delete(id));
+    } else {
+      filteredIds.forEach((id) => current.add(id));
+    }
+    this.fSubProjectIds.set([...current]);
+  }
 
   /** نموذج رفع إصدار */
   protected readonly showUpload = signal(false);
@@ -130,12 +165,17 @@ export class PresentationMemos implements OnInit {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
+        this.yearsLoading.set(false);
         this.selectedYearId.set(
           this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
         );
         this.loadSubProjects();
       },
-      error: () => this.loadSubProjects(),
+      error: () => {
+        this.yearsLoading.set(false);
+        this.yearsError.set(true);
+        this.loadSubProjects();
+      },
     });
   }
 
@@ -148,8 +188,15 @@ export class PresentationMemos implements OnInit {
   }
 
   private loadSubProjects(): void {
+    // بدون سنة مالية محددة يرجع الـ API مشروعات كل السنوات — وهذا يخالف شرط
+    // أن تكون مشروعات المذكرة تابعة للسنة المتصفَّحة. نفشل مغلقًا بقائمة فارغة.
+    if (this.selectedYearId() == null) {
+      this.subProjects.set([]);
+      return;
+    }
     this.financial.getSubProjects(this.selectedYearId()).subscribe({
       next: (items) => this.subProjects.set(items),
+      error: () => this.subProjects.set([]),
     });
   }
 
@@ -198,6 +245,7 @@ export class PresentationMemos implements OnInit {
     this.editingId.set(null);
     this.fTitle.set('');
     this.fSubProjectIds.set([]);
+    this.fContractingMethod.set(null);
     this.formError.set(null);
     this.pickerSearch.set('');
     this.showForm.set(true);
@@ -207,6 +255,7 @@ export class PresentationMemos implements OnInit {
     this.editingId.set(memo.id);
     this.fTitle.set(memo.title);
     this.fSubProjectIds.set(memo.subProjects.map((x) => x.subProjectId));
+    this.fContractingMethod.set(memo.contractingMethod);
     this.formError.set(null);
     this.pickerSearch.set('');
     this.showForm.set(true);
@@ -238,10 +287,18 @@ export class PresentationMemos implements OnInit {
       this.formError.set('اختر مشروعًا فرعيًا واحدًا على الأقل');
       return;
     }
+    if (this.fContractingMethod() == null) {
+      this.formError.set('اختر نوع التعاقد');
+      return;
+    }
 
     this.saving.set(true);
     this.formError.set(null);
-    const dto = { title: this.fTitle().trim(), subProjectIds: this.fSubProjectIds() };
+    const dto = {
+      title: this.fTitle().trim(),
+      subProjectIds: this.fSubProjectIds(),
+      contractingMethod: this.fContractingMethod(),
+    };
     const id = this.editingId();
     const request = id == null ? this.financial.createMemo(dto) : this.financial.updateMemo(id, dto);
 
@@ -374,6 +431,36 @@ export class PresentationMemos implements OnInit {
           this.uploadError.set(err?.error?.message ?? 'تعذر رفع الإصدار');
         },
       });
+  }
+
+  // ===== إرفاق قرار لجنة الشؤون القانونية بإصدار موجود =====
+  protected readonly legalOnlyUploading = signal(false);
+
+  /**
+   * يُرفق القرار بالإصدار الحالي بدل إنشاء إصدار جديد — القرار يصل بعد المذكرة
+   * وليس تعديلًا عليها، وتاريخ الرفع يُسجَّل وقت الإدخال.
+   */
+  protected onLegalOnlyPicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+
+    const id = this.openMemoId();
+    if (!file || id == null || this.legalOnlyUploading()) {
+      return;
+    }
+
+    this.legalOnlyUploading.set(true);
+    this.financial.uploadLegalDecision(id, file).subscribe({
+      next: () => {
+        this.legalOnlyUploading.set(false);
+        this.reload();
+      },
+      error: (err) => {
+        this.legalOnlyUploading.set(false);
+        alert(err?.error?.message ?? 'تعذر رفع قرار لجنة الشؤون القانونية');
+      },
+    });
   }
 
   protected download(version: ProcurementVersion, fileKey?: string): void {

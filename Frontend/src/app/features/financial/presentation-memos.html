@@ -22,7 +22,19 @@
     <div class="state error">{{ error() }}</div>
   } @else {
     <div class="toolbar">
+      <!-- خيار نائب دائم: <select> بلا خيارات ينهار إلى مربع صغير بسهم فقط -->
       <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
+        <option [ngValue]="null" disabled>
+          @if (yearsLoading()) {
+            جارٍ تحميل السنوات…
+          } @else if (yearsError()) {
+            تعذر تحميل السنوات المالية
+          } @else if (sortedYears().length === 0) {
+            لا توجد سنوات مالية
+          } @else {
+            — اختر السنة المالية —
+          }
+        </option>
         @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
       </select>
     </div>
@@ -59,6 +71,9 @@
             <span class="chip st" [class.ok-chip]="memo.isCompleted" [class.warn-chip]="memoStatus(memo) === 'active'">
               {{ memoStatusLabel(memo) }}
             </span>
+            @if (memo.contractingMethodLabel) {
+              <span class="chip">{{ memo.contractingMethodLabel }}</span>
+            }
             <span class="vers tnum">{{ memo.subProjects.length }} مشروع</span>
             <span class="grow"></span>
             <span class="arrow" [class.rot]="openMemoId() === memo.id">▾</span>
@@ -88,6 +103,15 @@
                       </button>
                       <button class="si-btn sm" (click)="openEdit(memo)">تعديل البيانات</button>
                       @if (memoDetail()!.currentVersionNumber > 0) {
+                        <!-- القرار يُرفق على الإصدار الحالي نفسه — لا يستدعي إصدارًا جديدًا -->
+                        <label class="si-btn sm legal-pick" [class.busy]="legalOnlyUploading()">
+                          <input type="file" hidden (change)="onLegalOnlyPicked($event)" [disabled]="legalOnlyUploading()" />
+                          @if (legalOnlyUploading()) {
+                            جاري الرفع…
+                          } @else {
+                            رفع قرار لجنة الشؤون
+                          }
+                        </label>
                         <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المذكرة</button>
                       }
                     } @else {
@@ -264,6 +288,15 @@
               />
             </div>
             <div class="si-fld full">
+              <label>نوع التعاقد <span class="req">*</span></label>
+              <select [ngModel]="fContractingMethod()" (ngModelChange)="fContractingMethod.set($event)">
+                <option [ngValue]="null">— اختر نوع التعاقد —</option>
+                @for (m of contractingMethods; track m.value) {
+                  <option [ngValue]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="si-fld full">
               <label>المشروعات الفرعية <span class="req">*</span></label>
               <input
                 class="picker-search"
@@ -271,6 +304,16 @@
                 [ngModel]="pickerSearch()"
                 (ngModelChange)="pickerSearch.set($event)"
               />
+              <div class="picker-bar">
+                <button type="button" class="si-btn sm" [disabled]="filteredSubProjects().length === 0" (click)="toggleSelectAllFiltered()">
+                  @if (allFilteredSelected()) {
+                    إلغاء تحديد المعروض
+                  } @else {
+                    تحديد كل المعروض ({{ filteredSubProjects().length }})
+                  }
+                </button>
+                <span class="picker-count tnum">محدَّد: {{ selectedCount() }}</span>
+              </div>
               <div class="check-list">
                 @for (sub of filteredSubProjects(); track sub.subProjectId) {
                   <label class="check-item">
