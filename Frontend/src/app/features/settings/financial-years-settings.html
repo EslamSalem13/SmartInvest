@@ -67,12 +67,11 @@
               <input type="date" [ngModel]="formEndDate()" (ngModelChange)="formEndDate.set($event)" />
             </div>
           </div>
-          <div class="si-grid">
-            <div class="si-fld"><label>مليار</label><input type="number" min="0" [ngModel]="formBudgetParts().billions" (ngModelChange)="updateBudgetPart('billions', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="formBudgetParts().millions" (ngModelChange)="updateBudgetPart('millions', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="formBudgetParts().thousands" (ngModelChange)="updateBudgetPart('thousands', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="formBudgetParts().units" (ngModelChange)="updateBudgetPart('units', $event)" placeholder="0" /></div>
+          <div class="si-fld">
+            <label>الموازنة (بالألف جنيه)</label>
+            <input type="number" min="0" step="0.01" [ngModel]="formBudgetThousands()" (ngModelChange)="updateBudgetThousands($event)" placeholder="0" />
           </div>
+          <div class="budget-total">القيمة بالجنيه: {{ formBudgetTotal().toLocaleString('en-US') }} ج.م</div>
           <label class="si-check">
             <input type="checkbox" [ngModel]="formIsClosed()" (ngModelChange)="formIsClosed.set($event)" />
             سنة مالية مقفولة

@@ -18,3 +18,5 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 
 .si-check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .si-check input { width: 16px; height: 16px; }
+
+.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--green-700); text-align: end; }

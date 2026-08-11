@@ -7,7 +7,7 @@ import { LookupsService } from '../../core/services/lookups.service';
 import { AgenciesService } from '../../core/services/agencies.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
-import { BudgetParts, combineBudget } from '../../core/utils/budget.util';
+import { thousandsToEgp } from '../../core/utils/budget.util';
 import {
   FinancialYear,
   Lookup,
@@ -54,8 +54,8 @@ export class Projects {
   );
 
   protected readonly showAddYearForm = signal(false);
-  protected readonly newYearBudgetParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
-  protected readonly newYearBudgetTotal = computed(() => combineBudget(this.newYearBudgetParts()));
+  protected readonly newYearBudgetThousands = signal<number | null>(null);
+  protected readonly newYearBudgetTotal = computed(() => thousandsToEgp(this.newYearBudgetThousands()));
   protected readonly addYearError = signal<string | null>(null);
   protected readonly savingYear = signal(false);
 
@@ -331,7 +331,7 @@ export class Projects {
   }
 
   protected openAddYear(): void {
-    this.newYearBudgetParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
+    this.newYearBudgetThousands.set(null);
     this.addYearError.set(null);
     this.showAddYearForm.set(true);
   }
@@ -340,8 +340,13 @@ export class Projects {
     this.showAddYearForm.set(false);
   }
 
-  protected updateNewYearBudgetPart(part: keyof BudgetParts, value: number | string): void {
-    this.newYearBudgetParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  protected updateNewYearBudgetThousands(value: number | string): void {
+    if (value === '' || value == null) {
+      this.newYearBudgetThousands.set(null);
+      return;
+    }
+    const num = Number(value);
+    this.newYearBudgetThousands.set(Number.isNaN(num) || num < 0 ? null : num);
   }
 
   protected confirmAddYear(): void {

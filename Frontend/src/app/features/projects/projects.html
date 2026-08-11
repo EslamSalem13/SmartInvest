@@ -210,13 +210,11 @@
         </div>
         <div class="si-modal-body">
           @if (addYearError()) { <div class="si-err">{{ addYearError() }}</div> }
-          <div class="si-grid">
-            <div class="si-fld"><label>مليار</label><input type="number" min="0" [ngModel]="newYearBudgetParts().billions" (ngModelChange)="updateNewYearBudgetPart('billions', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="newYearBudgetParts().millions" (ngModelChange)="updateNewYearBudgetPart('millions', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="newYearBudgetParts().thousands" (ngModelChange)="updateNewYearBudgetPart('thousands', $event)" placeholder="0" /></div>
-            <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="newYearBudgetParts().units" (ngModelChange)="updateNewYearBudgetPart('units', $event)" placeholder="0" /></div>
+          <div class="si-fld">
+            <label>الموازنة (بالألف جنيه)</label>
+            <input type="number" min="0" step="0.01" [ngModel]="newYearBudgetThousands()" (ngModelChange)="updateNewYearBudgetThousands($event)" placeholder="0" />
           </div>
-          <div class="budget-total">الإجمالي: {{ newYearBudgetTotal().toLocaleString('en-US') }} ج.م</div>
+          <div class="budget-total">القيمة بالجنيه: {{ newYearBudgetTotal().toLocaleString('en-US') }} ج.م</div>
         </div>
         <div class="si-modal-foot">
           <button class="si-btn primary" [disabled]="savingYear()" (click)="confirmAddYear()">

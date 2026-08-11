@@ -8,7 +8,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { MeasurementsService } from '../../core/services/measurements.service';
 import { MeasurementResolutionService } from '../../core/services/measurement-resolution.service';
 import { AuthService } from '../../core/services/auth.service';
-import { BudgetParts, combineBudget, splitBudget } from '../../core/utils/budget.util';
+import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
 import {
   ExecutiveAgencyProfile,
   FinancialYear,
@@ -197,22 +197,14 @@ interface MeasurementRow {
                 </select>
               </div>
               <div class="si-fld full">
-                <label>تمويل بنكي (ج.م)</label>
-                <div class="si-grid money-grid">
-                  <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="bankFundingParts().millions" (ngModelChange)="updateBankFundingPart('millions', $event)" placeholder="0" /></div>
-                  <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="bankFundingParts().thousands" (ngModelChange)="updateBankFundingPart('thousands', $event)" placeholder="0" /></div>
-                  <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="bankFundingParts().units" (ngModelChange)="updateBankFundingPart('units', $event)" placeholder="0" /></div>
-                </div>
-                <div class="money-total">الإجمالي: {{ bankFunding().toLocaleString('en-US') }} ج.م</div>
+                <label>تمويل بنكي (بالألف جنيه)</label>
+                <input type="number" min="0" step="0.01" [ngModel]="bankFundingThousands()" (ngModelChange)="updateBankFundingThousands($event)" placeholder="0" />
+                <div class="money-total">القيمة بالجنيه: {{ bankFunding().toLocaleString('en-US') }} ج.م</div>
               </div>
               <div class="si-fld full">
-                <label>تمويل ذاتي (ج.م)</label>
-                <div class="si-grid money-grid">
-                  <div class="si-fld"><label>مليون</label><input type="number" min="0" [ngModel]="selfFundingParts().millions" (ngModelChange)="updateSelfFundingPart('millions', $event)" placeholder="0" /></div>
-                  <div class="si-fld"><label>ألف</label><input type="number" min="0" [ngModel]="selfFundingParts().thousands" (ngModelChange)="updateSelfFundingPart('thousands', $event)" placeholder="0" /></div>
-                  <div class="si-fld"><label>جنيه</label><input type="number" min="0" [ngModel]="selfFundingParts().units" (ngModelChange)="updateSelfFundingPart('units', $event)" placeholder="0" /></div>
-                </div>
-                <div class="money-total">الإجمالي: {{ selfFunding().toLocaleString('en-US') }} ج.م</div>
+                <label>تمويل ذاتي (بالألف جنيه)</label>
+                <input type="number" min="0" step="0.01" [ngModel]="selfFundingThousands()" (ngModelChange)="updateSelfFundingThousands($event)" placeholder="0" />
+                <div class="money-total">القيمة بالجنيه: {{ selfFunding().toLocaleString('en-US') }} ج.م</div>
               </div>
               @if (edit()) {
                 <div class="si-fld">
@@ -329,7 +321,6 @@ interface MeasurementRow {
     .measure-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
     .measure-row .si-fld{margin:0}
     .si-x.sm{width:32px;height:32px;flex:0 0 auto}
-    .money-grid{grid-template-columns:repeat(3,1fr);margin-top:6px}
     .money-total{margin-top:6px;font-size:12.5px;font-weight:700;color:var(--green-700);text-align:end}
   `],
 })
@@ -378,17 +369,25 @@ export class SubProjectForm {
   protected readonly markazId = signal<number | null>(null);
   protected readonly priorityId = signal<number | null>(null);
   protected readonly statusId = signal<number | null>(null);
-  protected readonly bankFundingParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
-  protected readonly selfFundingParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
-  protected readonly bankFunding = computed(() => combineBudget(this.bankFundingParts()));
-  protected readonly selfFunding = computed(() => combineBudget(this.selfFundingParts()));
+  protected readonly bankFundingThousands = signal<number | null>(null);
+  protected readonly selfFundingThousands = signal<number | null>(null);
+  protected readonly bankFunding = computed(() => thousandsToEgp(this.bankFundingThousands()));
+  protected readonly selfFunding = computed(() => thousandsToEgp(this.selfFundingThousands()));
 
-  protected updateBankFundingPart(part: keyof BudgetParts, value: number | string): void {
-    this.bankFundingParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  private static parseThousands(value: number | string): number | null {
+    if (value === '' || value == null) {
+      return null;
+    }
+    const num = Number(value);
+    return Number.isNaN(num) || num < 0 ? null : num;
   }
 
-  protected updateSelfFundingPart(part: keyof BudgetParts, value: number | string): void {
-    this.selfFundingParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  protected updateBankFundingThousands(value: number | string): void {
+    this.bankFundingThousands.set(SubProjectForm.parseThousands(value));
+  }
+
+  protected updateSelfFundingThousands(value: number | string): void {
+    this.selfFundingThousands.set(SubProjectForm.parseThousands(value));
   }
 
   protected readonly overrunPercentage = signal<number | null>(null);
@@ -529,8 +528,8 @@ export class SubProjectForm {
           this.markazId.set(d.markazId);
           this.priorityId.set(d.priorityId);
           this.statusId.set(d.statusId);
-          this.bankFundingParts.set(splitBudget(d.bankFunding));
-          this.selfFundingParts.set(splitBudget(d.selfFunding));
+          this.bankFundingThousands.set(egpToThousands(d.bankFunding));
+          this.selfFundingThousands.set(egpToThousands(d.selfFunding));
           this.overrunPercentage.set(d.overrunPercentage);
           this.description.set(d.description ?? '');
           this.executiveAgencyId.set(d.executiveAgencyId);
@@ -662,8 +661,8 @@ export class SubProjectForm {
     this.markazId.set(null);
     this.priorityId.set(null);
     this.statusId.set(null);
-    this.bankFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
-    this.selfFundingParts.set({ billions: 0, millions: 0, thousands: 0, units: 0 });
+    this.bankFundingThousands.set(null);
+    this.selfFundingThousands.set(null);
     this.overrunPercentage.set(null);
     this.description.set('');
     this.executiveAgencyId.set(null);

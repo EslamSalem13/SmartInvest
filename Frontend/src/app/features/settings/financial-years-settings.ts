@@ -1,9 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialYear } from '../../core/models/project.models';
-import { BudgetParts, combineBudget, splitBudget } from '../../core/utils/budget.util';
+import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
 
 @Component({
   selector: 'app-financial-years-settings',
@@ -25,7 +25,8 @@ export class FinancialYearsSettings {
   protected readonly formName = signal('');
   protected readonly formStartDate = signal('');
   protected readonly formEndDate = signal('');
-  protected readonly formBudgetParts = signal<BudgetParts>({ billions: 0, millions: 0, thousands: 0, units: 0 });
+  protected readonly formBudgetThousands = signal<number | null>(null);
+  protected readonly formBudgetTotal = computed(() => thousandsToEgp(this.formBudgetThousands()));
   protected readonly formIsClosed = signal(false);
   protected readonly saving = signal(false);
   protected readonly formError = signal<string | null>(null);
@@ -54,7 +55,7 @@ export class FinancialYearsSettings {
     this.formName.set(year.name);
     this.formStartDate.set(year.startDate.slice(0, 10));
     this.formEndDate.set(year.endDate.slice(0, 10));
-    this.formBudgetParts.set(splitBudget(year.budget));
+    this.formBudgetThousands.set(egpToThousands(year.budget));
     this.formIsClosed.set(year.isClosed);
     this.formError.set(null);
     this.showForm.set(true);
@@ -65,8 +66,13 @@ export class FinancialYearsSettings {
     this.showForm.set(false);
   }
 
-  protected updateBudgetPart(part: keyof BudgetParts, value: number | string): void {
-    this.formBudgetParts.update((parts) => ({ ...parts, [part]: Number(value) || 0 }));
+  protected updateBudgetThousands(value: number | string): void {
+    if (value === '' || value == null) {
+      this.formBudgetThousands.set(null);
+      return;
+    }
+    const num = Number(value);
+    this.formBudgetThousands.set(Number.isNaN(num) || num < 0 ? null : num);
   }
 
   protected submitForm(): void {
@@ -79,7 +85,7 @@ export class FinancialYearsSettings {
 
     this.saving.set(true);
     this.formError.set(null);
-    const budget = combineBudget(this.formBudgetParts());
+    const budget = thousandsToEgp(this.formBudgetThousands());
     this.financialYearsService
       .update(id, {
         name,

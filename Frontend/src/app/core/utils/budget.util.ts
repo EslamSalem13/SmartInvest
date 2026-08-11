@@ -1,26 +1,15 @@
-export interface BudgetParts {
-  billions: number;
-  millions: number;
-  thousands: number;
-  units: number;
+/** يحوّل قيمة مُدخلة بالألف جنيه إلى جنيه كامل (للإرسال إلى الـ API). */
+export function thousandsToEgp(thousands: number | null | undefined): number {
+  if (thousands == null || Number.isNaN(thousands) || thousands < 0) {
+    return 0;
+  }
+  return Math.round(thousands * 1000 * 100) / 100;
 }
 
-export function splitBudget(value: number | null | undefined): BudgetParts {
-  let remaining = Math.round(value ?? 0);
-  const billions = Math.floor(remaining / 1_000_000_000);
-  remaining -= billions * 1_000_000_000;
-  const millions = Math.floor(remaining / 1_000_000);
-  remaining -= millions * 1_000_000;
-  const thousands = Math.floor(remaining / 1_000);
-  remaining -= thousands * 1_000;
-  return { billions, millions, thousands, units: remaining };
-}
-
-export function combineBudget(parts: BudgetParts): number {
-  return (
-    (parts.billions || 0) * 1_000_000_000 +
-    (parts.millions || 0) * 1_000_000 +
-    (parts.thousands || 0) * 1_000 +
-    (parts.units || 0)
-  );
+/** يحوّل قيمة مخزّنة بالجنيه إلى الألف جنيه (لعرضها في الحقل عند التعديل). دقة لأقرب جنيه حتى لا تُفقد قيم غير مضاعفة للعشرة عند العرض. */
+export function egpToThousands(egp: number | null | undefined): number | null {
+  if (egp == null) {
+    return null;
+  }
+  return Math.round(egp) / 1000;
 }
