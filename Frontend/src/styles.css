@@ -176,6 +176,121 @@ button { font-family: inherit; cursor: pointer; }
   transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
 }
 
+/* ===== نمط موحّد: تتحول صفوف الجداول إلى بطاقات مقروءة على الموبايل ===== */
+@media screen and (max-width: 768px) {
+  .si-responsive-table-wrap {
+    overflow: visible !important;
+    padding: 12px !important;
+  }
+
+  table.si-responsive-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: separate !important;
+    background: transparent !important;
+  }
+
+  .si-responsive-table thead {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .si-responsive-table tbody,
+  .si-responsive-table tfoot {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .si-responsive-table tfoot { margin-top: 12px; }
+
+  .si-responsive-table tbody > tr,
+  .si-responsive-table tfoot > tr {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 6px 14px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow-xs) !important;
+    overflow: hidden !important;
+  }
+
+  .si-responsive-table tbody > tr.main-row {
+    background: var(--green-50) !important;
+    border-color: var(--green-100) !important;
+  }
+
+  .si-responsive-table tfoot > tr {
+    background: var(--green-50) !important;
+    border-color: var(--green-100) !important;
+  }
+
+  .si-responsive-table td {
+    display: grid !important;
+    grid-template-columns: minmax(100px, 36%) minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 10px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
+    background: transparent !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    overflow-wrap: anywhere !important;
+    text-overflow: clip !important;
+    text-align: start !important;
+  }
+
+  .si-responsive-table td:last-child { border-bottom: 0 !important; }
+
+  .si-responsive-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: var(--text-xs);
+    font-weight: 800;
+    line-height: 1.7;
+  }
+
+  .si-responsive-table td[data-label="إجراءات"] .acts,
+  .si-responsive-table td[data-label="الإجراء"] .acts {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .si-responsive-table td.si-table-detail,
+  .si-responsive-table td.si-table-empty {
+    display: block !important;
+    text-align: center !important;
+  }
+
+  .si-responsive-table td.si-table-detail::before,
+  .si-responsive-table td.si-table-empty::before { content: none; }
+
+  .si-responsive-table .si-btn:not(.act),
+  .si-responsive-table a.si-btn { max-width: 100%; }
+}
+
+@media screen and (max-width: 380px) {
+  .si-responsive-table td {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 3px !important;
+  }
+}
+
 .si-page-head {
   display: flex;
   align-items: flex-end;
@@ -342,6 +457,15 @@ button { font-family: inherit; cursor: pointer; }
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+}
+
+@media (max-width: 620px) {
+  .si-modal-foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .si-modal-foot .grow { display: none; }
+  .si-modal-foot .si-btn { width: 100%; }
 }
 
 /* ===== طباعة: إخفاء هيكل التطبيق (الشريط الجانبي والترويسة) ===== */

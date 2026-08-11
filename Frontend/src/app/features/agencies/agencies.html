@@ -38,8 +38,8 @@
     <div class="state">لا توجد جهات تنفيذية مطابقة.</div>
   } @else {
     <div class="card">
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>اسم الجهة</th>
@@ -56,14 +56,14 @@
                   (click)="toggleExpand(a, $event)"
                   (keydown.enter)="toggleExpand(a, $event)"
                   (keydown.space)="$event.preventDefault(); toggleExpand(a, $event)">
-                <td>
+                <td data-label="اسم الجهة">
                   <svg class="chevron" [class.open]="isExpanded(a.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
                   <b>{{ a.agencyName }}</b>
                 </td>
-                <td class="tnum">{{ a.phone }}</td>
-                <td>{{ a.email }}</td>
-                <td><span class="pill" [class.ok]="a.isActive">{{ a.isActive ? 'نشط' : 'غير نشط' }}</span></td>
-                <td>
+                <td class="tnum" data-label="الهاتف">{{ a.phone }}</td>
+                <td data-label="البريد الإلكتروني">{{ a.email }}</td>
+                <td data-label="الحالة"><span class="pill" [class.ok]="a.isActive">{{ a.isActive ? 'نشط' : 'غير نشط' }}</span></td>
+                <td data-label="إجراءات">
                   @if (isManager()) {
                     <div class="acts">
                       <button class="act" title="تعديل" (click)="openEditForm(a, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
@@ -74,7 +74,7 @@
               </tr>
               @if (isExpanded(a.id)) {
                 <tr class="sub-row">
-                  <td colspan="5">
+                  <td colspan="5" class="si-table-detail">
                     @if (isDetailError(a.id)) {
                       <span class="subs-error">
                         تعذّر تحميل المشروعات الفرعية المسندة إلى هذه الجهة.

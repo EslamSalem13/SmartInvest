@@ -27,30 +27,32 @@
         </div>
       </header>
 
-      <table>
-        <thead>
-          <tr><th>#</th><th>المشروع الفرعي</th><th>المستوى</th><th>المكوّن العيني</th><th>الإجمالي</th></tr>
-        </thead>
-        <tbody>
-          @for (p of plan()!.projects; track $index; let i = $index) {
+      <div class="si-responsive-table-wrap">
+        <table class="si-responsive-table">
+          <thead>
+            <tr><th>#</th><th>المشروع الفرعي</th><th>المستوى</th><th>المكوّن العيني</th><th>الإجمالي</th></tr>
+          </thead>
+          <tbody>
+            @for (p of plan()!.projects; track $index; let i = $index) {
+              <tr>
+                <td data-label="#">{{ i + 1 }}</td>
+                <td data-label="المشروع الفرعي">{{ p.subProjectName }}</td>
+                <td data-label="المستوى">{{ p.projectLevelName }}</td>
+                <td data-label="المكوّن العيني">{{ p.componentTypeName }}</td>
+                <td class="tnum" data-label="الإجمالي">{{ money(p.totalCost) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="empty si-table-empty">لا توجد مشروعات في هذه الخطة.</td></tr>
+            }
+          </tbody>
+          <tfoot>
             <tr>
-              <td>{{ i + 1 }}</td>
-              <td>{{ p.subProjectName }}</td>
-              <td>{{ p.projectLevelName }}</td>
-              <td>{{ p.componentTypeName }}</td>
-              <td class="tnum">{{ money(p.totalCost) }}</td>
+              <td colspan="4" data-label="الإجمالي">الإجمالي</td>
+              <td class="tnum" data-label="القيمة">{{ money(totalCost()) }}</td>
             </tr>
-          } @empty {
-            <tr><td colspan="5" class="empty">لا توجد مشروعات في هذه الخطة.</td></tr>
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="4">الإجمالي</td>
-            <td class="tnum">{{ money(totalCost()) }}</td>
-          </tr>
-        </tfoot>
-      </table>
+          </tfoot>
+        </table>
+      </div>
     </div>
   }
 </div>

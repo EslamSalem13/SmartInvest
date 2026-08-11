@@ -62,8 +62,8 @@
           }
         </div>
       </div>
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>المشروع الفرعي</th>
@@ -77,36 +77,36 @@
           <tbody>
             @for (item of pagedItems(); track item.subProjectId) {
               <tr>
-                <td>{{ item.subProjectName }}</td>
-                <td>
+                <td data-label="المشروع الفرعي">{{ item.subProjectName }}</td>
+                <td data-label="الكود">
                   @if (item.subProjectCode) {
                     <span class="tnum">{{ item.subProjectCode }}</span>
                   } @else {
                     <span class="wait">بانتظار الاعتماد</span>
                   }
                 </td>
-                <td>{{ item.mainProjectName }}</td>
-                <td>
+                <td data-label="المشروع الرئيسي">{{ item.mainProjectName }}</td>
+                <td data-label="مذكرة عرض">
                   @if (item.hasPresentationMemo) {
                     <span class="chip ok-chip">مرتبط</span>
                   } @else {
                     <span class="chip">لا يوجد</span>
                   }
                 </td>
-                <td class="prog-cell">
+                <td class="prog-cell" data-label="تقدم الطرح">
                   <div class="prog">
                     <div class="bar" [style.width.%]="progress(item)"></div>
                   </div>
                   <span class="tnum prog-txt">{{ item.completedStages }}/{{ item.totalStages }}</span>
                 </td>
-                <td>
+                <td data-label="الإجراء">
                   <a class="si-btn primary sm" [routerLink]="['/app/financial', item.subProjectId]">
                     مراحل الطرح
                   </a>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية.</td></tr>
+              <tr><td colspan="6" class="empty si-table-empty">لا توجد مشروعات فرعية.</td></tr>
             }
           </tbody>
         </table>

@@ -145,16 +145,16 @@
             إضافة قياس
           </button>
         </div>
-        <div class="tbl-wrap">
-          <table>
+        <div class="tbl-wrap si-responsive-table-wrap">
+          <table class="si-responsive-table">
             <thead><tr><th>اسم القياس</th><th>القيمة</th><th>الوحدة</th><th>إجراءات</th></tr></thead>
             <tbody>
               @for (v of measurementValues(); track v.measurementId) {
                 <tr>
-                  <td>{{ v.measurementName }}</td>
-                  <td class="tnum">{{ v.value }}</td>
-                  <td>{{ v.unitName }}</td>
-                  <td>
+                  <td data-label="اسم القياس">{{ v.measurementName }}</td>
+                  <td class="tnum" data-label="القيمة">{{ v.value }}</td>
+                  <td data-label="الوحدة">{{ v.unitName }}</td>
+                  <td data-label="إجراءات">
                     <div class="acts">
                       <button class="act" title="تعديل" (click)="openEditMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
                       <button class="act danger" title="حذف" (click)="deleteMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
@@ -162,7 +162,7 @@
                   </td>
                 </tr>
               } @empty {
-                <tr><td colspan="4" class="empty">لا توجد قياسات مسجّلة بعد.</td></tr>
+                <tr><td colspan="4" class="empty si-table-empty">لا توجد قياسات مسجّلة بعد.</td></tr>
               }
             </tbody>
           </table>
@@ -211,19 +211,19 @@
         <div class="grid2">
           <div class="card">
             <div class="card-head"><h3>مراحل الطرح</h3></div>
-            <div class="tbl-wrap">
-              <table>
+            <div class="tbl-wrap si-responsive-table-wrap">
+              <table class="si-responsive-table">
                 <thead><tr><th>المرحلة</th><th>الحالة</th></tr></thead>
                 <tbody>
                   @for (s of procurementOverview()!.stages; track s.stage) {
                     <tr>
-                      <td>{{ s.stageLabel }}</td>
-                      <td>
+                      <td data-label="المرحلة">{{ s.stageLabel }}</td>
+                      <td data-label="الحالة">
                         @if (s.isCompleted) { <span class="st-pill ok">مكتملة ✓</span> } @else { <span class="wait">قيد التنفيذ</span> }
                       </td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="2" class="empty">لا توجد مراحل مسجّلة.</td></tr>
+                    <tr><td colspan="2" class="empty si-table-empty">لا توجد مراحل مسجّلة.</td></tr>
                   }
                 </tbody>
               </table>
@@ -231,19 +231,19 @@
           </div>
           <div class="card">
             <div class="card-head"><h3>مذكرات العرض</h3></div>
-            <div class="tbl-wrap">
-              <table>
+            <div class="tbl-wrap si-responsive-table-wrap">
+              <table class="si-responsive-table">
                 <thead><tr><th>المذكرة</th><th>الحالة</th></tr></thead>
                 <tbody>
                   @for (m of procurementOverview()!.presentationMemos; track m.id) {
                     <tr>
-                      <td>{{ m.title }}</td>
-                      <td>
+                      <td data-label="المذكرة">{{ m.title }}</td>
+                      <td data-label="الحالة">
                         @if (m.isCompleted) { <span class="st-pill ok">مكتملة ✓</span> } @else { <span class="wait">قيد الإعداد</span> }
                       </td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="2" class="empty">لا توجد مذكرات مرتبطة.</td></tr>
+                    <tr><td colspan="2" class="empty si-table-empty">لا توجد مذكرات مرتبطة.</td></tr>
                   }
                 </tbody>
               </table>

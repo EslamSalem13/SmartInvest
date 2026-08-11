@@ -190,22 +190,22 @@
                   </div>
                 }
 
-                <div class="tbl-wrap">
-                  <table>
+                <div class="tbl-wrap si-responsive-table-wrap">
+                  <table class="si-responsive-table">
                     <thead>
                       <tr><th>الإصدار</th><th>التاريخ</th><th>الملفات</th><th>قرار اللجنة القانونية</th><th>ملاحظات</th></tr>
                     </thead>
                     <tbody>
                       @for (version of memoDetail()!.versions; track version.id) {
                         <tr>
-                          <td class="tnum">
+                          <td class="tnum" data-label="الإصدار">
                             {{ version.versionNumber }}
                             @if (version.versionNumber === memoDetail()!.currentVersionNumber) {
                               <span class="chip ok-chip">الحالي</span>
                             }
                           </td>
-                          <td>{{ dateStr(version.createdAt) }}</td>
-                          <td>
+                          <td data-label="التاريخ">{{ dateStr(version.createdAt) }}</td>
+                          <td data-label="الملفات">
                             @for (file of version.files; track file.key) {
                               <button class="file-lnk" [title]="file.label" (click)="download(version, file.key)">
                                 <svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
@@ -214,7 +214,7 @@
                               </button>
                             }
                           </td>
-                          <td>
+                          <td data-label="قرار اللجنة القانونية">
                             @if (version.legalAffairsDecisionUploadedAt) {
                               <span class="chip ok-chip">مرفق</span>
                               <div class="fsize">رُفع في {{ dateStr(version.legalAffairsDecisionUploadedAt) }}</div>
@@ -222,10 +222,10 @@
                               <span class="wait">غير مرفق</span>
                             }
                           </td>
-                          <td class="notes">{{ version.notes || '—' }}</td>
+                          <td class="notes" data-label="ملاحظات">{{ version.notes || '—' }}</td>
                         </tr>
                       } @empty {
-                        <tr><td colspan="5" class="empty">لا توجد إصدارات بعد.</td></tr>
+                        <tr><td colspan="5" class="empty si-table-empty">لا توجد إصدارات بعد.</td></tr>
                       }
                     </tbody>
                   </table>

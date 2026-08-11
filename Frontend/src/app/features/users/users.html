@@ -39,8 +39,8 @@
     <div class="state">لا يوجد مستخدمون مطابقون.</div>
   } @else {
     <div class="card">
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>الاسم واسم المستخدم</th>
@@ -54,21 +54,21 @@
           <tbody>
             @for (u of paged(); track u.id) {
               <tr>
-                <td>
+                <td data-label="الاسم واسم المستخدم">
                   <div class="user">
                     <div class="av" [class.mgr]="u.role === Roles.PlanningManager">{{ initial(u.fullName) }}</div>
                     <div><b>{{ u.fullName }}</b><div class="uname">{{ u.userName }}</div></div>
                   </div>
                 </td>
-                <td>{{ u.email }}</td>
-                <td>
+                <td data-label="البريد الإلكتروني">{{ u.email }}</td>
+                <td data-label="الدور">
                   <span class="badge" [class.mgr]="u.role === Roles.PlanningManager">
                     {{ roleLabel(u.role) }}
                   </span>
                 </td>
-                <td><span class="pill" [class.ok]="u.isActive">{{ u.isActive ? 'نشط' : 'غير نشط' }}</span></td>
-                <td class="tnum">{{ u.createdAt | date: 'yyyy/MM/dd' }}</td>
-                <td>
+                <td data-label="الحالة"><span class="pill" [class.ok]="u.isActive">{{ u.isActive ? 'نشط' : 'غير نشط' }}</span></td>
+                <td class="tnum" data-label="تاريخ الإنشاء">{{ u.createdAt | date: 'yyyy/MM/dd' }}</td>
+                <td data-label="إجراءات">
                   <div class="acts">
                     <button class="act" title="إعادة تعيين كلمة المرور" (click)="resetPassword(u)">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>

@@ -43,8 +43,8 @@
           (ngModelChange)="search.set($event)"
         />
       </div>
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>اسم المشروع الفرعي</th>
@@ -58,22 +58,22 @@
           <tbody>
             @for (item of filtered(); track item.subProjectId) {
               <tr>
-                <td>
+                <td data-label="اسم المشروع الفرعي">
                   {{ item.subProjectName }}
                   @if (item.isStalled) { <span class="chip warn-chip">متعثر</span> }
                 </td>
-                <td>{{ item.contractorName ?? 'غير مسند' }}</td>
-                <td class="tnum">{{ item.financialProgressPercent }}%</td>
-                <td class="tnum">{{ item.physicalProgressPercent }}%</td>
-                <td class="tnum" [class.warn]="overdue(item)">
+                <td data-label="المقاول">{{ item.contractorName ?? 'غير مسند' }}</td>
+                <td class="tnum" data-label="التنفيذ المالي">{{ item.financialProgressPercent }}%</td>
+                <td class="tnum" data-label="التنفيذ العيني">{{ item.physicalProgressPercent }}%</td>
+                <td class="tnum" data-label="أقرب موعد مرحلة" [class.warn]="overdue(item)">
                   {{ item.nextDeadline ? (item.nextDeadline | date: 'yyyy/MM/dd') : '—' }}
                 </td>
-                <td>
+                <td data-label="الإجراء">
                   <button class="si-btn primary sm" (click)="onSelectStages(item)">عرض المراحل</button>
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty">لا توجد مشروعات فرعية معتمدة لهذه السنة.</td></tr>
+              <tr><td colspan="6" class="empty si-table-empty">لا توجد مشروعات فرعية معتمدة لهذه السنة.</td></tr>
             }
           </tbody>
         </table>
@@ -102,8 +102,8 @@
           @if (stagesLoading()) {
             <div class="state"><span class="spinner"></span> جاري التحميل…</div>
           } @else {
-            <div class="tbl-wrap">
-              <table>
+            <div class="tbl-wrap si-responsive-table-wrap">
+              <table class="si-responsive-table">
                 <thead>
                   <tr>
                     <th>المرحلة</th>
@@ -119,11 +119,11 @@
                 <tbody>
                   @for (s of stages(); track s.id) {
                     <tr [class.final-row]="s.isFinalDelivery">
-                      <td>
+                      <td data-label="المرحلة">
                         {{ s.name }}
                         @if (s.isFinalDelivery) { <span class="chip lock-chip">تلقائية</span> }
                       </td>
-                      <td class="tnum" [class.warn]="s.exceedsContractualDeadline">
+                      <td class="tnum" data-label="الموعد" [class.warn]="s.exceedsContractualDeadline">
                         @if (s.deadline) {
                           {{ s.deadline | date: 'yyyy/MM/dd' }}
                           @if (s.exceedsContractualDeadline) {
@@ -133,25 +133,25 @@
                           <span class="wait">بانتظار تسليم الأرضية</span>
                         }
                       </td>
-                      <td class="tnum">
+                      <td class="tnum" data-label="ذاتي">
                         {{ money(s.selfFundingSpent) }}
                         @if (s.hasSelfFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف الذاتي" (click)="downloadProof(s, 'self')">📎</button>
                         }
                       </td>
-                      <td class="tnum">
+                      <td class="tnum" data-label="بنكي">
                         {{ money(s.bankFundingSpent) }}
                         @if (s.hasBankFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف البنكي" (click)="downloadProof(s, 'bank')">📎</button>
                         }
                       </td>
-                      <td class="tnum">
+                      <td class="tnum" data-label="تنفيذ عيني">
                         {{ s.physicalProgressPercent }}%
                         @if (s.hasPhysicalProgressProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات التنفيذ العيني" (click)="downloadProof(s, 'progress')">📎</button>
                         }
                       </td>
-                      <td class="tnum penalty-cell">
+                      <td class="tnum penalty-cell" data-label="غرامة">
                         @if (editingPenaltyStageId() === s.id) {
                           <div class="penalty-edit">
                             <input
@@ -178,7 +178,7 @@
                           }
                         }
                       </td>
-                      <td>
+                      <td data-label="الحالة">
                         @if (s.isCompleted) {
                           <span class="st-pill ok">مكتملة</span>
                           @if (isManager()) {
@@ -188,10 +188,10 @@
                           <button class="si-btn sm" (click)="completeStage(s)">إنهاء</button>
                         }
                       </td>
-                      <td>@if (s.notes) { <span class="note-hint" [title]="s.notes">📝</span> }</td>
+                      <td data-label="ملاحظات">@if (s.notes) { <span class="note-hint" [title]="s.notes">📝</span> } @else { — }</td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="8" class="empty">لا توجد مراحل تنفيذ بعد.</td></tr>
+                    <tr><td colspan="8" class="empty si-table-empty">لا توجد مراحل تنفيذ بعد.</td></tr>
                   }
                 </tbody>
               </table>

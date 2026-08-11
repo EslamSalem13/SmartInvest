@@ -128,8 +128,8 @@
       <div class="card-head">
         <h3>جدول المشروعات</h3><span class="pill-count">{{ filteredMains().length }} مشروع رئيسي</span>
       </div>
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>كود المشروع</th><th>اسم المشروع</th><th>البرنامج</th><th>المقاول</th>
@@ -144,15 +144,15 @@
                   (click)="toggleProject(row.main.id)"
                   (keydown.enter)="toggleProject(row.main.id)"
                   (keydown.space)="$event.preventDefault(); toggleProject(row.main.id)">
-                <td>
+                <td data-label="كود المشروع">
                   <svg class="chevron sm" [class.open]="isProjectExpanded(row.main.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
                   @if (row.main.code) { <span class="code">{{ row.main.code }}</span> } @else { <span class="wait">مقترح</span> }
                 </td>
-                <td class="mname">{{ row.main.name }}</td>
-                <td>{{ row.main.subProgramName }}</td>
-                <td></td>
-                <td></td>
-                <td>
+                <td class="mname" data-label="اسم المشروع">{{ row.main.name }}</td>
+                <td data-label="البرنامج">{{ row.main.subProgramName }}</td>
+                <td data-label="المقاول">—</td>
+                <td data-label="المركز">—</td>
+                <td data-label="إجراءات">
                   <div class="acts">
                     @if (isManager() && !row.main.isApproved) {
                       <button class="act approve" title="اعتماد المشروع الرئيسي (لا يعتمد المشاريع الفرعية تلقائيًا)" (click)="openMainApprovalModal(row.main, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>
@@ -166,18 +166,18 @@
               <!-- صفوف الفرعي (تظهر فقط لو المشروع الرئيسي مفتوح) -->
               @if (isProjectExpanded(row.main.id)) {
                 @if (row.subs.length === 0) {
-                  <tr class="sub-row"><td></td><td colspan="5" class="empty-subs">لا توجد مشاريع فرعية تحت هذا المشروع.</td></tr>
+                  <tr class="sub-row"><td colspan="6" class="empty-subs si-table-empty">لا توجد مشاريع فرعية تحت هذا المشروع.</td></tr>
                 }
                 @for (s of row.subs; track s.id) {
                   <tr class="sub-row">
-                    <td>
+                    <td data-label="كود المشروع">
                       @if (s.code) { <span class="tnum">{{ s.code }}</span> } @else { <span class="wait">مقترح</span> }
                     </td>
-                    <td class="sname">{{ s.name }}</td>
-                    <td>{{ row.main.subProgramName }}</td>
-                    <td>{{ s.contractorName ?? 'غير مسند' }}</td>
-                    <td>{{ s.markazName }}</td>
-                    <td>
+                    <td class="sname" data-label="اسم المشروع">{{ s.name }}</td>
+                    <td data-label="البرنامج">{{ row.main.subProgramName }}</td>
+                    <td data-label="المقاول">{{ s.contractorName ?? 'غير مسند' }}</td>
+                    <td data-label="المركز">{{ s.markazName }}</td>
+                    <td data-label="إجراءات">
                       <div class="acts">
                         @if (isManager() && !s.isApproved) {
                           <button class="act approve" title="اعتماد المشروع" (click)="openSubApprovalModal(s, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 5 5L20 7" /></svg></button>

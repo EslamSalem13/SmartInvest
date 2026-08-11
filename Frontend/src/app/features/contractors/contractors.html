@@ -38,8 +38,8 @@
     <div class="state">لا يوجد مقاولون مطابقون.</div>
   } @else {
     <div class="card">
-      <div class="tbl-wrap">
-        <table>
+      <div class="tbl-wrap si-responsive-table-wrap">
+        <table class="si-responsive-table">
           <thead>
             <tr>
               <th>اسم المقاول</th>
@@ -57,15 +57,15 @@
                   (click)="toggleExpand(c, $event)"
                   (keydown.enter)="toggleExpand(c, $event)"
                   (keydown.space)="$event.preventDefault(); toggleExpand(c, $event)">
-                <td>
+                <td data-label="اسم المقاول">
                   <svg class="chevron" [class.open]="isExpanded(c.id)" viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6" /></svg>
                   <b>{{ c.contractorName }}</b>
                 </td>
-                <td>{{ c.companyType }}</td>
-                <td>{{ c.category }}</td>
-                <td class="tnum">{{ c.phoneNumber }}</td>
-                <td><span class="pill" [class.ok]="c.isActive">{{ c.isActive ? 'نشط' : 'غير نشط' }}</span></td>
-                <td>
+                <td data-label="نوع الشركة">{{ c.companyType }}</td>
+                <td data-label="الفئة">{{ c.category }}</td>
+                <td class="tnum" data-label="الهاتف">{{ c.phoneNumber }}</td>
+                <td data-label="الحالة"><span class="pill" [class.ok]="c.isActive">{{ c.isActive ? 'نشط' : 'غير نشط' }}</span></td>
+                <td data-label="إجراءات">
                   @if (isManager()) {
                     <div class="acts">
                       <button class="act" title="تعديل" (click)="openEditForm(c, $event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
@@ -76,7 +76,7 @@
               </tr>
               @if (isExpanded(c.id)) {
                 <tr class="sub-row">
-                  <td colspan="6">
+                  <td colspan="6" class="si-table-detail">
                     @if (isDetailError(c.id)) {
                       <span class="subs-error">
                         تعذّر تحميل المشروعات الفرعية المسندة إلى هذا المقاول.
