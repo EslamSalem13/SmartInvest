@@ -10,4 +10,7 @@ public static class Roles
 
     /// <summary>مدير + موظف تخطيط.</summary>
     public const string PlanningStaff = "PlanningEmployee,PlanningManager";
+
+    /// <summary>مدير التخطيط + سوبر أدمن — للعمليات الإدارية الحساسة مثل حذف الإتاحات البنكية.</summary>
+    public const string ManagementStaff = "PlanningManager,SuperAdmin";
 }

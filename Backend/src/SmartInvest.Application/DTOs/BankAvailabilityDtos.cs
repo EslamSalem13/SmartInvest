@@ -33,3 +33,13 @@ public class CreateBankAvailabilityDto
     public string? Notes { get; set; }
     public List<FileUploadDto> Documents { get; set; } = new();
 }
+
+/// <summary>يُبنى في الـ Controller من multipart/form-data — نفس نمط CreateBankAvailabilityDto، مع معرفات المستندات الحالية المطلوب الاحتفاظ بها وأي مستندات جديدة.</summary>
+public class UpdateBankAvailabilityDto
+{
+    public decimal Amount { get; set; }
+    public DateTime ReceivedDate { get; set; }
+    public string? Notes { get; set; }
+    public List<int> KeepDocumentIds { get; set; } = new();
+    public List<FileUploadDto> NewDocuments { get; set; } = new();
+}

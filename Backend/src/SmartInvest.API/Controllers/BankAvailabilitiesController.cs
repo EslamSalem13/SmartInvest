@@ -8,7 +8,7 @@ using SmartInvest.Domain.Common;
 
 namespace SmartInvest.API.Controllers;
 
-/// <summary>سجل الإتاحات البنكية لكل سنة مالية — سجل تاريخي، بلا تعديل أو حذف.</summary>
+/// <summary>سجل الإتاحات البنكية لكل سنة مالية — إضافة وتعديل لأي من PlanningStaff، وحذف لمدير التخطيط وسوبر أدمن فقط.</summary>
 [ApiController]
 [Authorize]
 [Route("api/financial-years/{financialYearId:int}/bank-availabilities")]
@@ -55,6 +55,47 @@ public class BankAvailabilitiesController : ControllerBase
 
         var result = await _bankAvailabilityService.CreateAsync(financialYearId, dto, cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>multipart/form-data: amount, receivedDate, notes، keepDocumentIds (متكررة لكل معرف يُحتفظ به) + مستندات جديدة اختيارية.</summary>
+    [HttpPut("{availabilityId:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<ActionResult<BankAvailabilityDto>> Update(
+        int financialYearId,
+        int availabilityId,
+        [FromForm] decimal amount,
+        [FromForm] DateTime receivedDate,
+        [FromForm] string? notes,
+        [FromForm] List<int>? keepDocumentIds,
+        CancellationToken cancellationToken)
+    {
+        var dto = new UpdateBankAvailabilityDto
+        {
+            Amount = amount,
+            ReceivedDate = receivedDate,
+            Notes = notes,
+            KeepDocumentIds = keepDocumentIds ?? new List<int>(),
+        };
+
+        foreach (var file in Request.Form.Files)
+        {
+            if (file.Length > 0)
+            {
+                dto.NewDocuments.Add(await FileRequestHelpers.ToUploadDtoAsync(file, cancellationToken));
+            }
+        }
+
+        var result = await _bankAvailabilityService.UpdateAsync(financialYearId, availabilityId, dto, cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>حذف نهائي (hard delete) للإتاحة وكل مستنداتها — مدير التخطيط وسوبر أدمن فقط.</summary>
+    [HttpDelete("{availabilityId:int}")]
+    [Authorize(Roles = Roles.ManagementStaff)]
+    public async Task<IActionResult> Delete(int financialYearId, int availabilityId, CancellationToken cancellationToken)
+    {
+        await _bankAvailabilityService.DeleteAsync(financialYearId, availabilityId, cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{availabilityId:int}/documents/{documentId:int}")]

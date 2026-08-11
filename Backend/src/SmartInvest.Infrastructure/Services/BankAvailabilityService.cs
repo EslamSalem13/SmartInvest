@@ -11,7 +11,8 @@ namespace SmartInvest.Infrastructure.Services;
 
 /// <summary>
 /// سجل الإتاحات البنكية لكل سنة مالية. يستخدم AppDbContext مباشرة (نفس نمط ProcurementService)
-/// لأن إضافة إتاحة تحتاج معاملة صريحة (Serializable) تمنع تجاوز سقف التمويل البنكي عند الإضافة المتزامنة.
+/// لأن إضافة أو تعديل إتاحة تحتاج معاملة صريحة (Serializable) تمنع تجاوز سقف التمويل البنكي
+/// عند الإضافة أو التعديل المتزامن.
 /// </summary>
 public class BankAvailabilityService : IBankAvailabilityService
 {
@@ -176,6 +177,147 @@ public class BankAvailabilityService : IBankAvailabilityService
                 FileName = d.File.FileName,
             }).ToList(),
         };
+    }
+
+    public async Task<BankAvailabilityDto> UpdateAsync(int financialYearId, int availabilityId, UpdateBankAvailabilityDto dto, CancellationToken cancellationToken = default)
+    {
+        var year = await _context.FinancialYears.AsNoTracking()
+            .FirstOrDefaultAsync(y => y.FinancialYearId == financialYearId, cancellationToken)
+            ?? throw new NotFoundException($"السنة المالية رقم {financialYearId} غير موجودة");
+
+        if (year.IsClosed)
+        {
+            throw new BusinessRuleException("لا يمكن تعديل إتاحة بنكية لسنة مالية مقفولة");
+        }
+
+        if (dto.Amount <= 0)
+        {
+            throw new BusinessRuleException("قيمة الإتاحة يجب أن تكون أكبر من صفر");
+        }
+
+        var today = DateTime.UtcNow.Date;
+        if (dto.ReceivedDate.Date > today)
+        {
+            throw new BusinessRuleException("تاريخ استلام الإتاحة لا يمكن أن يكون في المستقبل");
+        }
+        if (dto.ReceivedDate.Date < year.StartDate.Date || dto.ReceivedDate.Date > year.EndDate.Date)
+        {
+            throw new BusinessRuleException("تاريخ استلام الإتاحة يجب أن يقع ضمن فترة السنة المالية");
+        }
+
+        foreach (var file in dto.NewDocuments)
+        {
+            var extension = file.FileExtension ?? string.Empty;
+            if (!AllowedExtensions.Contains(extension))
+            {
+                throw new BusinessRuleException($"صيغة الملف '{file.FileName}' غير مدعومة");
+            }
+            if (file.FileSize > MaxFileSizeBytes)
+            {
+                throw new BusinessRuleException($"حجم الملف '{file.FileName}' يتجاوز الحد المسموح (10 ميجابايت)");
+            }
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var availability = await _context.BankAvailabilities
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.BankAvailabilityId == availabilityId && a.FinancialYearId == financialYearId, cancellationToken)
+            ?? throw new NotFoundException($"الإتاحة البنكية رقم {availabilityId} غير موجودة لهذه السنة المالية");
+
+        var keepIds = dto.KeepDocumentIds.ToHashSet();
+        var invalidIds = keepIds.Except(availability.Documents.Select(d => d.BankAvailabilityDocumentId)).ToList();
+        if (invalidIds.Count > 0)
+        {
+            throw new BusinessRuleException("أحد معرفات المستندات المُرسلة غير تابع لهذه الإتاحة");
+        }
+
+        var documentsToRemove = availability.Documents.Where(d => !keepIds.Contains(d.BankAvailabilityDocumentId)).ToList();
+        var finalDocumentCount = keepIds.Count + dto.NewDocuments.Count;
+
+        if (finalDocumentCount == 0)
+        {
+            throw new BusinessRuleException("يجب أن تحتفظ الإتاحة بمستند إثبات واحد على الأقل");
+        }
+        if (finalDocumentCount > MaxFilesPerAvailability)
+        {
+            throw new BusinessRuleException($"لا يمكن أن يتجاوز عدد المستندات {MaxFilesPerAvailability} لكل إتاحة");
+        }
+
+        var totalBankFunding = await GetTotalBankFundingAsync(financialYearId, cancellationToken);
+        var otherAvailabilitiesTotal = await _context.BankAvailabilities.AsNoTracking()
+            .Where(a => a.FinancialYearId == financialYearId && a.BankAvailabilityId != availabilityId)
+            .SumAsync(a => (decimal?)a.Amount, cancellationToken) ?? 0m;
+
+        var newTotal = otherAvailabilitiesTotal + dto.Amount;
+        if (newTotal > totalBankFunding)
+        {
+            throw new BusinessRuleException(
+                $"إجمالي الإتاحات ({newTotal:N2} ج.م) يتجاوز إجمالي التمويل البنكي المسجل لهذه السنة ({totalBankFunding:N2} ج.م)");
+        }
+
+        foreach (var doc in documentsToRemove)
+        {
+            availability.Documents.Remove(doc);
+            _context.BankAvailabilityDocuments.Remove(doc);
+        }
+
+        foreach (var file in dto.NewDocuments)
+        {
+            availability.Documents.Add(new BankAvailabilityDocument
+            {
+                File = new StoredFile
+                {
+                    FileName = file.FileName,
+                    FileExtension = file.FileExtension,
+                    FileSize = file.FileSize,
+                    Content = file.Content,
+                },
+            });
+        }
+
+        availability.Amount = dto.Amount;
+        availability.ReceivedDate = dto.ReceivedDate.Date;
+        availability.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return new BankAvailabilityDto
+        {
+            Id = availability.BankAvailabilityId,
+            FinancialYearId = availability.FinancialYearId,
+            Amount = availability.Amount,
+            ReceivedDate = availability.ReceivedDate,
+            CreatedAt = availability.CreatedAt,
+            Notes = availability.Notes,
+            Documents = availability.Documents.Select(d => new BankAvailabilityDocumentDto
+            {
+                Id = d.BankAvailabilityDocumentId,
+                FileName = d.File.FileName,
+            }).ToList(),
+        };
+    }
+
+    public async Task DeleteAsync(int financialYearId, int availabilityId, CancellationToken cancellationToken = default)
+    {
+        var year = await _context.FinancialYears.AsNoTracking()
+            .FirstOrDefaultAsync(y => y.FinancialYearId == financialYearId, cancellationToken)
+            ?? throw new NotFoundException($"السنة المالية رقم {financialYearId} غير موجودة");
+
+        if (year.IsClosed)
+        {
+            throw new BusinessRuleException("لا يمكن حذف إتاحة بنكية من سنة مالية مقفولة");
+        }
+
+        var availability = await _context.BankAvailabilities
+            .Include(a => a.Documents)
+            .FirstOrDefaultAsync(a => a.BankAvailabilityId == availabilityId && a.FinancialYearId == financialYearId, cancellationToken)
+            ?? throw new NotFoundException($"الإتاحة البنكية رقم {availabilityId} غير موجودة لهذه السنة المالية");
+
+        _context.BankAvailabilityDocuments.RemoveRange(availability.Documents);
+        _context.BankAvailabilities.Remove(availability);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<FileDownloadDto> DownloadDocumentAsync(int financialYearId, int availabilityId, int documentId, CancellationToken cancellationToken = default)

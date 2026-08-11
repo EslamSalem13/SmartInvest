@@ -4,7 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace SmartInvest.Domain.Entities;
 
 /// <summary>
-/// سجل إتاحة بنكية — دفعة أموال أتاحها البنك للسنة المالية (سجل تاريخي، لا يُعدَّل ولا يُحذف).
+/// سجل إتاحة بنكية — دفعة أموال أتاحها البنك للسنة المالية. يمكن تعديلها أو حذفها
+/// طالما السنة المالية غير مقفولة (تعديل لأي PlanningStaff، حذف لمدير التخطيط وسوبر أدمن فقط).
 /// </summary>
 public class BankAvailability
 {
