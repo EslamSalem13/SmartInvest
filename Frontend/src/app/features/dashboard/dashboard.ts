@@ -14,6 +14,7 @@ import { DashboardService } from '../../core/services/dashboard.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { DashboardOverview } from '../../core/models/dashboard.models';
 import { FinancialYear } from '../../core/models/project.models';
+import { egpToThousands, formatEgpAsThousands } from '../../core/utils/budget.util';
 
 // LabelLayout يلزم صراحةً مع الاستيراد الانتقائي من echarts/core حتى تتموضع تسميات
 // القطاعات (pie/rose) بلا تراكب — غير مُضمَّنة تلقائيًا خارج الحزمة الكاملة echarts/index.
@@ -138,13 +139,17 @@ export class Dashboard implements OnDestroy {
     return (value ?? 0).toLocaleString('en-US');
   }
 
-  protected compactMoney(value: number | null | undefined): string {
-    const v = value ?? 0;
-    const abs = Math.abs(v);
-    if (abs >= 1_000_000_000) return `${(v / 1_000_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })} مليار`;
-    if (abs >= 1_000_000) return `${(v / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })} مليون`;
-    if (abs >= 1_000) return `${(v / 1_000).toLocaleString('en-US', { maximumFractionDigits: 1 })} ألف`;
-    return v.toLocaleString('en-US');
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
+  }
+
+  private thousandsNumber(value: number | null | undefined): number {
+    return egpToThousands(value) ?? 0;
+  }
+
+  private chartThousandsLabel(value: number | string | null | undefined): string {
+    const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+    return `${numericValue.toLocaleString('en-US', { maximumFractionDigits: 3 })} ألف ج.م`;
   }
 
   protected percent(value: number | null | undefined): string {
@@ -230,7 +235,7 @@ export class Dashboard implements OnDestroy {
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط دائري يوضح توزيع التمويل بين البنكي والذاتي' },
-      tooltip: { trigger: 'item', valueFormatter: (v) => `${this.money(v as number)} ج.م` },
+      tooltip: { trigger: 'item', valueFormatter: (v) => this.chartThousandsLabel(v as number) },
       legend: { bottom: 0, textStyle: { fontFamily: 'Tajawal' } },
       color: [PALETTE[0], PALETTE[1]],
       series: [
@@ -241,7 +246,7 @@ export class Dashboard implements OnDestroy {
           avoidLabelOverlap: true,
           itemStyle: { borderColor: '#fff', borderWidth: 2 },
           label: { formatter: '{b}\n{d}%', fontFamily: 'Tajawal', fontSize: 11.5 },
-          data: fundingDistribution.map((d) => ({ name: d.name, value: d.value })),
+          data: fundingDistribution.map((d) => ({ name: d.name, value: this.thousandsNumber(d.value) })),
         },
       ],
     };
@@ -310,10 +315,10 @@ export class Dashboard implements OnDestroy {
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'shadow' },
-        valueFormatter: (v) => `${this.money(v as number)} ج.م`,
+        valueFormatter: (v) => this.chartThousandsLabel(v as number),
       },
       legend: { top: 0, textStyle: { fontFamily: 'Tajawal' } },
-      xAxis: { type: 'value' },
+      xAxis: { type: 'value', name: 'ألف ج.م', nameTextStyle: { fontFamily: 'Tajawal' } },
       yAxis: {
         type: 'category',
         data: items.map((i) => i.programName),
@@ -326,8 +331,8 @@ export class Dashboard implements OnDestroy {
         triggerEvent: true,
       },
       series: [
-        { name: 'بنكي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[0] }, data: items.map((i) => i.bankFunding) },
-        { name: 'ذاتي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[1] }, data: items.map((i) => i.selfFunding) },
+        { name: 'بنكي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[0] }, data: items.map((i) => this.thousandsNumber(i.bankFunding)) },
+        { name: 'ذاتي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[1] }, data: items.map((i) => this.thousandsNumber(i.selfFunding)) },
       ],
     };
   }
@@ -340,10 +345,10 @@ export class Dashboard implements OnDestroy {
       grid: { top: 24, right: 20, bottom: 30, left: 12, containLabel: true },
       tooltip: {
         trigger: 'axis',
-        valueFormatter: (v) => `${this.money(v as number)} ج.م`,
+        valueFormatter: (v) => this.chartThousandsLabel(v as number),
       },
       xAxis: { type: 'category', data: items.map((i) => this.dateOnly(i.receivedDate)), axisLabel: { fontFamily: 'Tajawal', fontSize: 11 } },
-      yAxis: { type: 'value' },
+      yAxis: { type: 'value', name: 'ألف ج.م', nameTextStyle: { fontFamily: 'Tajawal' } },
       series: [
         {
           type: 'line',
@@ -353,7 +358,7 @@ export class Dashboard implements OnDestroy {
           lineStyle: { color: PALETTE[0], width: 3 },
           itemStyle: { color: PALETTE[0] },
           areaStyle: { color: 'rgba(28,112,73,0.12)' },
-          data: items.map((i) => i.cumulativeAmount),
+          data: items.map((i) => this.thousandsNumber(i.cumulativeAmount)),
         },
       ],
     };

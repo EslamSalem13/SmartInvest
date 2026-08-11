@@ -72,8 +72,8 @@
           <span class="lab">إجمالي التمويل</span>
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></span>
         </div>
-        <b class="val" [title]="money(data.financialMetrics.totalFunding) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalFunding) }} <small>ج.م</small></b>
-        <span class="sub">بنكي {{ compactMoney(data.financialMetrics.bankFunding) }} · ذاتي {{ compactMoney(data.financialMetrics.selfFunding) }}</span>
+        <b class="val" [title]="money(data.financialMetrics.totalFunding) + ' ج.م'">{{ thousandsLabel(data.financialMetrics.totalFunding) }}</b>
+        <span class="sub">بنكي {{ thousandsLabel(data.financialMetrics.bankFunding) }} · ذاتي {{ thousandsLabel(data.financialMetrics.selfFunding) }}</span>
       </a>
 
       <a class="kpi gold" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams(undefined, true)" aria-label="عرض سجل الإتاحات البنكية">
@@ -81,7 +81,7 @@
           <span class="lab">إجمالي المتاح</span>
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="13" rx="2" /><path d="M2 10h20M6 15h4" /></svg></span>
         </div>
-        <b class="val" [title]="money(data.financialMetrics.totalBankAvailabilities) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalBankAvailabilities) }} <small>ج.م</small></b>
+        <b class="val" [title]="money(data.financialMetrics.totalBankAvailabilities) + ' ج.م'">{{ thousandsLabel(data.financialMetrics.totalBankAvailabilities) }}</b>
         <span class="sub">{{ percent(data.financialMetrics.availabilityRateOfBankFunding) }} من التمويل البنكي</span>
       </a>
 
@@ -90,7 +90,7 @@
           <span class="lab">إجمالي المنصرف</span>
           <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12l7 7 7-7" /></svg></span>
         </div>
-        <b class="val" [title]="money(data.financialMetrics.totalSpent) + ' ج.م'">{{ compactMoney(data.financialMetrics.totalSpent) }} <small>ج.م</small></b>
+        <b class="val" [title]="money(data.financialMetrics.totalSpent) + ' ج.م'">{{ thousandsLabel(data.financialMetrics.totalSpent) }}</b>
         <span class="sub">{{ percent(data.financialMetrics.spentRateOfTotalFunding) }} من إجمالي التمويل</span>
       </a>
 
@@ -190,7 +190,7 @@
               <li>
                 <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
                   <span class="detail-row-name">{{ p.subProjectName }}</span>
-                  <span class="detail-meta">{{ p.mainProjectName }} · {{ money(p.totalCost) }} ج.م</span>
+                  <span class="detail-meta" [title]="money(p.totalCost) + ' ج.م'">{{ p.mainProjectName }} · {{ thousandsLabel(p.totalCost) }}</span>
                 </a>
               </li>
             }
@@ -231,7 +231,7 @@
             @for (a of data.details.recentAvailabilities; track a.id) {
               <li>
                 <a class="detail-row" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams(undefined, true)" title="عرض سجل الإتاحات البنكية">
-                  <span class="detail-row-name tnum">{{ money(a.amount) }} ج.م</span>
+                  <span class="detail-row-name tnum" [title]="money(a.amount) + ' ج.م'">{{ thousandsLabel(a.amount) }}</span>
                   <span class="detail-meta">استلام {{ dateOnly(a.receivedDate) }}</span>
                 </a>
               </li>
@@ -253,7 +253,7 @@
               <li>
                 <a class="detail-row" [routerLink]="['/app/projects', p.subProjectId]" [title]="p.subProjectName">
                   <span class="detail-row-name">{{ p.subProjectName }}</span>
-                  <span class="detail-meta">{{ money(p.totalCost) }} ج.م</span>
+                  <span class="detail-meta" [title]="money(p.totalCost) + ' ج.م'">{{ thousandsLabel(p.totalCost) }}</span>
                 </a>
               </li>
             }
