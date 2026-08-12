@@ -76,6 +76,17 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .si-btn.sm { padding: 9px 14px; font-size: 12.5px; border-radius: var(--radius-sm); min-height: 38px; }
 .si-btn.danger { color: var(--bad); border-color: var(--bad-line); }
 .si-btn.danger:hover { background: var(--bad-bg); }
+.si-btn.complete { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; border-color: var(--green-700); }
+.si-btn.complete:disabled { opacity: .48; cursor: not-allowed; box-shadow: none; }
+.row-actions, .stage-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.existing-proof { display: block; color: var(--ok); font-size: 11px; line-height: 1.5; margin-bottom: 5px; }
+.completion-modal { width: min(620px, 100%); }
+.completion-warning { color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0 0 14px; font-weight: 700; }
+.completion-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.completion-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 11px 13px; }
+.completion-summary .full { grid-column: 1 / -1; }
+.completion-summary span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.completion-summary b { color: var(--heading); font-size: 13px; }
 
 /* هيدر التفاصيل */
 .detail-head { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 22px; margin-bottom: 16px; display: flex; gap: 16px; }
@@ -268,4 +279,10 @@ td.notes { color: var(--muted); max-width: 240px; }
 
   .prog-cell { min-width: 0; }
   .state { padding: 28px 18px; }
+  .row-actions, .stage-row-actions { width: 100%; align-items: stretch; }
+  .row-actions .si-btn, .stage-row-actions .si-btn { width: 100%; justify-content: center; }
+  .completion-summary { grid-template-columns: minmax(0, 1fr); }
+  .completion-summary .full { grid-column: auto; }
+  .completion-modal .si-modal-foot { flex-direction: column; }
+  .completion-modal .si-modal-foot .si-btn { width: 100%; }
 }

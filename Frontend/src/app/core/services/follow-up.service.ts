@@ -7,6 +7,7 @@ import {
   ExecutionStage,
   FollowUpFilters,
   FollowUpListItem,
+  ProjectCompletionEligibility,
 } from '../models/follow-up.models';
 
 @Injectable({ providedIn: 'root' })
@@ -52,6 +53,18 @@ export class FollowUpService {
     return this.http.put<ExecutionStage>(`${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}`, form);
   }
 
+  getCompletionEligibility(subProjectId: number, financialYearId: number): Observable<ProjectCompletionEligibility> {
+    return this.http.get<ProjectCompletionEligibility>(`${this.base}/subprojects/${subProjectId}/completion-eligibility`, {
+      params: { financialYearId },
+    });
+  }
+
+  completeExecution(subProjectId: number, financialYearId: number): Observable<ProjectCompletionEligibility> {
+    return this.http.put<ProjectCompletionEligibility>(`${this.base}/subprojects/${subProjectId}/complete-execution`, {}, {
+      params: { financialYearId },
+    });
+  }
+
   markComplete(subProjectId: number, stageId: number, financialYearId: number): Observable<ExecutionStage> {
     return this.http.put<ExecutionStage>(
       `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/complete`,
@@ -95,7 +108,7 @@ export class FollowUpService {
     const form = new FormData();
     form.append('financialYearId', String(financialYearId));
     form.append('name', payload.name);
-    form.append('deadline', payload.deadline);
+    if (payload.deadline) form.append('deadline', payload.deadline);
     form.append('selfFundingSpent', String(payload.selfFundingSpent));
     form.append('bankFundingSpent', String(payload.bankFundingSpent));
     form.append('physicalProgressPercent', String(payload.physicalProgressPercent));

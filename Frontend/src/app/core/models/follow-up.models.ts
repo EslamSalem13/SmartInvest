@@ -9,6 +9,23 @@ export interface FollowUpListItem {
   physicalProgressPercent: number;
   nextDeadline: string | null;
   stageCount: number;
+  completionEligibility: ProjectCompletionEligibility;
+}
+
+export interface ProjectCompletionEligibility {
+  isProjectCompleted: boolean;
+  canCompleteProject: boolean;
+  contractValue: number | null;
+  selfFundingSpent: number;
+  bankFundingSpent: number;
+  totalSpent: number;
+  overrunPercentage: number;
+  minimumRequired: number | null;
+  maximumAllowed: number | null;
+  physicalProgressTotal: number;
+  allStagesCompleted: boolean;
+  hasExecutionStages: boolean;
+  blockers: string[];
 }
 
 export interface ExecutionStage {

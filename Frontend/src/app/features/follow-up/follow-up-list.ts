@@ -117,6 +117,7 @@ export class FollowUpList implements OnInit {
   protected readonly stages = signal<ExecutionStage[]>([]);
   protected readonly stagesLoading = signal(false);
   protected readonly showAddStage = signal(false);
+  protected readonly editingStage = signal<ExecutionStage | null>(null);
   protected readonly savingStage = signal(false);
   protected readonly stageError = signal<string | null>(null);
 
@@ -208,6 +209,7 @@ export class FollowUpList implements OnInit {
   }
 
   protected openAddStage(): void {
+    this.editingStage.set(null);
     this.newStageName.set('');
     this.newStageDeadline.set('');
     this.newStageSelfSpent.set(0);
@@ -223,6 +225,26 @@ export class FollowUpList implements OnInit {
 
   protected closeAddStage(): void {
     this.showAddStage.set(false);
+    this.editingStage.set(null);
+  }
+
+  protected openEditStage(stage: ExecutionStage): void {
+    if (stage.isCompleted) {
+      this.toast.error('يجب إعادة فتح المرحلة المكتملة قبل تعديلها');
+      return;
+    }
+    this.editingStage.set(stage);
+    this.newStageName.set(stage.name);
+    this.newStageDeadline.set(stage.deadline?.slice(0, 10) ?? '');
+    this.newStageSelfSpent.set(stage.selfFundingSpent);
+    this.newStageBankSpent.set(stage.bankFundingSpent);
+    this.newStageProgress.set(stage.physicalProgressPercent);
+    this.newStageNotes.set(stage.notes ?? '');
+    this.newStageSelfFile = null;
+    this.newStageBankFile = null;
+    this.newStageProgressFile = null;
+    this.stageError.set(null);
+    this.showAddStage.set(true);
   }
 
   protected onSelfFileChange(event: Event): void {
@@ -242,7 +264,8 @@ export class FollowUpList implements OnInit {
     const financialYearId = this.selectedYearId();
     if (!item || financialYearId == null || this.savingStage()) return;
 
-    if (!this.newStageName().trim() || !this.newStageDeadline()) {
+    const editing = this.editingStage();
+    if ((!editing?.isFinalDelivery && !this.newStageName().trim()) || (!editing?.isFinalDelivery && !this.newStageDeadline())) {
       this.stageError.set('اسم المرحلة والموعد النهائي مطلوبان');
       return;
     }
@@ -250,8 +273,7 @@ export class FollowUpList implements OnInit {
     this.savingStage.set(true);
     this.stageError.set(null);
 
-    this.followUp
-      .createStage(item.subProjectId, financialYearId, {
+    const payload = {
         name: this.newStageName().trim(),
         deadline: this.newStageDeadline(),
         selfFundingSpent: this.newStageSelfSpent(),
@@ -261,11 +283,18 @@ export class FollowUpList implements OnInit {
         selfFundingProof: this.newStageSelfFile,
         bankFundingProof: this.newStageBankFile,
         physicalProgressProof: this.newStageProgressFile,
-      })
+      };
+    const request = editing
+      ? this.followUp.updateStage(item.subProjectId, editing.id, financialYearId, payload)
+      : this.followUp.createStage(item.subProjectId, financialYearId, payload);
+
+    request
       .subscribe({
         next: () => {
           this.savingStage.set(false);
           this.showAddStage.set(false);
+          this.editingStage.set(null);
+          this.toast.success(editing ? 'تم تعديل مرحلة التنفيذ' : 'تمت إضافة مرحلة التنفيذ');
           this.loadStages(item.subProjectId);
           this.load();
         },
@@ -274,6 +303,61 @@ export class FollowUpList implements OnInit {
           this.stageError.set(err?.error?.message ?? 'تعذّر حفظ المرحلة');
         },
       });
+  }
+
+  protected readonly completionCandidate = signal<FollowUpListItem | null>(null);
+  protected readonly completingProjectId = signal<number | null>(null);
+  protected readonly checkingCompletionId = signal<number | null>(null);
+
+  protected completionHint(item: FollowUpListItem): string {
+    return item.completionEligibility.blockers.join('\n') || 'كل شروط إكمال المشروع متحققة';
+  }
+
+  protected openCompletion(item: FollowUpListItem): void {
+    const financialYearId = this.selectedYearId();
+    if (!item.completionEligibility.canCompleteProject || financialYearId == null || this.checkingCompletionId() != null) return;
+    this.checkingCompletionId.set(item.subProjectId);
+    this.followUp.getCompletionEligibility(item.subProjectId, financialYearId).subscribe({
+      next: (eligibility) => {
+        this.checkingCompletionId.set(null);
+        if (!eligibility.canCompleteProject) {
+          this.toast.error(eligibility.blockers.join(' '));
+          this.load();
+          return;
+        }
+        this.completionCandidate.set({ ...item, completionEligibility: eligibility });
+      },
+      error: (err) => {
+        this.checkingCompletionId.set(null);
+        this.toast.error(err?.error?.message ?? 'تعذر التحقق من شروط إكمال المشروع');
+      },
+    });
+  }
+
+  protected closeCompletion(): void {
+    if (this.completingProjectId() == null) this.completionCandidate.set(null);
+  }
+
+  protected confirmCompletion(): void {
+    const item = this.completionCandidate();
+    const financialYearId = this.selectedYearId();
+    if (!item || financialYearId == null || this.completingProjectId() != null) return;
+
+    this.completingProjectId.set(item.subProjectId);
+    this.followUp.completeExecution(item.subProjectId, financialYearId).subscribe({
+      next: () => {
+        this.completingProjectId.set(null);
+        this.completionCandidate.set(null);
+        this.toast.success('تم إكمال المشروع وتغيير حالته إلى منتهي');
+        this.closeStages();
+        this.load();
+      },
+      error: (err) => {
+        this.completingProjectId.set(null);
+        this.toast.error(err?.error?.message ?? 'تعذر إكمال المشروع');
+        this.load();
+      },
+    });
   }
 
   protected completeStage(stage: ExecutionStage): void {

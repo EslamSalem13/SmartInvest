@@ -26,6 +26,12 @@ public interface IExecutionStageService
         int? financialYearId, int? mainProgramId, int? subProgramId, int? markazId, int? priorityId,
         string? searchTerm, CancellationToken cancellationToken = default);
 
+    Task<ProjectCompletionEligibilityDto> GetCompletionEligibilityAsync(
+        int subProjectId, int financialYearId, CancellationToken cancellationToken = default);
+
+    Task<ProjectCompletionEligibilityDto> CompleteExecutionAsync(
+        int subProjectId, int financialYearId, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// ينشئ/يحدّث مرحلة التسليم النهائي المُدارة تلقائيًا لهذا المشروع. آمن للاستدعاء المتكرر —
     /// لا يُنشئ صفًا مكررًا ولا يمس ما سُجِّل على الصف من صرف أو نسبة تنفيذ أو غرامة.

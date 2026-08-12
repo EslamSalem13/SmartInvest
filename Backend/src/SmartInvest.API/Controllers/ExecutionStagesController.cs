@@ -89,6 +89,21 @@ public class ExecutionStagesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("api/subprojects/{subProjectId:int}/completion-eligibility")]
+    public async Task<ActionResult<ProjectCompletionEligibilityDto>> GetCompletionEligibility(
+        int subProjectId, [FromQuery] int financialYearId, CancellationToken cancellationToken)
+    {
+        return Ok(await _executionStageService.GetCompletionEligibilityAsync(subProjectId, financialYearId, cancellationToken));
+    }
+
+    [HttpPut("api/subprojects/{subProjectId:int}/complete-execution")]
+    [Authorize(Roles = Roles.FollowUpStaff)]
+    public async Task<ActionResult<ProjectCompletionEligibilityDto>> CompleteExecution(
+        int subProjectId, [FromQuery] int financialYearId, CancellationToken cancellationToken)
+    {
+        return Ok(await _executionStageService.CompleteExecutionAsync(subProjectId, financialYearId, cancellationToken));
+    }
+
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}")]
     [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ExecutionStageDto>> Update(
@@ -96,7 +111,7 @@ public class ExecutionStagesController : ControllerBase
         int stageId,
         [FromForm] int financialYearId,
         [FromForm] string name,
-        [FromForm] DateTime deadline,
+        [FromForm] DateTime? deadline,
         [FromForm] decimal selfFundingSpent,
         [FromForm] decimal bankFundingSpent,
         [FromForm] decimal physicalProgressPercent,

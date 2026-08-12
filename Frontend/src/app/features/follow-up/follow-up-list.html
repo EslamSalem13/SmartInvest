@@ -69,7 +69,19 @@
                   {{ item.nextDeadline ? (item.nextDeadline | date: 'yyyy/MM/dd') : '—' }}
                 </td>
                 <td data-label="الإجراء">
-                  <button class="si-btn primary sm" (click)="onSelectStages(item)">عرض المراحل</button>
+                  <div class="row-actions">
+                    <button class="si-btn primary sm" (click)="onSelectStages(item)">عرض المراحل</button>
+                    @if (item.completionEligibility.isProjectCompleted) {
+                      <span class="st-pill ok">مكتمل</span>
+                    } @else {
+                      <button
+                        class="si-btn complete sm"
+                        [disabled]="!item.completionEligibility.canCompleteProject || checkingCompletionId() === item.subProjectId || completingProjectId() === item.subProjectId"
+                        [title]="completionHint(item)"
+                        (click)="openCompletion(item)"
+                      >{{ checkingCompletionId() === item.subProjectId ? 'جاري التحقق…' : 'إكمال المشروع' }}</button>
+                    }
+                  </div>
                 </td>
               </tr>
             } @empty {
@@ -113,7 +125,7 @@
                     <th>تنفيذ عيني</th>
                     <th>غرامة</th>
                     <th>الحالة</th>
-                    <th></th>
+                    <th>إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,7 +200,14 @@
                           <button class="si-btn sm" (click)="completeStage(s)">إنهاء</button>
                         }
                       </td>
-                      <td data-label="ملاحظات">@if (s.notes) { <span class="note-hint" [title]="s.notes">📝</span> } @else { — }</td>
+                      <td data-label="إجراءات">
+                        <div class="stage-row-actions">
+                          @if (!s.isCompleted) {
+                            <button class="si-btn sm" (click)="openEditStage(s)">تعديل</button>
+                          }
+                          @if (s.notes) { <span class="note-hint" [title]="s.notes">ملاحظات</span> }
+                        </div>
+                      </td>
                     </tr>
                   } @empty {
                     <tr><td colspan="8" class="empty si-table-empty">لا توجد مراحل تنفيذ بعد.</td></tr>
@@ -209,7 +228,7 @@
     <div class="si-overlay" (click)="closeAddStage()">
       <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(560px,100%)">
         <div class="si-modal-head">
-          <div class="grow"><h3>مرحلة تنفيذ جديدة</h3></div>
+          <div class="grow"><h3>{{ editingStage() ? 'تعديل مرحلة التنفيذ' : 'مرحلة تنفيذ جديدة' }}</h3></div>
           <button class="si-x" (click)="closeAddStage()">×</button>
         </div>
         <div class="si-modal-body">
@@ -217,11 +236,11 @@
           <div class="si-grid">
             <div class="si-fld full">
               <label>اسم المرحلة <span class="req">*</span></label>
-              <input [ngModel]="newStageName()" (ngModelChange)="newStageName.set($event)" placeholder="مثال: رصف الطبقة الأولى" />
+              <input [disabled]="editingStage()?.isFinalDelivery === true" [ngModel]="newStageName()" (ngModelChange)="newStageName.set($event)" placeholder="مثال: رصف الطبقة الأولى" />
             </div>
             <div class="si-fld">
               <label>الموعد النهائي <span class="req">*</span></label>
-              <input type="date" [ngModel]="newStageDeadline()" (ngModelChange)="newStageDeadline.set($event)" />
+              <input type="date" [disabled]="editingStage()?.isFinalDelivery === true" [ngModel]="newStageDeadline()" (ngModelChange)="newStageDeadline.set($event)" />
             </div>
             <div class="si-fld">
               <label>نسبة التنفيذ العيني %</label>
@@ -237,14 +256,17 @@
             </div>
             <div class="si-fld">
               <label>إثبات الصرف الذاتي</label>
+              @if (editingStage()?.hasSelfFundingProof) { <small class="existing-proof">سيتم الاحتفاظ بالإثبات الحالي ما لم ترفع بديلًا.</small> }
               <input type="file" (change)="onSelfFileChange($event)" />
             </div>
             <div class="si-fld">
               <label>إثبات الصرف البنكي</label>
+              @if (editingStage()?.hasBankFundingProof) { <small class="existing-proof">سيتم الاحتفاظ بالإثبات الحالي ما لم ترفع بديلًا.</small> }
               <input type="file" (change)="onBankFileChange($event)" />
             </div>
             <div class="si-fld">
               <label>إثبات التنفيذ العيني</label>
+              @if (editingStage()?.hasPhysicalProgressProof) { <small class="existing-proof">سيتم الاحتفاظ بالإثبات الحالي ما لم ترفع بديلًا.</small> }
               <input type="file" (change)="onProgressFileChange($event)" />
             </div>
             <div class="si-fld full">
@@ -255,7 +277,7 @@
         </div>
         <div class="si-modal-foot">
           <button class="si-btn primary" [disabled]="savingStage()" (click)="saveNewStage()">
-            @if (savingStage()) { جاري الحفظ… } @else { حفظ المرحلة }
+            @if (savingStage()) { جاري الحفظ… } @else { {{ editingStage() ? 'حفظ التعديلات' : 'حفظ المرحلة' }} }
           </button>
           <button class="si-btn" (click)="closeAddStage()">إلغاء</button>
         </div>
@@ -287,6 +309,38 @@
             @if (handoverSaving()) { جاري الحفظ… } @else { حفظ }
           </button>
           <button class="si-btn" (click)="closeHandover()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (completionCandidate(); as item) {
+    <div class="si-overlay" (click)="closeCompletion()">
+      <div class="si-modal completion-modal" (click)="$event.stopPropagation()">
+        <div class="si-modal-head">
+          <div class="grow">
+            <h3>تأكيد إكمال المشروع</h3>
+            <p>{{ item.subProjectName }}</p>
+          </div>
+          <button class="si-x" [disabled]="completingProjectId() != null" (click)="closeCompletion()">×</button>
+        </div>
+        <div class="si-modal-body">
+          <p class="completion-warning">بعد التأكيد ستتغير حالة المشروع إلى «منتهي» ولن يمكن إضافة أو تعديل مراحل التنفيذ.</p>
+          <div class="completion-summary">
+            <div><span>قيمة العقد</span><b>{{ thousandsLabel(item.completionEligibility.contractValue) }}</b></div>
+            <div><span>المنصرف الذاتي</span><b>{{ thousandsLabel(item.completionEligibility.selfFundingSpent) }}</b></div>
+            <div><span>المنصرف البنكي</span><b>{{ thousandsLabel(item.completionEligibility.bankFundingSpent) }}</b></div>
+            <div><span>إجمالي المنصرف</span><b>{{ thousandsLabel(item.completionEligibility.totalSpent) }}</b></div>
+            <div><span>نسبة التجاوز</span><b class="tnum">{{ item.completionEligibility.overrunPercentage }}%</b></div>
+            <div><span>الحد الأقصى المسموح</span><b>{{ thousandsLabel(item.completionEligibility.maximumAllowed) }}</b></div>
+            <div class="full"><span>مجموع التنفيذ العيني</span><b class="tnum">{{ item.completionEligibility.physicalProgressTotal }}%</b></div>
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          <button class="si-btn complete" [disabled]="completingProjectId() != null" (click)="confirmCompletion()">
+            @if (completingProjectId() != null) { جاري الإكمال… } @else { تأكيد إكمال المشروع }
+          </button>
+          <button class="si-btn" [disabled]="completingProjectId() != null" (click)="closeCompletion()">إلغاء</button>
         </div>
       </div>
     </div>

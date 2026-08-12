@@ -5,4 +5,7 @@
     <Project Path="src/SmartInvest.Domain/SmartInvest.Domain.csproj" />
     <Project Path="src/SmartInvest.Infrastructure/SmartInvest.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SmartInvest.Tests/SmartInvest.Tests.csproj" />
+  </Folder>
 </Solution>
