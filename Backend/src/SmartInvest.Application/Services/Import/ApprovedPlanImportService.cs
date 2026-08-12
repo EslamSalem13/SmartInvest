@@ -424,24 +424,23 @@ public class ApprovedPlanImportService
                 // Already approved for this financial year - reuse it rather than creating a duplicate.
                 resultPlan = approvedPlan;
             }
-            else if (suggestedPlan != null)
-            {
-                resultPlan = await _planService.ApproveAsync(suggestedPlan.PlanId, approvalDate);
-            }
             else
             {
-                resultPlan = new Plan
+                resultPlan = suggestedPlan ?? new Plan
                 {
-                    PlanName = $"الخطة المعتمدة – {financialYear.Name}",
-                    PlanStatus = PlanStatus.Approved,
-                    ApprovalDate = approvalDate,
+                    PlanName = $"الخطة المقترحة – {financialYear.Name}",
+                    PlanStatus = PlanStatus.Suggested,
                     StartDate = financialYear.StartDate,
                     EndDate = financialYear.EndDate,
                     FinancialYearId = dto.FinancialYearId,
                     SuggestionDate = DateTime.UtcNow,
                 };
-                await _planRepo.AddAsync(resultPlan, cancellationToken);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                if (suggestedPlan == null)
+                {
+                    await _planRepo.AddAsync(resultPlan, cancellationToken);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
             }
 
             var alreadyLinked = (await _planProjectRepository.FindAsync(x => x.PlanId == resultPlan.PlanId, cancellationToken))
@@ -451,6 +450,11 @@ public class ApprovedPlanImportService
                 await _planProjectRepository.AddAsync(new PlanProject { PlanId = resultPlan.PlanId, SubProjectId = subProjectId }, cancellationToken);
             }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (approvedPlan == null)
+            {
+                resultPlan = await _planService.ApproveAsync(resultPlan.PlanId, approvalDate);
+            }
         }
         catch (Exception ex)
         {

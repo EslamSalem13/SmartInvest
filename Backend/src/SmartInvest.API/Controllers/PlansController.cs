@@ -72,7 +72,11 @@ public class PlansController : ControllerBase
             return NotFound();
         }
 
+        var status = plan.PlanStatus;
+        var approvalDate = plan.ApprovalDate;
         mapper.Map(planDto, plan);
+        plan.PlanStatus = status;
+        plan.ApprovalDate = approvalDate;
         await planService.UpdatePlan(plan);
 
         return NoContent();
@@ -134,7 +138,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpPut("{id:int}/approve")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> Approve(int id, ApprovePlanDto dto)
     {
         var plan = await planService.ApproveAsync(id, dto.ApprovalDate);

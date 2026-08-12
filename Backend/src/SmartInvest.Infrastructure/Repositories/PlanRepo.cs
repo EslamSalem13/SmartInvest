@@ -69,6 +69,11 @@
             }
             public async Task AddExistingProject(int PlanId, int ProjectId)
             {
+                if (await Context.PlanProjects.AnyAsync(x => x.PlanId == PlanId && x.SubProjectId == ProjectId))
+                {
+                    return;
+                }
+
                 var project = await Context.SubProjects.FindAsync(ProjectId);
                 if (project != null)
                 {

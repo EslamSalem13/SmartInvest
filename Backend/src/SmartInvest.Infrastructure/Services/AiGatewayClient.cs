@@ -66,6 +66,7 @@ public class AiGatewayClient : IAiGatewayClient
         {
             AiWorkload.ExcelImport => _options.ExcelImportModelId,
             AiWorkload.Reports => _options.ReportsModelId,
+            AiWorkload.PlanApprovalEmail => _options.PlanApprovalEmailModelId,
             _ => _options.ModelId,
         };
         var modelId = string.IsNullOrWhiteSpace(workloadModelId) ? _options.ModelId : workloadModelId;
