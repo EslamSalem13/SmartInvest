@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
@@ -25,6 +25,7 @@ import {
 })
 export class ProcurementWorkflow implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly financial = inject(FinancialService);
   private readonly contractorsService = inject(ContractorsService);
   private readonly contractTypesService = inject(ContractTypesService);
@@ -244,6 +245,142 @@ export class ProcurementWorkflow implements OnInit {
     return formatEgpAsThousands(value);
   }
 
+  // ===== المدة القصوى (كل المراحل عدا الإعلان) =====
+  protected readonly durationInput = signal<number | null>(null);
+  protected readonly durationSaving = signal(false);
+
+  protected saveDuration(): void {
+    const detail = this.stageDetail();
+    if (!detail || this.durationSaving()) {
+      return;
+    }
+    this.durationSaving.set(true);
+    this.financial.setStageDuration(this.subProjectId, detail.stage, this.durationInput()).subscribe({
+      next: () => {
+        this.durationSaving.set(false);
+        this.toast.success('تم حفظ المدة القصوى');
+        this.reload();
+      },
+      error: (err) => {
+        this.durationSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر حفظ المدة القصوى');
+      },
+    });
+  }
+
+  // ===== تاريخ الإعلان (خاص بمرحلة الإعلان) =====
+  protected readonly announcementDateInput = signal('');
+  protected readonly announcementDateSaving = signal(false);
+
+  protected saveAnnouncementDate(): void {
+    const detail = this.stageDetail();
+    if (!detail || this.announcementDateSaving()) {
+      return;
+    }
+    if (!this.announcementDateInput()) {
+      this.toast.error('برجاء تحديد تاريخ الإعلان');
+      return;
+    }
+    this.announcementDateSaving.set(true);
+    this.financial.setAnnouncementDate(this.subProjectId, this.announcementDateInput()).subscribe({
+      next: () => {
+        this.announcementDateSaving.set(false);
+        this.toast.success('تم حفظ تاريخ الإعلان');
+        this.reload();
+      },
+      error: (err) => {
+        this.announcementDateSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر حفظ تاريخ الإعلان');
+      },
+    });
+  }
+
+  // ===== "هذه المرحلة غير لازمة للطرح" =====
+  protected readonly showSkipModal = signal(false);
+  protected readonly skipReasonInput = signal('');
+  protected readonly skipSaving = signal(false);
+
+  protected openSkipModal(): void {
+    this.skipReasonInput.set('');
+    this.showSkipModal.set(true);
+  }
+
+  protected confirmSkip(): void {
+    const detail = this.stageDetail();
+    if (!detail || this.skipSaving()) {
+      return;
+    }
+    if (!this.skipReasonInput().trim()) {
+      this.toast.error('سبب التخطي مطلوب');
+      return;
+    }
+    this.skipSaving.set(true);
+    this.financial.skipStage(this.subProjectId, detail.stage, this.skipReasonInput().trim()).subscribe({
+      next: () => {
+        this.skipSaving.set(false);
+        this.showSkipModal.set(false);
+        this.toast.success('تم تخطي المرحلة');
+        this.reload();
+      },
+      error: (err) => {
+        this.skipSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر تخطي المرحلة');
+      },
+    });
+  }
+
+  // ===== فشل المرحلة → مذكرة عرض جديدة =====
+  protected readonly showFailModal = signal(false);
+  protected readonly failReasonInput = signal('');
+  protected readonly failSaving = signal(false);
+
+  protected openFailModal(): void {
+    this.failReasonInput.set('');
+    this.showFailModal.set(true);
+  }
+
+  protected confirmFail(): void {
+    const detail = this.stageDetail();
+    if (!detail || this.failSaving()) {
+      return;
+    }
+    if (!this.failReasonInput().trim()) {
+      this.toast.error('سبب الفشل مطلوب');
+      return;
+    }
+    this.failSaving.set(true);
+    this.financial.failStage(this.subProjectId, detail.stage, this.failReasonInput().trim()).subscribe({
+      next: () => {
+        this.failSaving.set(false);
+        this.showFailModal.set(false);
+        this.toast.success('سُجِّل الفشل — أنشئ مذكرة عرض جديدة لإعادة الطرح');
+        // إعادة الطرح تبدأ بمذكرة عرض جديدة — ننتقل مباشرة لصفحتها مع تجهيز المشروع الفرعي مُختارًا
+        this.router.navigate(['/app/financial/memos'], {
+          queryParams: { subProjectId: this.subProjectId, openCreate: 1 },
+        });
+      },
+      error: (err) => {
+        this.failSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذر تسجيل الفشل');
+      },
+    });
+  }
+
+  /** نص مختصر يوضّح الموعد النهائي — قبله "متبقي" وبعده تحذير أحمر ضمنيًا عبر canFail */
+  protected deadlineText(stage: ProcurementStage): string {
+    if (!stage.deadline) {
+      return '';
+    }
+    const days = Math.ceil((new Date(stage.deadline).getTime() - Date.now()) / 86_400_000);
+    if (days > 0) {
+      return `متبقي ${days} ${days === 1 ? 'يوم' : 'أيام'} — حتى ${this.dateStr(stage.deadline)}`;
+    }
+    if (days === 0) {
+      return `آخر يوم — ${this.dateStr(stage.deadline)}`;
+    }
+    return `تجاوز الموعد النهائي (${this.dateStr(stage.deadline)}) بـ ${-days} ${-days === 1 ? 'يوم' : 'أيام'}`;
+  }
+
   protected reload(): void {
     this.financial.getOverview(this.subProjectId).subscribe({
       next: (overview) => {
@@ -285,6 +422,8 @@ export class ProcurementWorkflow implements OnInit {
       next: (detail) => {
         this.stageDetail.set(detail);
         this.syncAwardForm(detail.contractAward);
+        this.durationInput.set(detail.durationDays);
+        this.announcementDateInput.set(detail.announcementDate?.slice(0, 10) ?? '');
         this.stageLoading.set(false);
       },
       error: () => this.stageLoading.set(false),

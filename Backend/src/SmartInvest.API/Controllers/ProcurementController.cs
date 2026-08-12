@@ -142,6 +142,42 @@ public class ProcurementController : ControllerBase
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 
+    /// <summary>مدير التخطيط يحدد المدة القصوى لمرحلة (بالأيام) قبل ظهور زر الفشل. غير متاحة لمرحلة الإعلان.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/duration")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> SetDuration(int subProjectId, string stage, SetStageDurationDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.SetStageDurationAsync(subProjectId, ParseStage(stage), dto.DurationDays, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>تاريخ نشر الإعلان — خاص بمرحلة الإعلان فقط، منه تُحسب مدة الـ15 يومًا الإلزامية.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/announcement/date")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<IActionResult> SetAnnouncementDate(int subProjectId, SetAnnouncementDateDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.SetAnnouncementDateAsync(subProjectId, dto.AnnouncementDate, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>"هذه المرحلة غير لازمة للطرح" — مدير التخطيط فقط، يتطلب سببًا.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/skip")]
+    [Authorize(Roles = Roles.PlanningManager)]
+    public async Task<IActionResult> Skip(int subProjectId, string stage, SkipStageDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.SkipStageAsync(subProjectId, ParseStage(stage), dto.Reason, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>فشل مرحلة — يتطلب سببًا، ويُبطل اكتمالها وما بعدها دون حذف أي إصدار.</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/fail")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<IActionResult> Fail(int subProjectId, string stage, FailStageDto dto, CancellationToken cancellationToken)
+    {
+        await _procurementService.FailStageAsync(subProjectId, ParseStage(stage), dto.Reason, cancellationToken);
+        return NoContent();
+    }
+
     private static ProcurementStage ParseStage(string stage)
     {
         if (!ProcurementStageKeys.TryFromKey(stage, out var parsed))

@@ -64,6 +64,49 @@ public class ProcurementStageDto
 
     /// <summary>تفاصيل الترسية — غير فارغة فقط لمرحلة "العقد والترسية".</summary>
     public ContractAwardDetailsDto? ContractAward { get; set; }
+
+    // ===== المدة القصوى وزر الفشل =====
+
+    /// <summary>المدة القصوى بالأيام التي حددها مدير التخطيط — null يعني بلا موعد نهائي. لا تُستخدم لمرحلة الإعلان.</summary>
+    public int? DurationDays { get; set; }
+
+    /// <summary>
+    /// الموعد النهائي — محسوب دائمًا في الخادم، وليس CreatedAt + DurationDays حرفيًا في كل الأحوال:
+    /// مرحلة الإعلان تحسبه من AnnouncementDate + 15 يومًا الثابتة بدلًا من DurationDays.
+    /// </summary>
+    public DateTime? Deadline { get; set; }
+
+    /// <summary>تجاوز الموعد النهائي دون إكمال — الشرط الوحيد لظهور زر الفشل في الواجهة.</summary>
+    public bool CanFail { get; set; }
+
+    public bool IsSkipped { get; set; }
+    public string? SkipReason { get; set; }
+
+    public DateTime? FailedAt { get; set; }
+    public string? FailureReason { get; set; }
+
+    /// <summary>تاريخ نشر الإعلان — غير فارغ فقط لمرحلة "الإعلان".</summary>
+    public DateTime? AnnouncementDate { get; set; }
+}
+
+public class SetStageDurationDto
+{
+    public int? DurationDays { get; set; }
+}
+
+public class SetAnnouncementDateDto
+{
+    public DateTime AnnouncementDate { get; set; }
+}
+
+public class SkipStageDto
+{
+    public string Reason { get; set; } = string.Empty;
+}
+
+public class FailStageDto
+{
+    public string Reason { get; set; } = string.Empty;
 }
 
 /// <summary>بيانات مرحلة الترسية بخلاف الملفات: الإسناد، الدفعة المقدمة، المدة، الشرط الجزائي.</summary>
@@ -135,6 +178,9 @@ public class PresentationMemoBriefDto
     public string Title { get; set; } = string.Empty;
     public int CurrentVersionNumber { get; set; }
     public bool IsCompleted { get; set; }
+
+    /// <summary>نوع التعاقد المحدد في المذكرة — يظهر جنب اسمها في صفحة مراحل الطرح.</summary>
+    public string? ContractingMethodLabel { get; set; }
 }
 
 public class ProcurementOverviewDto

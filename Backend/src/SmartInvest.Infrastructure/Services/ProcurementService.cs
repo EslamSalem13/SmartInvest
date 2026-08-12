@@ -120,24 +120,35 @@ public class ProcurementService : IProcurementService
             throw new BusinessRuleException("لا يمكن بدء مراحل الطرح قبل اعتماد المشروع الفرعي");
         }
 
+        // الفعّالة فقط: الأحدث إنشاءً، وعند التساوي الأعلى Id.
+        // نجلب نوع التعاقد كرقم خام لأن تحويله لتسمية عربية بحث في قاموس — لا يُترجَم إلى SQL.
+        var activeMemoRaw = await _context.PresentationMemoSubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .OrderByDescending(x => x.PresentationMemo.CreatedAt)
+            .ThenByDescending(x => x.PresentationMemo.Id)
+            .Select(x => new
+            {
+                x.PresentationMemo.Id,
+                x.PresentationMemo.Title,
+                x.PresentationMemo.CurrentVersionNumber,
+                x.PresentationMemo.IsCompleted,
+                x.PresentationMemo.ContractingMethod,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
         var overview = new ProcurementOverviewDto
         {
             SubProjectId = subProjectId,
             SubProjectName = sub.SubProjectName,
             SubProjectCode = sub.SubProjectCode,
-            // الفعّالة فقط: الأحدث إنشاءً، وعند التساوي الأعلى Id
-            ActivePresentationMemo = await _context.PresentationMemoSubProjects.AsNoTracking()
-                .Where(x => x.SubProjectId == subProjectId)
-                .OrderByDescending(x => x.PresentationMemo.CreatedAt)
-                .ThenByDescending(x => x.PresentationMemo.Id)
-                .Select(x => new PresentationMemoBriefDto
-                {
-                    Id = x.PresentationMemo.Id,
-                    Title = x.PresentationMemo.Title,
-                    CurrentVersionNumber = x.PresentationMemo.CurrentVersionNumber,
-                    IsCompleted = x.PresentationMemo.IsCompleted,
-                })
-                .FirstOrDefaultAsync(cancellationToken),
+            ActivePresentationMemo = activeMemoRaw == null ? null : new PresentationMemoBriefDto
+            {
+                Id = activeMemoRaw.Id,
+                Title = activeMemoRaw.Title,
+                CurrentVersionNumber = activeMemoRaw.CurrentVersionNumber,
+                IsCompleted = activeMemoRaw.IsCompleted,
+                ContractingMethodLabel = ContractingMethodLabels.ToLabel(activeMemoRaw.ContractingMethod),
+            },
         };
 
         bool? previousCompleted = true;
@@ -150,6 +161,10 @@ public class ProcurementService : IProcurementService
             {
                 stageDto.AdvancePaymentDone = await GetAdvancePaymentDoneAsync(subProjectId, cancellationToken);
                 stageDto.ContractAward = await GetContractAwardDetailsAsync(subProjectId, cancellationToken);
+            }
+            else if (stage == ProcurementStage.Announcement)
+            {
+                await ApplyAnnouncementOverridesAsync(stageDto, subProjectId, cancellationToken);
             }
             overview.Stages.Add(stageDto);
             previousCompleted = state?.IsCompleted ?? false;
@@ -171,6 +186,10 @@ public class ProcurementService : IProcurementService
         {
             dto.AdvancePaymentDone = await GetAdvancePaymentDoneAsync(subProjectId, cancellationToken);
             dto.ContractAward = await GetContractAwardDetailsAsync(subProjectId, cancellationToken);
+        }
+        else if (stage == ProcurementStage.Announcement)
+        {
+            await ApplyAnnouncementOverridesAsync(dto, subProjectId, cancellationToken);
         }
 
         if (state != null)
@@ -349,6 +368,59 @@ public class ProcurementService : IProcurementService
             FileExtension = file.FileExtension,
             Content = file.Content,
         };
+    }
+
+    public async Task SetStageDurationAsync(int subProjectId, ProcurementStage stage, int? durationDays, CancellationToken cancellationToken = default)
+    {
+        if (stage == ProcurementStage.Announcement)
+        {
+            // للإعلان قاعدة ثابتة (15 يومًا من AnnouncementDate) لا تقدير فيها لمدير التخطيط —
+            // راجع SetAnnouncementDateAsync بدلًا من هذه الدالة لهذه المرحلة تحديدًا.
+            throw new BusinessRuleException("مرحلة الإعلان لها قاعدة موعد ثابتة (15 يومًا من تاريخ الإعلان) ولا تقبل تحديد مدة يدويًا");
+        }
+
+        await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+        await _stages[stage].SetDurationAsync(subProjectId, durationDays, cancellationToken);
+    }
+
+    public async Task SetAnnouncementDateAsync(int subProjectId, DateTime announcementDate, CancellationToken cancellationToken = default)
+    {
+        await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+
+        var doc = await _context.Announcements
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken);
+
+        if (doc == null)
+        {
+            doc = new Announcement { SubProjectId = subProjectId };
+            _context.Announcements.Add(doc);
+        }
+        else if (doc.IsCompleted)
+        {
+            throw new BusinessRuleException("هذه المرحلة مكتملة — يجب إعادة فتحها قبل تعديل تاريخ الإعلان");
+        }
+
+        doc.AnnouncementDate = announcementDate;
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SkipStageAsync(int subProjectId, ProcurementStage stage, string reason, CancellationToken cancellationToken = default)
+    {
+        await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+        await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
+        await _stages[stage].SkipAsync(subProjectId, reason, cancellationToken);
+    }
+
+    public async Task FailStageAsync(int subProjectId, ProcurementStage stage, string reason, CancellationToken cancellationToken = default)
+    {
+        await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
+        await _stages[stage].FailAsync(subProjectId, reason, cancellationToken);
+
+        // فشل مرحلة يُبطل كل ما بعدها فعليًا — بنفس منطق إعادة الفتح تمامًا.
+        foreach (var laterStage in _stages.Keys.Where(s => (int)s > (int)stage).OrderBy(s => (int)s))
+        {
+            await _stages[laterStage].ResetIfCompletedAsync(subProjectId, cancellationToken);
+        }
     }
 
     private async Task<ContractAward> GetEditableContractAwardAsync(int subProjectId, CancellationToken cancellationToken)
@@ -560,6 +632,11 @@ public class ProcurementService : IProcurementService
     private static TDto BuildStageDto<TDto>(ProcurementStage stage, IStageOps ops, StageDocState? state)
         where TDto : ProcurementStageDto, new()
     {
+        // الموعد النهائي العام = بداية المرحلة + المدة التي حددها مدير التخطيط.
+        // مرحلة الإعلان تتجاوز هذا لاحقًا بقاعدة الـ15 يومًا الثابتة (انظر GetOverviewAsync/GetStageAsync).
+        var deadline = state?.DurationDays is int days ? state.CreatedAt.AddDays(days) : (DateTime?)null;
+        var canFail = deadline != null && DateTime.UtcNow > deadline && state?.IsCompleted != true;
+
         return new TDto
         {
             Stage = ProcurementStageKeys.ToKey(stage),
@@ -572,6 +649,13 @@ public class ProcurementService : IProcurementService
             FileSlots = ops.Slots
                 .Select(s => new ProcurementFileSlotDto { Key = s.Key, Label = s.Label, Required = s.Required })
                 .ToList(),
+            DurationDays = state?.DurationDays,
+            Deadline = deadline,
+            CanFail = canFail,
+            IsSkipped = state?.IsSkipped ?? false,
+            SkipReason = state?.SkipReason,
+            FailedAt = state?.FailedAt,
+            FailureReason = state?.FailureReason,
         };
     }
 
@@ -591,7 +675,8 @@ public class ProcurementService : IProcurementService
                 new FileSlot<AnnouncementVersion>("newspaper-advertisement", "إعلان الجريدة", v => v.NewspaperAdvertisement, (v, f) => v.NewspaperAdvertisement = f, required: true),
                 new FileSlot<AnnouncementVersion>("portal-advertisement", "إعلان البوابة", v => v.PortalAdvertisement, (v, f) => v.PortalAdvertisement = f, required: true),
                 new FileSlot<AnnouncementVersion>("competent-authority-approval", "موافقة الجهة المختصة", v => v.CompetentAuthorityApproval, (v, f) => v.CompetentAuthorityApproval = f, required: true),
-            ]),
+            ],
+            extraCompletionCheck: (doc, ct) => Task.FromResult(ValidateAnnouncementForCompletion(doc))),
 
         [ProcurementStage.OpeningEnvelopes] = new StageOps<OpeningEnvelopes, OpeningEnvelopesVersion>(
             db, "فتح المظاريف",
@@ -634,6 +719,46 @@ public class ProcurementService : IProcurementService
 
     /// <summary>«مقاولات» = أعمال تنفيذ تستحق دفعة مقدمة. «توريدات» لا يُصرف لها مقدَّم.</summary>
     internal static bool IsContractingProject(string? projectNature) => projectNature == "مقاولات";
+
+    /// <summary>
+    /// الحد الأدنى الإلزامي لبقاء الإعلان قائمًا قبل فتح المظاريف — لا يخضع لتقدير مدير التخطيط،
+    /// بعكس بقية المراحل التي مدتها القصوى اختيارية بالكامل.
+    /// </summary>
+    internal const int AnnouncementMinimumDays = 15;
+
+    /// <summary>لا يمكن إكمال الإعلان قبل تحديد تاريخه، ولا قبل مرور 15 يومًا كاملة منه.</summary>
+    private static string? ValidateAnnouncementForCompletion(Announcement doc)
+    {
+        if (doc.AnnouncementDate == null)
+        {
+            return "يجب تحديد تاريخ الإعلان قبل إكمال هذه المرحلة";
+        }
+
+        var minimumCompletionDate = doc.AnnouncementDate.Value.AddDays(AnnouncementMinimumDays);
+        if (DateTime.UtcNow < minimumCompletionDate)
+        {
+            var remaining = (minimumCompletionDate - DateTime.UtcNow).Days + 1;
+            return $"لا يمكن إكمال الإعلان قبل مرور {AnnouncementMinimumDays} يومًا من تاريخه — متبقٍ {remaining} يوم تقريبًا";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// يستبدل حساب الموعد النهائي العام (CreatedAt + DurationDays) بقاعدة الإعلان الثابتة
+    /// (AnnouncementDate + 15 يومًا)، ويُرفق تاريخ الإعلان نفسه للعرض.
+    /// </summary>
+    private async Task ApplyAnnouncementOverridesAsync(ProcurementStageDto dto, int subProjectId, CancellationToken cancellationToken)
+    {
+        var announcementDate = await _context.Announcements.AsNoTracking()
+            .Where(a => a.SubProjectId == subProjectId)
+            .Select(a => a.AnnouncementDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        dto.AnnouncementDate = announcementDate;
+        dto.Deadline = announcementDate?.AddDays(AnnouncementMinimumDays);
+        dto.CanFail = dto.Deadline != null && DateTime.UtcNow > dto.Deadline && !dto.IsCompleted;
+    }
 
     /// <summary>
     /// قواعد إكمال الترسية: المقاول، المدة، تسليم الأرضية — ثم الدفعة المقدمة لمشروعات «مقاولات» فقط.
@@ -730,7 +855,17 @@ public class ProcurementService : IProcurementService
     // تجريد المرحلة (مستند + إصدارات) بشكل عام على أنواع الكيانات
     // ------------------------------------------------------------------
 
-    internal sealed record StageDocState(int Id, int CurrentVersionNumber, bool IsCompleted, DateTime? LastUpdatedAt);
+    internal sealed record StageDocState(
+        int Id,
+        int CurrentVersionNumber,
+        bool IsCompleted,
+        DateTime? LastUpdatedAt,
+        DateTime CreatedAt,
+        int? DurationDays,
+        bool IsSkipped,
+        string? SkipReason,
+        DateTime? FailedAt,
+        string? FailureReason);
 
     internal sealed record SlotInfo(string Key, string Label, bool Required);
 
@@ -746,6 +881,15 @@ public class ProcurementService : IProcurementService
 
         /// <summary>لو المرحلة مكتملة يرجعها "غير مكتملة" بصمت (بدون التحقق من الشروط) — تُستخدم عند إعادة فتح مرحلة سابقة فتُلغي المراحل التالية تبعًا لها. لا تفعل شيئًا لو المرحلة لم تبدأ أصلاً.</summary>
         Task ResetIfCompletedAsync(int subProjectId, CancellationToken ct);
+
+        /// <summary>مدير التخطيط يحدد المدة القصوى — null يلغي الموعد النهائي ويخفي زر الفشل.</summary>
+        Task SetDurationAsync(int subProjectId, int? durationDays, CancellationToken ct);
+
+        /// <summary>"هذه المرحلة غير لازمة للطرح" — تُعامَل كمكتملة فتفتح ما بعدها، مع تمييزها بصريًا.</summary>
+        Task SkipAsync(int subProjectId, string reason, CancellationToken ct);
+
+        /// <summary>فشل هذه المرحلة — تبطل اكتمالها وما بعدها (بلا حذف أي إصدار) وتُسجِّل السبب أثرًا دائمًا.</summary>
+        Task FailAsync(int subProjectId, string reason, CancellationToken ct);
     }
 
     internal sealed class FileSlot<TVer>
@@ -810,7 +954,17 @@ public class ProcurementService : IProcurementService
         {
             return await _db.Set<TDoc>().AsNoTracking()
                 .Where(d => d.SubProjectId == subProjectId)
-                .Select(d => new StageDocState(d.Id, d.CurrentVersionNumber, d.IsCompleted, d.UpdatedAt ?? d.CreatedAt))
+                .Select(d => new StageDocState(
+                    d.Id,
+                    d.CurrentVersionNumber,
+                    d.IsCompleted,
+                    d.UpdatedAt ?? d.CreatedAt,
+                    d.CreatedAt,
+                    d.DurationDays,
+                    d.IsSkipped,
+                    d.SkipReason,
+                    d.FailedAt,
+                    d.FailureReason))
                 .FirstOrDefaultAsync(ct);
         }
 
@@ -929,6 +1083,14 @@ public class ProcurementService : IProcurementService
             }
 
             doc.IsCompleted = isCompleted;
+            if (!isCompleted)
+            {
+                // إبطال الاكتمال يُلغي حالة "التخطي" أيضًا — تخطٍّ ثم إعادة فتح تعني
+                // أن المرحلة لازمة فعليًا الآن، فيجب رفع مستنداتها بشكل طبيعي.
+                doc.IsSkipped = false;
+                doc.SkipReason = null;
+                doc.SkippedAt = null;
+            }
             await _db.SaveChangesAsync(ct);
         }
 
@@ -940,8 +1102,81 @@ public class ProcurementService : IProcurementService
             if (doc != null && doc.IsCompleted)
             {
                 doc.IsCompleted = false;
+                doc.IsSkipped = false;
+                doc.SkipReason = null;
+                doc.SkippedAt = null;
                 await _db.SaveChangesAsync(ct);
             }
+        }
+
+        public async Task SetDurationAsync(int subProjectId, int? durationDays, CancellationToken ct)
+        {
+            if (durationDays is < 1)
+            {
+                throw new BusinessRuleException("المدة القصوى يجب أن تكون يومًا واحدًا على الأقل");
+            }
+
+            var doc = await _db.Set<TDoc>()
+                .FirstOrDefaultAsync(d => d.SubProjectId == subProjectId, ct);
+
+            if (doc == null)
+            {
+                // مدير التخطيط يحدد المدة وقت فتح المرحلة، قبل أي رفع فعلي — العدّ يبدأ من هنا،
+                // لا من أول إصدار، حتى يعكس "من غير ما يحصل إكمال" بدقة أكبر.
+                doc = new TDoc { SubProjectId = subProjectId };
+                _db.Set<TDoc>().Add(doc);
+            }
+
+            doc.DurationDays = durationDays;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task SkipAsync(int subProjectId, string reason, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                throw new BusinessRuleException("سبب التخطي مطلوب");
+            }
+
+            var doc = await _db.Set<TDoc>()
+                .FirstOrDefaultAsync(d => d.SubProjectId == subProjectId, ct);
+
+            if (doc == null)
+            {
+                doc = new TDoc { SubProjectId = subProjectId };
+                _db.Set<TDoc>().Add(doc);
+            }
+            else if (doc.IsCompleted && !doc.IsSkipped)
+            {
+                throw new BusinessRuleException("هذه المرحلة مكتملة فعليًا بمستندات — لا معنى لتخطيها");
+            }
+
+            doc.IsCompleted = true;
+            doc.IsSkipped = true;
+            doc.SkipReason = reason.Trim();
+            doc.SkippedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task FailAsync(int subProjectId, string reason, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                throw new BusinessRuleException("سبب الفشل مطلوب");
+            }
+
+            var doc = await _db.Set<TDoc>()
+                .FirstOrDefaultAsync(d => d.SubProjectId == subProjectId, ct)
+                ?? throw new NotFoundException("لم تبدأ هذه المرحلة بعد — لا يوجد مستند");
+
+            // نفس أثر إعادة الفتح على هذه المرحلة (بلا حذف إصدارات) + توثيق أن السبب فشل لا تصحيح عادي
+            doc.IsCompleted = false;
+            doc.IsSkipped = false;
+            doc.SkipReason = null;
+            doc.SkippedAt = null;
+            doc.FailedAt = DateTime.UtcNow;
+            doc.FailureReason = reason.Trim();
+            await _db.SaveChangesAsync(ct);
         }
 
         private ProcurementVersionDto ToDto(TVer version)

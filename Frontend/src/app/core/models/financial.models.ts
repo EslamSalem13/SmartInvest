@@ -84,6 +84,19 @@ export interface ProcurementStage {
   /** تأكيد صرف الدفعة المقدمة 25% — قيمة غير فارغة فقط لمرحلة "العقد والترسية" */
   advancePaymentDone: boolean | null;
   contractAward?: ContractAwardDetails | null;
+
+  /** المدة القصوى بالأيام التي حددها مدير التخطيط — null يعني بلا موعد نهائي. لا تُستخدم لمرحلة الإعلان. */
+  durationDays: number | null;
+  /** الموعد النهائي — محسوب من الخادم دائمًا (لمرحلة الإعلان: تاريخ الإعلان + 15 يومًا ثابتة) */
+  deadline: string | null;
+  /** تجاوز الموعد النهائي دون إكمال — الشرط الوحيد لظهور زر الفشل */
+  canFail: boolean;
+  isSkipped: boolean;
+  skipReason: string | null;
+  failedAt: string | null;
+  failureReason: string | null;
+  /** تاريخ نشر الإعلان — غير فارغ فقط لمرحلة "الإعلان" */
+  announcementDate: string | null;
 }
 
 export interface ProcurementStageDetail extends ProcurementStage {
@@ -95,6 +108,7 @@ export interface PresentationMemoBrief {
   title: string;
   currentVersionNumber: number;
   isCompleted: boolean;
+  contractingMethodLabel: string | null;
 }
 
 export interface ProcurementOverview {

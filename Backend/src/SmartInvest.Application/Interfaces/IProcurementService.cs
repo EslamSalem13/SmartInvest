@@ -31,4 +31,16 @@ public interface IProcurementService
     Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, FileUploadDto proofFile, CancellationToken cancellationToken = default);
 
     Task<FileDownloadDto> DownloadSiteHandoverProofAsync(int subProjectId, CancellationToken cancellationToken = default);
+
+    /// <summary>مدير التخطيط يحدد المدة القصوى لمرحلة قبل ظهور زر الفشل — غير متاحة لمرحلة الإعلان (قاعدتها ثابتة).</summary>
+    Task SetStageDurationAsync(int subProjectId, ProcurementStage stage, int? durationDays, CancellationToken cancellationToken = default);
+
+    /// <summary>تاريخ نشر الإعلان فعليًا — منه تُحسب مدة الـ15 يومًا الإلزامية.</summary>
+    Task SetAnnouncementDateAsync(int subProjectId, DateTime announcementDate, CancellationToken cancellationToken = default);
+
+    /// <summary>"هذه المرحلة غير لازمة للطرح" — تُعامَل كمكتملة فتفتح ما بعدها.</summary>
+    Task SkipStageAsync(int subProjectId, ProcurementStage stage, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>فشل مرحلة — يبطل اكتمالها وما بعدها، ويُسجِّل السبب. لا يحذف أي إصدار.</summary>
+    Task FailStageAsync(int subProjectId, ProcurementStage stage, string reason, CancellationToken cancellationToken = default);
 }

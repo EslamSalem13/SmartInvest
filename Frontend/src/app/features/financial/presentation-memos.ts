@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
@@ -24,6 +24,7 @@ export class PresentationMemos implements OnInit {
   private readonly financial = inject(FinancialService);
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -169,14 +170,32 @@ export class PresentationMemos implements OnInit {
         this.selectedYearId.set(
           this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
         );
-        this.loadSubProjects();
+        this.loadSubProjects(() => this.openCreateFromQueryParams());
       },
       error: () => {
         this.yearsLoading.set(false);
         this.yearsError.set(true);
-        this.loadSubProjects();
+        this.loadSubProjects(() => this.openCreateFromQueryParams());
       },
     });
+  }
+
+  /**
+   * وصول من "فشل المرحلة" في صفحة مراحل الطرح: ?subProjectId=X&openCreate=1 —
+   * يفتح نموذج مذكرة جديدة والمشروع الفرعي مُختارًا مسبقًا لإعادة الطرح.
+   * لا يعمل إلا لو كان المشروع ضمن السنة المالية المعروضة حاليًا — نفس تقييد باقي الصفحة.
+   */
+  private openCreateFromQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('openCreate') !== '1') {
+      return;
+    }
+    const subProjectId = Number(params.get('subProjectId'));
+    if (!subProjectId || !this.subProjects().some((s) => s.subProjectId === subProjectId)) {
+      return;
+    }
+    this.openCreate();
+    this.fSubProjectIds.set([subProjectId]);
   }
 
   protected onYearChange(id: number | null): void {
@@ -187,7 +206,7 @@ export class PresentationMemos implements OnInit {
     this.loadSubProjects();
   }
 
-  private loadSubProjects(): void {
+  private loadSubProjects(onLoaded?: () => void): void {
     // بدون سنة مالية محددة يرجع الـ API مشروعات كل السنوات — وهذا يخالف شرط
     // أن تكون مشروعات المذكرة تابعة للسنة المتصفَّحة. نفشل مغلقًا بقائمة فارغة.
     if (this.selectedYearId() == null) {
@@ -195,7 +214,10 @@ export class PresentationMemos implements OnInit {
       return;
     }
     this.financial.getSubProjects(this.selectedYearId()).subscribe({
-      next: (items) => this.subProjects.set(items),
+      next: (items) => {
+        this.subProjects.set(items);
+        onLoaded?.();
+      },
       error: () => this.subProjects.set([]),
     });
   }

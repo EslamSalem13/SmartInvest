@@ -77,6 +77,38 @@ export class FinancialService {
     return this.http.put<void>(`${this.base}/subprojects/${subProjectId}/procurement/${stage}/reopen`, {});
   }
 
+  /** مدير التخطيط يحدد المدة القصوى (بالأيام) — null يلغي الموعد النهائي. غير متاحة لمرحلة الإعلان. */
+  setStageDuration(subProjectId: number, stage: string, durationDays: number | null): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/${stage}/duration`,
+      { durationDays },
+    );
+  }
+
+  /** تاريخ نشر الإعلان — خاص بمرحلة الإعلان، منه تُحسب مدة الـ15 يومًا الإلزامية */
+  setAnnouncementDate(subProjectId: number, announcementDate: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/announcement/date`,
+      { announcementDate },
+    );
+  }
+
+  /** "هذه المرحلة غير لازمة للطرح" */
+  skipStage(subProjectId: number, stage: string, reason: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/${stage}/skip`,
+      { reason },
+    );
+  }
+
+  /** فشل مرحلة — يبطل اكتمالها وما بعدها، ويتطلب سببًا */
+  failStage(subProjectId: number, stage: string, reason: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/${stage}/fail`,
+      { reason },
+    );
+  }
+
   /** تأكيد/إلغاء تأكيد صرف الدفعة المقدمة — خاص بمرحلة العقد والترسية */
   setAdvancePaymentDone(subProjectId: number, done: boolean): Observable<void> {
     return this.http.put<void>(

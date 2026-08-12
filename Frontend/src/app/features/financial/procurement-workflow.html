@@ -32,6 +32,9 @@
             <a class="memo-chip" routerLink="/app/financial/memos" [class.done]="memo.isCompleted">
               {{ memo.title }}
             </a>
+            @if (memo.contractingMethodLabel) {
+              <span class="chip">{{ memo.contractingMethodLabel }}</span>
+            }
           } @else {
             <span>لا توجد —</span>
             <a class="lnk" routerLink="/app/financial/memos">إنشاء مذكرة عرض</a>
@@ -67,8 +70,14 @@
               <span class="chip st" [class.ok-chip]="stage.isCompleted" [class.warn-chip]="statusClass(stage) === 'active'">
                 {{ statusLabel(stage) }}
               </span>
+              @if (stage.isSkipped) {
+                <span class="chip">غير لازمة للطرح</span>
+              }
               @if (stage.currentVersionNumber > 0) {
                 <span class="vers tnum">الإصدار الحالي: {{ stage.currentVersionNumber }}</span>
+              }
+              @if (stage.deadline && !stage.isCompleted) {
+                <span class="chip" [class.warn-chip]="stage.canFail">{{ deadlineText(stage) }}</span>
               }
             }
             <span class="grow"></span>
@@ -82,6 +91,59 @@
               @if (stageLoading()) {
                 <div class="state"><span class="spinner"></span> جاري التحميل…</div>
               } @else if (stageDetail()) {
+                <!-- سبب الفشل/التخطي السابق — أثر تاريخي دائم حتى بعد إعادة المحاولة -->
+                @if (stageDetail()!.failureReason) {
+                  <div class="si-note">
+                    <b>فشلت هذه المرحلة سابقًا ({{ dateStr(stageDetail()!.failedAt) }}):</b> {{ stageDetail()!.failureReason }}
+                  </div>
+                }
+                @if (stageDetail()!.isSkipped && stageDetail()!.skipReason) {
+                  <div class="si-note">
+                    <b>سبب اعتبارها غير لازمة:</b> {{ stageDetail()!.skipReason }}
+                  </div>
+                }
+
+                <!-- المدة القصوى / تاريخ الإعلان -->
+                @if (stageDetail()!.stage === 'announcement') {
+                  <div class="stage-actions">
+                    <div class="si-fld" style="min-width:220px">
+                      <label>تاريخ الإعلان <span class="req">*</span></label>
+                      <input
+                        type="date"
+                        [ngModel]="announcementDateInput()"
+                        (ngModelChange)="announcementDateInput.set($event)"
+                        [disabled]="stageDetail()!.isCompleted || !isStaff()"
+                      />
+                      <span class="hint">منه تُحسب مدة الـ15 يومًا الإلزامية قبل فتح المظاريف</span>
+                    </div>
+                    @if (isStaff() && !stageDetail()!.isCompleted) {
+                      <button class="si-btn sm" [disabled]="announcementDateSaving()" (click)="saveAnnouncementDate()">
+                        @if (announcementDateSaving()) { جاري الحفظ… } @else { حفظ تاريخ الإعلان }
+                      </button>
+                    }
+                  </div>
+                } @else if (isManager()) {
+                  <div class="stage-actions">
+                    <div class="si-fld" style="min-width:160px">
+                      <label>المدة القصوى — أيام</label>
+                      <input
+                        type="number"
+                        min="1"
+                        [ngModel]="durationInput()"
+                        (ngModelChange)="durationInput.set($event)"
+                        [disabled]="stageDetail()!.isCompleted"
+                        placeholder="بلا موعد نهائي"
+                      />
+                      <span class="hint">تجاوزها بلا إكمال يفتح زر «فشل المرحلة»</span>
+                    </div>
+                    @if (!stageDetail()!.isCompleted) {
+                      <button class="si-btn sm" [disabled]="durationSaving()" (click)="saveDuration()">
+                        @if (durationSaving()) { جاري الحفظ… } @else { حفظ المدة }
+                      </button>
+                    }
+                  </div>
+                }
+
                 <!-- أزرار الإجراءات -->
                 @if (isStaff()) {
                   <div class="stage-actions">
@@ -90,10 +152,16 @@
                         <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
                         رفع إصدار جديد
                       </button>
+                      @if (stageDetail()!.canFail) {
+                        <button class="si-btn danger sm" (click)="openFailModal()">فشل المرحلة</button>
+                      }
                       @if (stageDetail()!.currentVersionNumber > 0) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المرحلة</button>
                       } @else {
                         <span class="si-note-inline">ارفع إصدارًا يحتوي على المستندات المطلوبة أولًا — زر "إكمال المرحلة" يظهر بعدها</span>
+                      }
+                      @if (isManager()) {
+                        <button class="si-btn sm" (click)="openSkipModal()">هذه المرحلة غير لازمة للطرح</button>
                       }
                     } @else {
                       <span class="si-note-inline">المرحلة مكتملة — الإصدارات للقراءة فقط.</span>
@@ -101,6 +169,47 @@
                         <button class="si-btn sm" [disabled]="busy()" (click)="reopen()">إعادة فتح</button>
                       }
                     }
+                  </div>
+                }
+
+                <!-- تخطي المرحلة -->
+                @if (showSkipModal()) {
+                  <div class="upload-form">
+                    <div class="si-fld full">
+                      <label>سبب التخطي <span class="req">*</span></label>
+                      <textarea
+                        [ngModel]="skipReasonInput()"
+                        (ngModelChange)="skipReasonInput.set($event)"
+                        placeholder="لماذا هذه المرحلة غير لازمة لهذا المشروع؟"
+                      ></textarea>
+                    </div>
+                    <div class="upload-foot">
+                      <button class="si-btn primary sm" [disabled]="skipSaving()" (click)="confirmSkip()">
+                        @if (skipSaving()) { جاري الحفظ… } @else { تأكيد التخطي }
+                      </button>
+                      <button class="si-btn sm" (click)="showSkipModal.set(false)">إلغاء</button>
+                    </div>
+                  </div>
+                }
+
+                <!-- فشل المرحلة -->
+                @if (showFailModal()) {
+                  <div class="upload-form">
+                    <div class="si-fld full">
+                      <label>سبب الفشل <span class="req">*</span></label>
+                      <textarea
+                        [ngModel]="failReasonInput()"
+                        (ngModelChange)="failReasonInput.set($event)"
+                        placeholder="سبب الفشل أو أسباب إعادة طرح المشروع…"
+                      ></textarea>
+                      <span class="hint">سيُطلب منك بعدها إنشاء مذكرة عرض جديدة لإعادة الطرح</span>
+                    </div>
+                    <div class="upload-foot">
+                      <button class="si-btn danger sm" [disabled]="failSaving()" (click)="confirmFail()">
+                        @if (failSaving()) { جاري الحفظ… } @else { تأكيد الفشل }
+                      </button>
+                      <button class="si-btn sm" (click)="showFailModal.set(false)">إلغاء</button>
+                    </div>
                   </div>
                 }
 
