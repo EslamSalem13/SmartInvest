@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartInvest.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811192855_AddMemoContractingMethod")]
+    partial class AddMemoContractingMethod
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -278,59 +281,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.HasKey("AuditLogId");
 
                     b.ToTable("AuditLogs");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.BankAvailability", b =>
-                {
-                    b.Property<int>("BankAvailabilityId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BankAvailabilityId"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedByUserId")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("FinancialYearId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime>("ReceivedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("BankAvailabilityId");
-
-                    b.HasIndex("FinancialYearId");
-
-                    b.ToTable("BankAvailabilities");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.BankAvailabilityDocument", b =>
-                {
-                    b.Property<int>("BankAvailabilityDocumentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("BankAvailabilityDocumentId"));
-
-                    b.Property<int>("BankAvailabilityId")
-                        .HasColumnType("int");
-
-                    b.HasKey("BankAvailabilityDocumentId");
-
-                    b.HasIndex("BankAvailabilityId");
-
-                    b.ToTable("BankAvailabilityDocuments");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ComponentType", b =>
@@ -1979,65 +1929,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("PortalAdvertisement");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.BankAvailability", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.FinancialYear", "FinancialYear")
-                        .WithMany("BankAvailabilities")
-                        .HasForeignKey("FinancialYearId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("FinancialYear");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.BankAvailabilityDocument", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.BankAvailability", "BankAvailability")
-                        .WithMany("Documents")
-                        .HasForeignKey("BankAvailabilityId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.OwnsOne("SmartInvest.Domain.Common.StoredFile", "File", b1 =>
-                        {
-                            b1.Property<int>("BankAvailabilityDocumentId")
-                                .HasColumnType("int");
-
-                            b1.Property<byte[]>("Content")
-                                .IsRequired()
-                                .HasColumnType("varbinary(max)")
-                                .HasColumnName("File_Content");
-
-                            b1.Property<string>("FileExtension")
-                                .IsRequired()
-                                .HasMaxLength(20)
-                                .HasColumnType("nvarchar(20)")
-                                .HasColumnName("File_FileExtension");
-
-                            b1.Property<string>("FileName")
-                                .IsRequired()
-                                .HasMaxLength(255)
-                                .HasColumnType("nvarchar(255)")
-                                .HasColumnName("File_FileName");
-
-                            b1.Property<long>("FileSize")
-                                .HasColumnType("bigint")
-                                .HasColumnName("File_FileSize");
-
-                            b1.HasKey("BankAvailabilityDocumentId");
-
-                            b1.ToTable("BankAvailabilityDocuments");
-
-                            b1.WithOwner()
-                                .HasForeignKey("BankAvailabilityDocumentId");
-                        });
-
-                    b.Navigation("BankAvailability");
-
-                    b.Navigation("File")
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.ProjectAssignment", "ProjectAssignment")
@@ -3131,11 +3022,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Versions");
                 });
 
-            modelBuilder.Entity("SmartInvest.Domain.Entities.BankAvailability", b =>
-                {
-                    b.Navigation("Documents");
-                });
-
             modelBuilder.Entity("SmartInvest.Domain.Entities.ContractAward", b =>
                 {
                     b.Navigation("Versions");
@@ -3165,8 +3051,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialYear", b =>
                 {
-                    b.Navigation("BankAvailabilities");
-
                     b.Navigation("Plans");
 
                     b.Navigation("SubProjectFinancialYears");

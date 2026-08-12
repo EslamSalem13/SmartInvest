@@ -101,7 +101,8 @@ export interface ProcurementOverview {
   subProjectId: number;
   subProjectName: string;
   subProjectCode: string | null;
-  presentationMemos: PresentationMemoBrief[];
+  /** المذكرة الفعّالة فقط — الأحدث، وليست كل المذكرات المرتبطة تاريخيًا */
+  activePresentationMemo: PresentationMemoBrief | null;
   stages: ProcurementStage[];
 }
 
@@ -113,7 +114,21 @@ export interface ProcurementSubProjectListItem {
   completedStages: number;
   totalStages: number;
   hasPresentationMemo: boolean;
+  activeMemoId: number | null;
+  activeMemoTitle: string | null;
+  contractingMethod: number | null;
+  contractingMethodLabel: string | null;
 }
+
+/** أسماء مراحل الطرح الست بالترتيب — الفهرس = عدد المراحل المكتملة قبلها */
+export const PROCUREMENT_STAGE_NAMES: readonly string[] = [
+  'كراسة الشروط',
+  'الإعلان',
+  'فتح المظاريف',
+  'التقييم الفني',
+  'التقييم المالي',
+  'العقد والترسية',
+];
 
 // ===== مذكرات العرض =====
 
@@ -130,6 +145,9 @@ export interface PresentationMemo {
   isCompleted: boolean;
   createdAt: string;
   subProjects: MemoSubProject[];
+  /** رقم من ContractingMethod — فارغ للمذكرات المُنشأة قبل إضافة الحقل */
+  contractingMethod: number | null;
+  contractingMethodLabel: string | null;
 }
 
 export interface PresentationMemoDetail extends PresentationMemo {
@@ -139,6 +157,21 @@ export interface PresentationMemoDetail extends PresentationMemo {
 export interface CreatePresentationMemo {
   title: string;
   subProjectIds: number[];
+  contractingMethod: number | null;
 }
 
 export type UpdatePresentationMemo = CreatePresentationMemo;
+
+/**
+ * طرق التعاقد — مرتّبة من الأقل تنافسية إلى الأكثر.
+ * القيم تطابق enum ContractingMethod في الـ Backend.
+ */
+export const CONTRACTING_METHODS: ReadonlyArray<{ value: number; label: string }> = [
+  { value: 1, label: 'إسناد مباشر' },
+  { value: 2, label: 'الاتفاق المباشر' },
+  { value: 3, label: 'ممارسة محدودة' },
+  { value: 4, label: 'الممارسة العامة' },
+  { value: 5, label: 'مناقصة خاصة' },
+  { value: 6, label: 'مناقصة عامة' },
+  { value: 7, label: 'المناقصة ذات المرحلتين' },
+];

@@ -25,7 +25,7 @@ public class PresentationMemoService : IPresentationMemoService
 
     public async Task<IReadOnlyList<PresentationMemoDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.PresentationMemos.AsNoTracking()
+        var memos = await _context.PresentationMemos.AsNoTracking()
             .OrderByDescending(m => m.Id)
             .Select(m => new PresentationMemoDto
             {
@@ -34,6 +34,7 @@ public class PresentationMemoService : IPresentationMemoService
                 CurrentVersionNumber = m.CurrentVersionNumber,
                 IsCompleted = m.IsCompleted,
                 CreatedAt = m.CreatedAt,
+                ContractingMethod = (int?)m.ContractingMethod,
                 SubProjects = m.MemoSubProjects
                     .Select(x => new MemoSubProjectDto
                     {
@@ -44,6 +45,14 @@ public class PresentationMemoService : IPresentationMemoService
                     .ToList(),
             })
             .ToListAsync(cancellationToken);
+
+        // التسمية بحث في قاموس — لا تُترجم إلى SQL، فتُملأ بعد التنفيذ
+        foreach (var item in memos)
+        {
+            item.ContractingMethodLabel = ContractingMethodLabels.ToLabel((ContractingMethod?)item.ContractingMethod);
+        }
+
+        return memos;
     }
 
     public async Task<PresentationMemoDetailDto> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -57,6 +66,7 @@ public class PresentationMemoService : IPresentationMemoService
                 CurrentVersionNumber = m.CurrentVersionNumber,
                 IsCompleted = m.IsCompleted,
                 CreatedAt = m.CreatedAt,
+                ContractingMethod = (int?)m.ContractingMethod,
                 SubProjects = m.MemoSubProjects
                     .Select(x => new MemoSubProjectDto
                     {
@@ -68,6 +78,8 @@ public class PresentationMemoService : IPresentationMemoService
             })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException($"مذكرة العرض رقم {id} غير موجودة");
+
+        memo.ContractingMethodLabel = ContractingMethodLabels.ToLabel((ContractingMethod?)memo.ContractingMethod);
 
         memo.Versions = await _context.PresentationMemoVersions.AsNoTracking()
             .Where(v => v.PresentationMemoId == id)
@@ -116,6 +128,22 @@ public class PresentationMemoService : IPresentationMemoService
         return memo;
     }
 
+    /// <summary>طريقة التعاقد إلزامية على أي إنشاء أو تعديل — الـ null مسموح في القاعدة فقط للمذكرات القديمة.</summary>
+    private static ContractingMethod ParseContractingMethod(int? value)
+    {
+        if (value is not int method)
+        {
+            throw new BusinessRuleException("طريقة التعاقد مطلوبة");
+        }
+
+        if (!ContractingMethodLabels.IsDefined(method))
+        {
+            throw new BusinessRuleException("طريقة التعاقد غير معروفة");
+        }
+
+        return (ContractingMethod)method;
+    }
+
     public async Task<PresentationMemoDto> CreateAsync(CreatePresentationMemoDto dto, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(dto.Title))
@@ -131,7 +159,11 @@ public class PresentationMemoService : IPresentationMemoService
 
         await EnsureSubProjectsExistAsync(subProjectIds, cancellationToken);
 
-        var memo = new PresentationMemo { Title = dto.Title.Trim() };
+        var memo = new PresentationMemo
+        {
+            Title = dto.Title.Trim(),
+            ContractingMethod = ParseContractingMethod(dto.ContractingMethod),
+        };
         foreach (var subProjectId in subProjectIds)
         {
             memo.MemoSubProjects.Add(new PresentationMemoSubProject { SubProjectId = subProjectId });
@@ -169,6 +201,7 @@ public class PresentationMemoService : IPresentationMemoService
         await EnsureSubProjectsExistAsync(subProjectIds, cancellationToken);
 
         memo.Title = dto.Title.Trim();
+        memo.ContractingMethod = ParseContractingMethod(dto.ContractingMethod);
 
         var toRemove = memo.MemoSubProjects.Where(x => !subProjectIds.Contains(x.SubProjectId)).ToList();
         foreach (var link in toRemove)
@@ -286,6 +319,45 @@ public class PresentationMemoService : IPresentationMemoService
             LegalAffairsDecisionUploadedAt = version.LegalAffairsDecisionUploadedAt,
             Files = files,
         };
+    }
+
+    public async Task UploadLegalDecisionAsync(int id, FileUploadDto file, CancellationToken cancellationToken = default)
+    {
+        var memo = await _context.PresentationMemos
+            .FirstOrDefaultAsync(m => m.Id == id, cancellationToken)
+            ?? throw new NotFoundException($"مذكرة العرض رقم {id} غير موجودة");
+
+        if (memo.IsCompleted)
+        {
+            throw new BusinessRuleException("مذكرة العرض مكتملة — يجب إعادة فتحها قبل التعديل");
+        }
+
+        if (memo.CurrentVersionNumber == 0)
+        {
+            throw new BusinessRuleException("لا يوجد إصدار مرفوع لإرفاق القرار به");
+        }
+
+        if (file.Content.Length == 0)
+        {
+            throw new BusinessRuleException("ملف قرار لجنة الشؤون القانونية مطلوب");
+        }
+
+        // القرار يُرفق على الإصدار الحالي نفسه ولا يُنشئ إصدارًا جديدًا — القرار يصل بعد المذكرة،
+        // وليس تعديلًا عليها. تاريخ الرفع يُسجَّل وقت الإدخال الفعلي.
+        var version = await _context.PresentationMemoVersions
+            .FirstOrDefaultAsync(v => v.PresentationMemoId == id && v.VersionNumber == memo.CurrentVersionNumber, cancellationToken)
+            ?? throw new NotFoundException("الإصدار الحالي غير موجود");
+
+        version.LegalAffairsCommitteeDecision = new StoredFile
+        {
+            FileName = file.FileName,
+            FileExtension = file.FileExtension,
+            FileSize = file.FileSize,
+            Content = file.Content,
+        };
+        version.LegalAffairsDecisionUploadedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<FileDownloadDto> DownloadFileAsync(int id, int versionNumber, string? fileKey = null, CancellationToken cancellationToken = default)

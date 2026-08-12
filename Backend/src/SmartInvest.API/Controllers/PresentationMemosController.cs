@@ -87,6 +87,27 @@ public class PresentationMemosController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>إرفاق قرار لجنة الشؤون القانونية بالإصدار الحالي — لا يُنشئ إصدارًا جديدًا.</summary>
+    [HttpPost("{id:int}/legal-decision")]
+    [Authorize(Roles = Roles.PlanningStaff)]
+    public async Task<IActionResult> UploadLegalDecision(
+        int id,
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new BusinessRuleException("ملف قرار لجنة الشؤون القانونية مطلوب");
+        }
+
+        await _memoService.UploadLegalDecisionAsync(
+            id,
+            await FileRequestHelpers.ToUploadDtoAsync(file, cancellationToken),
+            cancellationToken);
+
+        return NoContent();
+    }
+
     /// <summary><paramref name="fileKey"/> اختياري: "legal-affairs-decision" لتحميل قرار اللجنة بدل ملف المذكرة.</summary>
     [HttpGet("{id:int}/versions/{versionNumber:int}/file")]
     public async Task<IActionResult> DownloadFile(int id, int versionNumber, [FromQuery] string? fileKey, CancellationToken cancellationToken)

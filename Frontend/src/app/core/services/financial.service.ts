@@ -154,6 +154,13 @@ export class FinancialService {
     return this.http.post<ProcurementVersion>(`${this.base}/presentation-memos/${id}/versions`, form);
   }
 
+  /** إرفاق قرار لجنة الشؤون القانونية بالإصدار الحالي — لا يُنشئ إصدارًا جديدًا */
+  uploadLegalDecision(id: number, file: File): Observable<void> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return this.http.post<void>(`${this.base}/presentation-memos/${id}/legal-decision`, form);
+  }
+
   downloadMemoFile(id: number, versionNumber: number, fileKey?: string): Observable<Blob> {
     return this.http.get(`${this.base}/presentation-memos/${id}/versions/${versionNumber}/file`, {
       responseType: 'blob',

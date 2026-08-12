@@ -11,7 +11,19 @@
   </header>
 
   <div class="toolbar">
+    <!-- خيار نائب دائم: <select> بلا خيارات ينهار إلى مربع صغير بسهم فقط -->
     <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
+      <option [ngValue]="null" disabled>
+        @if (yearsLoading()) {
+          جارٍ تحميل السنوات…
+        } @else if (yearsError()) {
+          تعذر تحميل السنوات المالية
+        } @else if (sortedYears().length === 0) {
+          لا توجد سنوات مالية
+        } @else {
+          — اختر السنة المالية —
+        }
+      </option>
       @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
     </select>
   </div>
@@ -40,6 +52,17 @@
       <div class="card-head">
         <h3>المشروعات الفرعية</h3>
         <div class="grow"></div>
+        <div class="filter-tabs">
+          <button type="button" class="ftab" [class.on]="memoFilter() === 'all'" (click)="memoFilter.set('all')">
+            الكل
+          </button>
+          <button type="button" class="ftab" [class.on]="memoFilter() === 'with'" (click)="memoFilter.set('with')">
+            لها مذكرة <span class="fcount tnum">{{ memoCountFor('with') }}</span>
+          </button>
+          <button type="button" class="ftab" [class.on]="memoFilter() === 'without'" (click)="memoFilter.set('without')">
+            بدون مذكرة <span class="fcount tnum">{{ memoCountFor('without') }}</span>
+          </button>
+        </div>
         <input
           class="search"
           placeholder="بحث بالاسم أو الكود…"
@@ -47,20 +70,61 @@
           (ngModelChange)="search.set($event)"
         />
       </div>
+
       <div class="memo-filters">
-        <span class="lbl">تقدم الطرح:</span>
-        <div class="filter-tabs">
-          @for (n of stageCountOptions; track n) {
-            <button
-              type="button"
-              class="ftab"
-              [class.on]="stageCountFilter().has(n)"
-              (click)="toggleStageCount(n)"
-            >
-              {{ n }}/6
-            </button>
+        <span class="lbl">المرحلة الحالية:</span>
+        <div class="dd" [class.open]="openDropdown() === 'stage'">
+          <button type="button" class="dd-toggle" (click)="toggleDropdown('stage', $event)">
+            @if (stageCountFilter().size === 0) {
+              <span>كل المراحل</span>
+            } @else if (stageCountFilter().size === 1) {
+              <span>{{ stageLabel(stageCountFilter().values().next().value!) }}</span>
+            } @else {
+              <span>{{ stageCountFilter().size }} مراحل مختارة</span>
+            }
+            <svg class="dd-chevron" viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          @if (openDropdown() === 'stage') {
+            <div class="dd-panel" (click)="$event.stopPropagation()">
+              @for (n of stageCountOptions; track n) {
+                <label class="check-item">
+                  <input type="checkbox" [checked]="stageCountFilter().has(n)" (change)="toggleStageCount(n)" />
+                  <span style="flex:1">{{ stageLabel(n) }}</span>
+                  <span class="fcount tnum">{{ stageCountFor(n) }}</span>
+                </label>
+              }
+            </div>
           }
         </div>
+
+        <span class="lbl">نوع التعاقد:</span>
+        <div class="dd" [class.open]="openDropdown() === 'method'">
+          <button type="button" class="dd-toggle" (click)="toggleDropdown('method', $event)">
+            @if (methodFilter().size === 0) {
+              <span>كل الأنواع</span>
+            } @else if (methodFilter().size === 1) {
+              <span>{{ selectedMethodLabel() }}</span>
+            } @else {
+              <span>{{ methodFilter().size }} أنواع مختارة</span>
+            }
+            <svg class="dd-chevron" viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          @if (openDropdown() === 'method') {
+            <div class="dd-panel" (click)="$event.stopPropagation()">
+              @for (m of allMethods; track m.value) {
+                <label class="check-item">
+                  <input type="checkbox" [checked]="methodFilter().has(m.value)" (change)="toggleMethod(m.value)" />
+                  <span style="flex:1">{{ m.label }}</span>
+                  <span class="fcount tnum">{{ methodCountFor(m.value) }}</span>
+                </label>
+              }
+            </div>
+          }
+        </div>
+
+        @if (hasActiveFilters()) {
+          <button type="button" class="si-btn sm" (click)="clearFilters()">مسح الفلاتر</button>
+        }
       </div>
       <div class="tbl-wrap si-responsive-table-wrap">
         <table class="si-responsive-table">
@@ -69,7 +133,8 @@
               <th>المشروع الفرعي</th>
               <th>الكود</th>
               <th>المشروع الرئيسي</th>
-              <th>مذكرة عرض</th>
+              <th>مذكرة العرض</th>
+              <th>نوع التعاقد</th>
               <th>تقدم الطرح</th>
               <th></th>
             </tr>
@@ -86,18 +151,25 @@
                   }
                 </td>
                 <td data-label="المشروع الرئيسي">{{ item.mainProjectName }}</td>
-                <td data-label="مذكرة عرض">
-                  @if (item.hasPresentationMemo) {
-                    <span class="chip ok-chip">مرتبط</span>
+                <td data-label="مذكرة العرض">
+                  @if (item.activeMemoTitle) {
+                    <a class="memo-chip done" routerLink="/app/financial/memos">{{ item.activeMemoTitle }}</a>
                   } @else {
                     <span class="chip">لا يوجد</span>
+                  }
+                </td>
+                <td data-label="نوع التعاقد">
+                  @if (item.contractingMethodLabel) {
+                    <span class="chip">{{ item.contractingMethodLabel }}</span>
+                  } @else {
+                    <span class="muted">—</span>
                   }
                 </td>
                 <td class="prog-cell" data-label="تقدم الطرح">
                   <div class="prog">
                     <div class="bar" [style.width.%]="progress(item)"></div>
                   </div>
-                  <span class="tnum prog-txt">{{ item.completedStages }}/{{ item.totalStages }}</span>
+                  <span class="tnum prog-txt">{{ stageLabel(item.completedStages) }}</span>
                 </td>
                 <td data-label="الإجراء">
                   <a class="si-btn primary sm" [routerLink]="['/app/financial', item.subProjectId]">
@@ -106,7 +178,7 @@
                 </td>
               </tr>
             } @empty {
-              <tr><td colspan="6" class="empty si-table-empty">لا توجد مشروعات فرعية.</td></tr>
+              <tr><td colspan="7" class="empty si-table-empty">لا توجد مشروعات فرعية.</td></tr>
             }
           </tbody>
         </table>

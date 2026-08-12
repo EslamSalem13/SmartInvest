@@ -27,20 +27,26 @@
         </div>
         <h2>{{ overview()!.subProjectName }}</h2>
         <div class="sub">
-          مذكرات العرض المرتبطة:
-          @if (overview()!.presentationMemos.length === 0) {
+          مذكرة العرض الفعّالة:
+          @if (overview()!.activePresentationMemo; as memo) {
+            <a class="memo-chip" routerLink="/app/financial/memos" [class.done]="memo.isCompleted">
+              {{ memo.title }}
+            </a>
+          } @else {
             <span>لا توجد —</span>
             <a class="lnk" routerLink="/app/financial/memos">إنشاء مذكرة عرض</a>
-          } @else {
-            @for (memo of overview()!.presentationMemos; track memo.id) {
-              <a class="memo-chip" routerLink="/app/financial/memos" [class.done]="memo.isCompleted">
-                {{ memo.title }}
-              </a>
-            }
           }
         </div>
       </div>
     </div>
+
+    <!-- بلا مذكرة عرض لا يقبل الخادم بدء أي مرحلة — نوضّح ذلك قبل المحاولة -->
+    @if (!overview()!.activePresentationMemo) {
+      <div class="si-note">
+        لا يمكن بدء أي مرحلة من مراحل الطرح قبل إرفاق مذكرة عرض لهذا المشروع.
+        <a class="lnk" routerLink="/app/financial/memos">إنشاء مذكرة عرض</a>
+      </div>
+    }
 
     <!-- المراحل -->
     <div class="stages">

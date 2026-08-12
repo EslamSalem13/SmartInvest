@@ -1,9 +1,13 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FinancialService } from '../../core/services/financial.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
-import { ProcurementSubProjectListItem } from '../../core/models/financial.models';
+import {
+  CONTRACTING_METHODS,
+  PROCUREMENT_STAGE_NAMES,
+  ProcurementSubProjectListItem,
+} from '../../core/models/financial.models';
 import { FinancialYear } from '../../core/models/project.models';
 
 @Component({
@@ -23,13 +27,152 @@ export class FinancialList implements OnInit {
 
   protected readonly financialYears = signal<FinancialYear[]>([]);
   protected readonly selectedYearId = signal<number | null>(null);
+  protected readonly yearsLoading = signal(true);
+  protected readonly yearsError = signal(false);
   protected readonly sortedYears = computed(() =>
     [...this.financialYears()].sort((a, b) => b.startDate.localeCompare(a.startDate)),
   );
 
-  /** فلتر تقدم الطرح (0..6) — اختيار متعدد؛ مجموعة فارغة تعني بدون فلترة */
+  /**
+   * فلتر المرحلة الحالية — القيمة هي عدد المراحل المكتملة (0..6)،
+   * وتُترجم إلى اسم المرحلة التي يقف عندها المشروع الآن. 6 = اكتمل الطرح.
+   * اختيار متعدد؛ مجموعة فارغة تعني بدون فلترة.
+   */
   protected readonly stageCountFilter = signal<Set<number>>(new Set());
   protected readonly stageCountOptions = [0, 1, 2, 3, 4, 5, 6];
+
+  /** اسم المرحلة التي يقف عندها المشروع = المرحلة التالية لآخر مرحلة مكتملة */
+  protected stageLabel(completedStages: number): string {
+    return PROCUREMENT_STAGE_NAMES[completedStages] ?? 'اكتمل الطرح';
+  }
+
+  /** فلتر نوع التعاقد — مأخوذ من مذكرة العرض الفعّالة */
+  protected readonly methodFilter = signal<Set<number>>(new Set());
+
+  protected toggleMethod(value: number): void {
+    this.methodFilter.update((current) => {
+      const next = new Set(current);
+      if (next.has(value)) {
+        next.delete(value);
+      } else {
+        next.add(value);
+      }
+      return next;
+    });
+  }
+
+  /** فلتر وجود مذكرة عرض */
+  protected readonly memoFilter = signal<'all' | 'with' | 'without'>('all');
+
+  /** الصفوف بعد البحث فقط — الأساس الذي تُحسب عليه أعداد الفلاتر */
+  private readonly searchMatched = computed(() => {
+    const term = this.search().trim();
+    if (!term) {
+      return this.items();
+    }
+    return this.items().filter(
+      (x) =>
+        x.subProjectName.includes(term) ||
+        (x.subProjectCode ?? '').includes(term) ||
+        x.mainProjectName.includes(term),
+    );
+  });
+
+  /**
+   * العدّادات تُحسب على نتائج البحث بعد تطبيق فلاتر المجموعات الأخرى فقط،
+   * حتى يعكس الرقم بجوار كل خيار عدد الصفوف التي سيعطيها اختياره فعلًا.
+   *
+   * محسوبة دفعة واحدة في خرائط لأن استدعاءها كدوال داخل @for يعيد مسح
+   * القائمة مع كل دورة كشف تغيير.
+   */
+  private readonly stageCounts = computed(() => {
+    const counts = new Map<number, number>();
+    for (const x of this.searchMatched()) {
+      if (this.matchesMethod(x) && this.matchesMemo(x)) {
+        counts.set(x.completedStages, (counts.get(x.completedStages) ?? 0) + 1);
+      }
+    }
+    return counts;
+  });
+
+  private readonly methodCounts = computed(() => {
+    const counts = new Map<number, number>();
+    for (const x of this.searchMatched()) {
+      if (x.contractingMethod != null && this.matchesStage(x) && this.matchesMemo(x)) {
+        counts.set(x.contractingMethod, (counts.get(x.contractingMethod) ?? 0) + 1);
+      }
+    }
+    return counts;
+  });
+
+  private readonly memoCounts = computed(() => {
+    let withMemo = 0;
+    let withoutMemo = 0;
+    for (const x of this.searchMatched()) {
+      if (!this.matchesStage(x) || !this.matchesMethod(x)) {
+        continue;
+      }
+      if (x.hasPresentationMemo) {
+        withMemo++;
+      } else {
+        withoutMemo++;
+      }
+    }
+    return { with: withMemo, without: withoutMemo };
+  });
+
+  protected stageCountFor(completedStages: number): number {
+    return this.stageCounts().get(completedStages) ?? 0;
+  }
+
+  protected methodCountFor(value: number): number {
+    return this.methodCounts().get(value) ?? 0;
+  }
+
+  protected memoCountFor(mode: 'with' | 'without'): number {
+    return this.memoCounts()[mode];
+  }
+
+  /** كل أنواع التعاقد السبعة تظهر دائمًا — النوع بلا مشروعات يظهر بعدّاد صفر بدل الاختفاء */
+  protected readonly allMethods = CONTRACTING_METHODS;
+
+  protected selectedMethodLabel(): string {
+    const value = this.methodFilter().values().next().value;
+    return this.allMethods.find((m) => m.value === value)?.label ?? '';
+  }
+
+  private matchesStage(x: ProcurementSubProjectListItem): boolean {
+    const stages = this.stageCountFilter();
+    return stages.size === 0 || stages.has(x.completedStages);
+  }
+
+  private matchesMethod(x: ProcurementSubProjectListItem): boolean {
+    const methods = this.methodFilter();
+    return methods.size === 0 || (x.contractingMethod != null && methods.has(x.contractingMethod));
+  }
+
+  private matchesMemo(x: ProcurementSubProjectListItem): boolean {
+    const mode = this.memoFilter();
+    return mode === 'all' || x.hasPresentationMemo === (mode === 'with');
+  }
+
+  /**
+   * فلترا المرحلة الحالية ونوع التعاقد قائمتان منسدلتان بمربعات اختيار متعدد —
+   * الاختيار المتعدد كما هو، فقط شكل العرض تغيّر. قيمة واحدة تتذكر أيهما مفتوحة
+   * حتى يُغلق فتح إحداهما الأخرى تلقائيًا.
+   */
+  protected readonly openDropdown = signal<'stage' | 'method' | null>(null);
+
+  protected toggleDropdown(which: 'stage' | 'method', event: Event): void {
+    event.stopPropagation();
+    this.openDropdown.update((current) => (current === which ? null : which));
+  }
+
+  /** أي نقرة تصل حتى مستند الصفحة لم تُوقَف داخل زر أو لوحة — أي أنها خارجهما */
+  @HostListener('document:click')
+  protected closeDropdowns(): void {
+    this.openDropdown.set(null);
+  }
 
   protected toggleStageCount(n: number): void {
     this.stageCountFilter.update((current) => {
@@ -43,20 +186,24 @@ export class FinancialList implements OnInit {
     });
   }
 
-  protected readonly filtered = computed(() => {
-    const term = this.search().trim();
-    const stages = this.stageCountFilter();
+  protected readonly filtered = computed(() =>
+    this.searchMatched().filter(
+      (x) => this.matchesStage(x) && this.matchesMethod(x) && this.matchesMemo(x),
+    ),
+  );
 
-    return this.items().filter((x) => {
-      const matchesTerm =
-        !term ||
-        x.subProjectName.includes(term) ||
-        (x.subProjectCode ?? '').includes(term) ||
-        x.mainProjectName.includes(term);
-      const matchesStages = stages.size === 0 || stages.has(x.completedStages);
-      return matchesTerm && matchesStages;
-    });
-  });
+  protected readonly hasActiveFilters = computed(
+    () =>
+      this.stageCountFilter().size > 0 ||
+      this.methodFilter().size > 0 ||
+      this.memoFilter() !== 'all',
+  );
+
+  protected clearFilters(): void {
+    this.stageCountFilter.set(new Set());
+    this.methodFilter.set(new Set());
+    this.memoFilter.set('all');
+  }
 
   // ===== pagination =====
   protected readonly page = signal(1);
@@ -85,6 +232,8 @@ export class FinancialList implements OnInit {
     effect(() => {
       this.search();
       this.stageCountFilter();
+      this.methodFilter();
+      this.memoFilter();
       this.page.set(1);
     });
   }
@@ -101,12 +250,17 @@ export class FinancialList implements OnInit {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
+        this.yearsLoading.set(false);
         this.selectedYearId.set(
           this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
         );
         this.load();
       },
-      error: () => this.load(),
+      error: () => {
+        this.yearsLoading.set(false);
+        this.yearsError.set(true);
+        this.load();
+      },
     });
   }
 
