@@ -233,3 +233,39 @@ td.notes { color: var(--muted); max-width: 240px; }
 /* مرحلة التسليم النهائي المُدارة تلقائيًا — مميزة ومقفولة */
 .final-row { background: var(--surface-2); }
 .final-row td { font-weight: 700; }
+
+@media (max-width: 768px) {
+  .page { width: 100%; padding: 18px 16px; overflow-x: hidden; }
+
+  .page-head, .page-head > div:first-child { width: 100%; min-width: 0; }
+  .page-head { align-items: stretch; flex-direction: column; }
+  .page-head h1, .page-head p { overflow-wrap: anywhere; }
+
+  .toolbar { width: 100%; align-items: stretch; }
+  .toolbar select.mini {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    text-align-last: center;
+  }
+
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .kpi, .card { width: 100%; min-width: 0; }
+
+  .card-head {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .card-head h3 { width: 100%; overflow-wrap: anywhere; }
+  .card-head .grow { display: none; }
+  .card-head .search {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .prog-cell { min-width: 0; }
+  .state { padding: 28px 18px; }
+}

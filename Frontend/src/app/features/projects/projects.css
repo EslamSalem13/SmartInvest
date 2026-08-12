@@ -200,6 +200,7 @@ tr.sub-row .sname { font-weight: 600; }
   .page { padding: 18px 16px; }
   .page-head { align-items: stretch; flex-wrap: wrap; }
   .page-head > div, .toolbar, .toolbar > *, .filterbar > *, .advanced > *, select.mini { width: 100%; min-width: 0; }
+  select.mini { text-align: center; text-align-last: center; }
   .toolbar .grow { display: none; }
   .toolbar, .filterbar { align-items: stretch; }
   .toolbar .si-btn, .toolbar a.si-btn, .filterbar > .si-btn, .advanced .si-btn { width: 100%; }
