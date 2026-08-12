@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeToggle } from '../../shared/theme-toggle';
 
 @Component({
   selector: 'app-account-recovery',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ThemeToggle],
   templateUrl: './account-recovery.html',
   styleUrl: './account-recovery.css',
 })

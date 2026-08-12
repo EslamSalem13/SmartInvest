@@ -15,7 +15,7 @@
   font-size: 12px;
 }
 .profile-head h1 {
-  color: var(--green-900);
+  color: var(--heading);
   font-size: clamp(28px, 3vw, 38px);
 }
 .profile-head p {
@@ -62,7 +62,7 @@
   position: relative;
   width: 112px;
   height: 112px;
-  border: 5px solid #fff;
+  border: 5px solid var(--surface);
   box-shadow: var(--shadow-md);
   font-size: 36px;
 }
@@ -72,12 +72,12 @@
   height: 22px;
   border-radius: 50%;
   background: var(--ok);
-  border: 4px solid #fff;
+  border: 4px solid var(--surface);
   bottom: 5px;
   inset-inline-start: 4px;
 }
 .identity-card h2 {
-  color: var(--green-900);
+  color: var(--heading);
   font-size: 21px;
 }
 .username {
@@ -108,7 +108,7 @@
 .soft-danger {
   background: var(--bad-bg);
   color: var(--bad);
-  border-color: #f3c6cc;
+  border-color: var(--bad-line);
 }
 .account-meta {
   margin: 22px 0 0;
@@ -147,7 +147,7 @@
   margin-bottom: 20px;
 }
 .section-title h2 {
-  color: var(--green-900);
+  color: var(--heading);
   font-size: 18px;
 }
 .section-title p {
@@ -162,7 +162,7 @@
   display: grid;
   place-items: center;
   background: var(--green-100);
-  color: var(--green-700);
+  color: var(--link);
   font-size: 19px;
   font-weight: 900;
   flex-shrink: 0;
@@ -196,7 +196,7 @@
 .text-action {
   border: 0;
   background: transparent;
-  color: var(--green-700);
+  color: var(--link);
   font: inherit;
   font-weight: 800;
   text-decoration: underline;
@@ -212,7 +212,7 @@
   place-content: center;
   justify-items: center;
   gap: 12px;
-  color: var(--green-800);
+  color: var(--heading);
 }
 .spinner {
   width: 28px;

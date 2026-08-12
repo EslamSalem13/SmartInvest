@@ -42,6 +42,10 @@
 
     <div class="grow"></div>
 
+    <div class="theme-slot">
+      <app-theme-toggle />
+    </div>
+
     <a class="me" routerLink="/app/profile" routerLinkActive="profile-active" (click)="closeMobileNav()" aria-label="فتح الملف الشخصي">
       <span class="av si-avatar">
         @if (avatarUrl()) {

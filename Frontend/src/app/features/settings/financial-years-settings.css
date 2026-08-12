@@ -3,7 +3,7 @@
 .panel-head h2 { font-size: 17px; }
 
 .state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 32px; color: var(--muted); box-shadow: var(--shadow); }
-.state.error { color: #b32a39; border-color: #F3C6CC; background: var(--bad-bg); }
+.state.error { color: var(--bad-ink); border-color: var(--bad-line); background: var(--bad-bg); }
 .spinner { width: 16px; height: 16px; border: 2px solid var(--line-strong); border-top-color: var(--green-700); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -15,16 +15,16 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .acts { display: inline-flex; gap: 6px; }
 .act { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease); }
 .act svg { width: 15px; height: 15px; }
-.act:hover { background: var(--green-100); color: var(--green-700); border-color: var(--green-100); }
+.act:hover { background: var(--green-100); color: var(--link); border-color: var(--green-100); }
 .act:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; }
-.act.danger { color: var(--bad); border-color: #F3C6CC; }
+.act.danger { color: var(--bad); border-color: var(--bad-line); }
 .act.danger:hover { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-bg); }
 .act.danger:focus-visible { outline-color: var(--bad); }
 
 .si-check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .si-check input { width: 16px; height: 16px; }
 
-.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--green-700); text-align: end; }
+.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--link); text-align: end; }
 
 @media (min-width: 769px) {
   th:last-child, td:last-child { width: 120px; text-align: end; }

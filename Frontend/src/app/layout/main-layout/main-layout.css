@@ -49,7 +49,7 @@
   border-radius: 50%;
   border: 1px solid var(--line-strong);
   background: var(--surface);
-  color: var(--green-800);
+  color: var(--link);
   display: grid;
   place-items: center;
   box-shadow: var(--shadow-md);
@@ -94,6 +94,15 @@
 }
 
 .grow { flex: 1; }
+
+.theme-slot { margin: 6px 0 10px; }
+.theme-slot ::ng-deep .theme-toggle {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(231, 206, 140, .24);
+  color: #DCEAE0;
+  box-shadow: none;
+}
+.theme-slot ::ng-deep .theme-toggle:hover { background: rgba(255, 255, 255, .1); }
 
 .avatar-err {
   background: rgba(219, 70, 87, .16);
@@ -150,7 +159,7 @@
   border-radius: 12px;
   border: 1px solid var(--line-strong);
   background: var(--surface);
-  color: var(--green-800);
+  color: var(--link);
   box-shadow: var(--shadow-md);
   align-items: center;
   justify-content: center;
@@ -162,7 +171,7 @@
   position: fixed;
   inset: 0;
   z-index: 105;
-  background: rgba(7, 31, 22, .55);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
 }
 

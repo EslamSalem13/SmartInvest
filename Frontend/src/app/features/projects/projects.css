@@ -1,9 +1,9 @@
 .page { padding: 28px 32px; }
 
-.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--green-700); text-align: end; }
+.budget-total { margin-top: 10px; font-size: 13px; font-weight: 700; color: var(--link); text-align: end; }
 
 .page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
-.page-head h1 { font-size: var(--text-2xl); color: var(--green-900); }
+.page-head h1 { font-size: var(--text-2xl); color: var(--heading); }
 .page-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
 
 /* شريط الأدوات */
@@ -53,7 +53,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .kpi.bad::before { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-bg); }
 .kpi.gold::before { background: var(--gold); box-shadow: 0 0 0 4px var(--gold-100); }
 .kpi .lab { position: relative; z-index: 1; color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
-.kpi .val { position: relative; z-index: 1; display: block; font-size: clamp(15px, 1.6vw + 10px, var(--text-xl)); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--green-900); overflow-wrap: anywhere; }
+.kpi .val { position: relative; z-index: 1; display: block; font-size: clamp(15px, 1.6vw + 10px, var(--text-xl)); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--heading); overflow-wrap: anywhere; }
 .kpi .val small { font-size: 11px; color: var(--muted); font-weight: 700; }
 
 /* بطاقة "المتاح" — عنصر button يحمل class="kpi gold kpi-btn" فيرث كل تصميم .kpi تلقائيًا؛
@@ -81,15 +81,15 @@ button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); b
 .avail-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .avail-stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
 .avail-stat .lab { display: block; font-size: 11.5px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
-.avail-stat b { font-size: 15px; color: var(--green-800); font-weight: 800; }
+.avail-stat b { font-size: 15px; color: var(--heading); font-weight: 800; }
 
 .avail-add-form { margin-top: 14px; padding: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-lg); animation: si-pop .16s var(--ease); flex: 0 0 auto; }
-.avail-form-title { font-size: var(--text-base); color: var(--green-900); margin-bottom: 12px; }
+.avail-form-title { font-size: var(--text-base); color: var(--heading); margin-bottom: 12px; }
 .avail-add-actions { display: flex; gap: 8px; margin-top: 10px; }
 .avail-file-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .avail-file-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 7px 10px; font-size: 12.5px; }
 .avail-file-name { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.avail-file-name svg { flex: 0 0 auto; color: var(--green-700); }
+.avail-file-name svg { flex: 0 0 auto; color: var(--link); }
 .avail-file-size { color: var(--muted); font-weight: 600; }
 
 /* منطقة السحب والإفلات لرفع المستندات */
@@ -111,15 +111,15 @@ button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); b
 .avail-list::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
 .avail-row { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--surface); }
 .avail-row-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.avail-row-main b { color: var(--green-800); font-size: 14.5px; }
+.avail-row-main b { color: var(--heading); font-size: 14.5px; }
 .avail-row-acts { display: flex; align-items: center; gap: 8px; }
 .avail-dates { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .avail-notes { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
 .avail-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.avail-doc-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--green-700); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12px; font-weight: 700; transition: background .15s var(--ease); }
+.avail-doc-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--link); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12px; font-weight: 700; transition: background .15s var(--ease); }
 .avail-doc-btn:hover { background: var(--green-100); }
 .avail-delete-msg { font-size: 13.5px; color: var(--ink); line-height: 1.8; }
-.avail-delete-msg b { color: var(--green-800); }
+.avail-delete-msg b { color: var(--heading); }
 
 /* الفلاتر */
 .filterbar { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm); flex-wrap: wrap; }
@@ -135,15 +135,15 @@ button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); b
 
 /* الحالات */
 .state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: 48px; color: var(--muted); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
-.state.error { color: #b32a39; border-color: #F3C6CC; background: var(--bad-bg); }
+.state.error { color: var(--bad-ink); border-color: var(--bad-line); background: var(--bad-bg); }
 .spinner { width: 16px; height: 16px; border: 2px solid var(--line-strong); border-top-color: var(--green-700); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* الجدول */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
 .card-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
-.card-head h3 { font-size: var(--text-md); color: var(--green-900); }
-.pill-count { background: var(--green-100); border: 1px solid var(--line); color: var(--green-700); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; }
+.card-head h3 { font-size: var(--text-md); color: var(--heading); }
+.pill-count { background: var(--green-100); border: 1px solid var(--line); color: var(--link); padding: 4px 12px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; }
 .tbl-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { font-size: 11.5px; color: var(--muted); font-weight: 700; text-align: start; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface-2); }
@@ -161,30 +161,30 @@ tr.main-row { cursor: pointer; transition: background .15s var(--ease); }
 tr.main-row:focus-visible { outline: 2px solid var(--green-600); outline-offset: -2px; }
 .chevron { transition: transform 0.2s var(--ease); vertical-align: middle; margin-inline-end: 6px; }
 .chevron.open { transform: rotate(90deg); }
-.chevron.sm { margin-inline-end: 4px; color: var(--green-700); }
+.chevron.sm { margin-inline-end: 4px; color: var(--link); }
 .empty-subs { color: var(--muted); text-align: center; }
 
 /* المشروع الرئيسي — أخضر */
 tr.main-row td { background: var(--green-50); font-weight: 700; }
 tr.main-row:hover td { background: var(--green-100); }
-tr.main-row .code { color: var(--green-700); font-weight: 800; }
-tr.main-row .mname { color: var(--green-700); font-weight: 800; }
+tr.main-row .code { color: var(--link); font-weight: 800; }
+tr.main-row .mname { color: var(--link); font-weight: 800; }
 
 tr.sub-row { transition: background .15s var(--ease); }
 tr.sub-row:hover td { background: var(--surface-2); }
 tr.sub-row .sname { font-weight: 600; }
 
-.code { color: var(--green-700); font-weight: 700; }
+.code { color: var(--link); font-weight: 700; }
 .wait { display: inline-block; color: var(--muted); font-size: 12px; font-weight: 700; background: var(--surface-2); border: 1px dashed var(--line-strong); padding: 3px 9px; border-radius: 7px; }
 
 .acts { display: inline-flex; gap: 6px; }
 .acts a.act { text-decoration: none; }
 .act { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); }
-.act:hover { background: var(--green-100); color: var(--green-700); border-color: var(--green-100); transform: translateY(-1px); }
+.act:hover { background: var(--green-100); color: var(--link); border-color: var(--green-100); transform: translateY(-1px); }
 .act svg { width: 15px; height: 15px; }
-.act.approve { color: var(--ok); border-color: #BFE6CD; }
+.act.approve { color: var(--ok); border-color: var(--ok-line); }
 .act.approve:hover { background: var(--ok-bg); }
-.act.danger { color: var(--bad); border-color: #F3C6CC; }
+.act.danger { color: var(--bad); border-color: var(--bad-line); }
 .act.danger:hover { background: var(--bad-bg); }
 
 /* pagination */

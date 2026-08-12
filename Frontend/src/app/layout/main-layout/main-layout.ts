@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { AuthService } from '../../core/services/auth.service';
 import { Roles } from '../../core/models/auth.models';
 import { ToastHost } from '../../shared/toast-host';
+import { ThemeToggle } from '../../shared/theme-toggle';
 
 interface NavItem {
   label: string;
@@ -15,7 +16,7 @@ const SIDEBAR_COLLAPSED_KEY = 'smartinvest_sidebar_collapsed';
 
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastHost],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastHost, ThemeToggle],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.css',
 })

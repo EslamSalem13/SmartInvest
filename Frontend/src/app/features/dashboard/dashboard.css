@@ -1,7 +1,7 @@
 .page { padding: 28px 32px; }
 
 .page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
-.page-head h1 { font-size: var(--text-2xl); color: var(--green-900); }
+.page-head h1 { font-size: var(--text-2xl); color: var(--heading); }
 .page-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-sm); font-weight: 600; }
 .grow { flex: 1; }
 
@@ -26,7 +26,7 @@
 .chart-skel { height: 300px; }
 
 .state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: 48px; color: var(--muted); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
-.state.error { color: #b32a39; border-color: #F3C6CC; background: var(--bad-bg); }
+.state.error { color: var(--bad-ink); border-color: var(--bad-line); background: var(--bad-bg); }
 
 /* ===== كروت المؤشرات ===== */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 26px; }
@@ -53,7 +53,7 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
 .kpi.info::before { background: radial-gradient(circle, var(--info-bg), transparent 72%); }
 .kpi-top { position: relative; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .kpi .lab { color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
-.ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--green-100); color: var(--green-700); flex-shrink: 0; }
+.ic { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; background: var(--green-100); color: var(--link); flex-shrink: 0; }
 .ic svg { width: 16px; height: 16px; }
 .kpi.ok .ic { background: var(--ok-bg); color: var(--ok); }
 .kpi.warn .ic { background: var(--warn-bg); color: var(--warn); }
@@ -63,7 +63,7 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
 .kpi .val {
   position: relative; z-index: 1; display: block;
   font-size: clamp(20px, 1.6vw + 14px, var(--text-3xl));
-  font-weight: 800; margin-top: 10px; font-family: var(--font-heading); color: var(--green-900);
+  font-weight: 800; margin-top: 10px; font-family: var(--font-heading); color: var(--heading);
   overflow-wrap: anywhere;
 }
 .kpi .val small { font-size: 12px; color: var(--muted); font-weight: 700; }
@@ -74,7 +74,7 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
 .chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 18px 20px; min-width: 0; overflow: hidden; }
 .chart-card.wide { grid-column: span 2; }
 @media (max-width: 900px) { .chart-card.wide { grid-column: span 1; } }
-.chart-card h3 { font-size: var(--text-base); color: var(--green-900); margin-bottom: 10px; font-weight: 800; }
+.chart-card h3 { font-size: var(--text-base); color: var(--heading); margin-bottom: 10px; font-weight: 800; }
 .chart-box { width: 100%; height: 280px; min-width: 0; }
 .chart-box.tall { height: 320px; }
 .chart-empty { height: 200px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px dashed var(--line-strong); }
@@ -83,8 +83,8 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
 .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 16px; }
 .detail-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 16px 18px; min-width: 0; overflow: hidden; }
 .detail-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.detail-card-head h3 { font-size: var(--text-base); color: var(--green-900); font-weight: 800; margin: 0; }
-.detail-view-all { flex-shrink: 0; font-size: 11.5px; font-weight: 700; color: var(--green-700); text-decoration: none; white-space: nowrap; }
+.detail-card-head h3 { font-size: var(--text-base); color: var(--heading); font-weight: 800; margin: 0; }
+.detail-view-all { flex-shrink: 0; font-size: 11.5px; font-weight: 700; color: var(--link); text-decoration: none; white-space: nowrap; }
 .detail-view-all:hover { text-decoration: underline; }
 .detail-view-all:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; border-radius: 4px; }
 .detail-empty { color: var(--muted); font-size: 12.5px; margin: 0; }
@@ -101,11 +101,11 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
   transition: background .15s var(--ease);
 }
 .detail-row:hover { background: var(--surface-2); }
-.detail-row:hover .detail-row-name { color: var(--green-800); }
+.detail-row:hover .detail-row-name { color: var(--heading); }
 .detail-row:focus-visible { outline: 2px solid var(--green-700); outline-offset: -2px; }
 .detail-row-name {
   flex: 1 1 auto; min-width: 0; max-width: 100%;
-  color: var(--green-700); font-weight: 700;
+  color: var(--link); font-weight: 700;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: color .15s var(--ease);
 }

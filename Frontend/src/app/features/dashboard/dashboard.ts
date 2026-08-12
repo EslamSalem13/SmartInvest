@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import * as echarts from 'echarts/core';
@@ -12,6 +12,7 @@ import type { GridComponentOption, LegendComponentOption, TooltipComponentOption
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { DashboardOverview } from '../../core/models/dashboard.models';
 import { FinancialYear } from '../../core/models/project.models';
 import { egpToThousands, formatEgpAsThousands } from '../../core/utils/budget.util';
@@ -35,6 +36,7 @@ type EChartsOption = ComposeOption<
 >;
 
 const PALETTE = ['#1C7049', '#C79A3A', '#2E6FB0', '#DB4657', '#C98A12', '#269560', '#8A6512', '#15603F', '#B4872C', '#0F4A34'];
+const DARK_PALETTE = ['#2FA66A', '#D5AA4A', '#5CA6E8', '#F05A67', '#E2AE43', '#42B77B', '#F1D58A', '#27905F', '#BE9137', '#6BD39A'];
 
 @Component({
   selector: 'app-dashboard',
@@ -46,6 +48,7 @@ export class Dashboard implements OnDestroy {
   protected readonly auth = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly themeService = inject(ThemeService);
 
   protected readonly financialYears = signal<FinancialYear[]>([]);
   protected readonly selectedYearId = signal<number | null>(null);
@@ -91,6 +94,10 @@ export class Dashboard implements OnDestroy {
   );
 
   constructor() {
+    effect(() => {
+      this.themeService.theme();
+      setTimeout(() => this.renderAllCharts(), 0);
+    });
     this.loadFinancialYears();
   }
 
@@ -231,26 +238,80 @@ export class Dashboard implements OnDestroy {
       container.dataset['chartKey'] = key;
       this.resizeObserver?.observe(container);
     }
-    instance.setOption(option, true);
+    instance.setOption(this.withChartTheme(option), true);
+  }
+
+  private cssToken(name: string, fallback: string): string {
+    if (typeof document === 'undefined') return fallback;
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  }
+
+  private chartPalette(): string[] {
+    return this.themeService.isDark() ? DARK_PALETTE : PALETTE;
+  }
+
+  private withChartTheme(option: EChartsOption): EChartsOption {
+    const themed = option as any;
+    const text = this.cssToken('--ink', '#14201A');
+    const muted = this.cssToken('--chart-text', '#647569');
+    const border = this.cssToken('--line-strong', '#CDD8CC');
+    const grid = this.cssToken('--chart-grid', '#E3E9E2');
+    const surface = this.cssToken('--surface-2', '#F6F9F6');
+
+    const themeAxis = (axis: any): any => {
+      if (!axis) return axis;
+      if (Array.isArray(axis)) return axis.map(themeAxis);
+      return {
+        ...axis,
+        axisLabel: { color: muted, fontFamily: 'Tajawal', ...(axis.axisLabel ?? {}) },
+        nameTextStyle: { color: muted, fontFamily: 'Tajawal', ...(axis.nameTextStyle ?? {}) },
+        axisLine: { ...(axis.axisLine ?? {}), lineStyle: { color: border, ...(axis.axisLine?.lineStyle ?? {}) } },
+        axisTick: { ...(axis.axisTick ?? {}), lineStyle: { color: border, ...(axis.axisTick?.lineStyle ?? {}) } },
+        splitLine: { ...(axis.splitLine ?? {}), lineStyle: { color: grid, ...(axis.splitLine?.lineStyle ?? {}) } },
+      };
+    };
+
+    return {
+      ...themed,
+      backgroundColor: 'transparent',
+      textStyle: { color: text, fontFamily: 'Tajawal', ...(themed.textStyle ?? {}) },
+      tooltip: themed.tooltip
+        ? {
+            backgroundColor: surface,
+            borderColor: border,
+            textStyle: { color: text, fontFamily: 'Tajawal' },
+            ...themed.tooltip,
+          }
+        : themed.tooltip,
+      legend: themed.legend
+        ? {
+            ...themed.legend,
+            textStyle: { color: muted, fontFamily: 'Tajawal', ...(themed.legend.textStyle ?? {}) },
+          }
+        : themed.legend,
+      xAxis: themeAxis(themed.xAxis),
+      yAxis: themeAxis(themed.yAxis),
+    } as EChartsOption;
   }
 
   // ===== خيارات كل مخطط =====
   private buildFundingOption(data: DashboardOverview): EChartsOption {
     const { fundingDistribution } = data.charts;
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط دائري يوضح توزيع التمويل بين البنكي والذاتي' },
       tooltip: { trigger: 'item', valueFormatter: (v) => this.chartThousandsLabel(v as number) },
       legend: { bottom: 0, textStyle: { fontFamily: 'Tajawal' } },
-      color: [PALETTE[0], PALETTE[1]],
+      color: [palette[0], palette[1]],
       series: [
         {
           type: 'pie',
           radius: ['52%', '75%'],
           center: ['50%', '44%'],
           avoidLabelOverlap: true,
-          itemStyle: { borderColor: '#fff', borderWidth: 2 },
-          label: { formatter: '{b}\n{d}%', fontFamily: 'Tajawal', fontSize: 11.5 },
+          itemStyle: { borderColor: this.cssToken('--surface', '#fff'), borderWidth: 2 },
+          label: { color: this.cssToken('--chart-text', '#647569'), formatter: '{b}\n{d}%', fontFamily: 'Tajawal', fontSize: 11.5 },
           data: fundingDistribution.map((d) => ({ name: d.name, value: this.thousandsNumber(d.value) })),
         },
       ],
@@ -259,6 +320,7 @@ export class Dashboard implements OnDestroy {
 
   private buildAvailabilityGaugeOption(data: DashboardOverview): EChartsOption {
     const rate = Math.min(100, Math.max(0, data.financialMetrics.availabilityRateOfBankFunding));
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مقياس دائري يوضح نسبة الإتاحات البنكية من إجمالي التمويل البنكي' },
@@ -271,8 +333,8 @@ export class Dashboard implements OnDestroy {
           max: 100,
           radius: '92%',
           center: ['50%', '58%'],
-          progress: { show: true, width: 16, itemStyle: { color: PALETTE[0] } },
-          axisLine: { lineStyle: { width: 16, color: [[1, '#EEF2EE']] } },
+          progress: { show: true, width: 16, itemStyle: { color: palette[0] } },
+          axisLine: { lineStyle: { width: 16, color: [[1, this.cssToken('--chart-track', '#EEF2EE')]] } },
           axisTick: { show: false },
           splitLine: { show: false },
           axisLabel: { show: false },
@@ -282,7 +344,7 @@ export class Dashboard implements OnDestroy {
             formatter: '{value}%',
             fontSize: 24,
             fontFamily: 'Cairo',
-            color: '#0C3B2A',
+            color: this.cssToken('--heading', '#0C3B2A'),
             offsetCenter: [0, '10%'],
           },
           data: [{ value: Math.round(rate * 100) / 100 }],
@@ -293,6 +355,7 @@ export class Dashboard implements OnDestroy {
 
   private buildStatusOption(data: DashboardOverview): EChartsOption {
     const items = data.charts.statusDistribution;
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط أعمدة يوضح توزيع المشروعات حسب الحالة' },
@@ -304,8 +367,8 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 40,
-          itemStyle: { color: PALETTE[0], borderRadius: [8, 8, 0, 0] },
-          data: items.map((i, idx) => ({ value: i.value, itemStyle: { color: PALETTE[idx % PALETTE.length] } })),
+          itemStyle: { color: palette[0], borderRadius: [8, 8, 0, 0] },
+          data: items.map((i, idx) => ({ value: i.value, itemStyle: { color: palette[idx % palette.length] } })),
         },
       ],
     };
@@ -313,6 +376,7 @@ export class Dashboard implements OnDestroy {
 
   private buildProgramFundingOption(data: DashboardOverview): EChartsOption {
     const items = [...data.charts.programFunding].sort((a, b) => a.totalFunding - b.totalFunding);
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط أعمدة أفقي مكدّس يوضح التمويل البنكي والذاتي لكل برنامج رئيسي' },
@@ -336,14 +400,15 @@ export class Dashboard implements OnDestroy {
         triggerEvent: true,
       },
       series: [
-        { name: 'بنكي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[0] }, data: items.map((i) => this.thousandsNumber(i.bankFunding)) },
-        { name: 'ذاتي', type: 'bar', stack: 'funding', itemStyle: { color: PALETTE[1] }, data: items.map((i) => this.thousandsNumber(i.selfFunding)) },
+        { name: 'بنكي', type: 'bar', stack: 'funding', itemStyle: { color: palette[0] }, data: items.map((i) => this.thousandsNumber(i.bankFunding)) },
+        { name: 'ذاتي', type: 'bar', stack: 'funding', itemStyle: { color: palette[1] }, data: items.map((i) => this.thousandsNumber(i.selfFunding)) },
       ],
     };
   }
 
   private buildTimelineOption(data: DashboardOverview): EChartsOption {
     const items = data.charts.availabilityTimeline;
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط خطي يوضح تراكم الإتاحات البنكية عبر الزمن' },
@@ -360,9 +425,9 @@ export class Dashboard implements OnDestroy {
           smooth: true,
           symbol: 'circle',
           symbolSize: 7,
-          lineStyle: { color: PALETTE[0], width: 3 },
-          itemStyle: { color: PALETTE[0] },
-          areaStyle: { color: 'rgba(28,112,73,0.12)' },
+          lineStyle: { color: palette[0], width: 3 },
+          itemStyle: { color: palette[0] },
+          areaStyle: { color: this.themeService.isDark() ? 'rgba(47,166,106,0.24)' : 'rgba(28,112,73,0.12)' },
           data: items.map((i) => this.thousandsNumber(i.cumulativeAmount)),
         },
       ],
@@ -371,6 +436,7 @@ export class Dashboard implements OnDestroy {
 
   private buildMarkazOption(data: DashboardOverview): EChartsOption {
     const items = [...data.charts.markazDistribution].sort((a, b) => a.value - b.value).slice(-10);
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط أعمدة أفقي يوضح توزيع المشروعات حسب المركز' },
@@ -382,7 +448,7 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 18,
-          itemStyle: { color: PALETTE[2], borderRadius: [0, 6, 6, 0] },
+          itemStyle: { color: palette[2], borderRadius: [0, 6, 6, 0] },
           data: items.map((i) => i.value),
         },
       ],
@@ -391,20 +457,21 @@ export class Dashboard implements OnDestroy {
 
   private buildPriorityOption(data: DashboardOverview): EChartsOption {
     const items = data.charts.priorityDistribution;
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط وردي يوضح توزيع المشروعات حسب الأولوية' },
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, textStyle: { fontFamily: 'Tajawal' } },
-      color: PALETTE,
+      color: palette,
       series: [
         {
           type: 'pie',
           radius: ['20%', '75%'],
           center: ['50%', '44%'],
           roseType: 'radius',
-          itemStyle: { borderColor: '#fff', borderWidth: 2 },
-          label: { fontFamily: 'Tajawal', fontSize: 11 },
+          itemStyle: { borderColor: this.cssToken('--surface', '#fff'), borderWidth: 2 },
+          label: { color: this.cssToken('--chart-text', '#647569'), fontFamily: 'Tajawal', fontSize: 11 },
           data: items.map((i) => ({ name: i.name, value: i.value })),
         },
       ],
@@ -413,6 +480,7 @@ export class Dashboard implements OnDestroy {
 
   private buildProgressOption(data: DashboardOverview): EChartsOption {
     const items = data.charts.progressDistribution;
+    const palette = this.chartPalette();
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط أعمدة يوضح توزيع المشروعات حسب نطاق نسبة التنفيذ' },
@@ -424,7 +492,7 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 40,
-          itemStyle: { color: PALETTE[5], borderRadius: [8, 8, 0, 0] },
+          itemStyle: { color: palette[5], borderRadius: [8, 8, 0, 0] },
           data: items.map((i) => i.value),
         },
       ],
