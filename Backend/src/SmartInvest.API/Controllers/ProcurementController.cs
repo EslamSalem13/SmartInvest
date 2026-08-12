@@ -142,9 +142,9 @@ public class ProcurementController : ControllerBase
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 
-    /// <summary>مدير التخطيط يحدد المدة القصوى لمرحلة (بالأيام) قبل ظهور زر الفشل. غير متاحة لمرحلة الإعلان.</summary>
+    /// <summary>مدير الإدارة المالية يحدد المدة القصوى لمرحلة (بالأيام) قبل ظهور زر الفشل. غير متاحة لمرحلة الإعلان.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/duration")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> SetDuration(int subProjectId, string stage, SetStageDurationDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetStageDurationAsync(subProjectId, ParseStage(stage), dto.DurationDays, cancellationToken);
@@ -153,16 +153,16 @@ public class ProcurementController : ControllerBase
 
     /// <summary>تاريخ نشر الإعلان — خاص بمرحلة الإعلان فقط، منه تُحسب مدة الـ15 يومًا الإلزامية.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/announcement/date")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> SetAnnouncementDate(int subProjectId, SetAnnouncementDateDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetAnnouncementDateAsync(subProjectId, dto.AnnouncementDate, cancellationToken);
         return NoContent();
     }
 
-    /// <summary>"هذه المرحلة غير لازمة للطرح" — مدير التخطيط فقط، يتطلب سببًا.</summary>
+    /// <summary>"هذه المرحلة غير لازمة للطرح" — مدير الإدارة المالية فقط، يتطلب سببًا.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/skip")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Skip(int subProjectId, string stage, SkipStageDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SkipStageAsync(subProjectId, ParseStage(stage), dto.Reason, cancellationToken);
@@ -171,7 +171,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>فشل مرحلة — يتطلب سببًا، ويُبطل اكتمالها وما بعدها دون حذف أي إصدار.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/fail")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> Fail(int subProjectId, string stage, FailStageDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.FailStageAsync(subProjectId, ParseStage(stage), dto.Reason, cancellationToken);
