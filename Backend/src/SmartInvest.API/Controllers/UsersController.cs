@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = Roles.ManagementStaff)]
+[Authorize(Roles = Roles.UserManagers)]
 public class UsersController : ControllerBase
 {
     private readonly IIdentityService _identityService;

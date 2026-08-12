@@ -6,10 +6,10 @@ using SmartInvest.Domain.Common;
 
 namespace SmartInvest.API.Controllers;
 
-/// <summary>إحصائيات لوحة تحكم مدير التخطيط — قراءة فقط.</summary>
+/// <summary>إحصائيات لوحة التحكم لكل الأدوار الوظيفية — قراءة فقط.</summary>
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = Roles.ManagementStaff)]
+[Authorize(Roles = Roles.AllStaff)]
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

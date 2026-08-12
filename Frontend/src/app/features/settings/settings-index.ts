@@ -8,6 +8,7 @@ interface SettingsCard {
   label: string;
   description: string;
   managerOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
 const LOOKUP_DESCRIPTIONS: Record<string, string> = {
@@ -33,7 +34,8 @@ const LOOKUP_DESCRIPTIONS: Record<string, string> = {
 })
 export class SettingsIndex {
   private readonly auth = inject(AuthService);
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canManageUsers = this.auth.canManageUsers;
+  protected readonly isSuperAdmin = this.auth.isSuperAdmin;
 
   protected readonly cards: SettingsCard[] = [
     ...SETTINGS_LOOKUP_TABS.map((t) => ({
@@ -46,5 +48,6 @@ export class SettingsIndex {
     { slug: 'agencies', label: 'الجهات التنفيذية', description: 'الجهات المسؤولة عن تنفيذ المشروعات' },
     { slug: 'measurements', label: 'القياسات', description: 'تعريفات القياسات المخصصة للمشروعات الفرعية' },
     { slug: 'users', label: 'إدارة المستخدمين', description: 'حسابات المستخدمين وصلاحياتهم', managerOnly: true },
+    { slug: 'plan-approval-notifications', label: 'إشعارات اعتماد الخطط', description: 'متابعة إرسال البريد للمستلمين وإعادة محاولة الرسائل الفاشلة', superAdminOnly: true },
   ];
 }

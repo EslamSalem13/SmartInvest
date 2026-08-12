@@ -22,7 +22,7 @@ export class Measurements {
   private readonly measurementsService = inject(MeasurementsService);
   private readonly auth = inject(AuthService);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isManager = this.auth.canManageProjects;
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);

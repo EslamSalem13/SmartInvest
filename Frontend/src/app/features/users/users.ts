@@ -19,6 +19,8 @@ export class Users {
   private readonly auth = inject(AuthService);
   protected readonly Roles = Roles;
   protected readonly isSuperAdmin = this.auth.isSuperAdmin;
+  protected readonly isPlanningManager = this.auth.isPlanningManager;
+  protected readonly isFinancialManager = this.auth.isFinancialManager;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -43,9 +45,22 @@ export class Users {
   protected readonly total = computed(() => this.users().length);
   protected readonly activeCount = computed(() => this.users().filter((u) => u.isActive).length);
   protected readonly inactiveCount = computed(() => this.users().filter((u) => !u.isActive).length);
-  protected readonly managerCount = computed(
-    () => this.users().filter((u) => u.role === Roles.PlanningManager).length,
-  );
+  protected readonly managedRoleLabel = computed(() => {
+    if (this.isPlanningManager()) return 'موظفو التخطيط';
+    if (this.isFinancialManager()) return 'موظفو الإدارة المالية';
+    return 'المديرون';
+  });
+  protected readonly managedRoleCount = computed(() => {
+    if (this.isPlanningManager()) {
+      return this.users().filter((u) => u.role === Roles.PlanningEmployee).length;
+    }
+    if (this.isFinancialManager()) {
+      return this.users().filter((u) => u.role === Roles.FinancialEmployee).length;
+    }
+    return this.users().filter(
+      (u) => u.role === Roles.PlanningManager || u.role === Roles.FinancialManager,
+    ).length;
+  });
 
   // ===== pagination =====
   protected readonly page = signal(1);
@@ -101,7 +116,7 @@ export class Users {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('تعذّر تحميل المستخدمين. تأكد من تسجيل الدخول كمدير تخطيط.');
+        this.error.set('تعذّر تحميل المستخدمين. تأكد من أن دورك يسمح بإدارة المستخدمين.');
         this.loading.set(false);
       },
     });
@@ -117,6 +132,10 @@ export class Users {
         return 'سوبر أدمن';
       case Roles.PlanningManager:
         return 'مدير التخطيط';
+      case Roles.FinancialManager:
+        return 'مدير الإدارة المالية';
+      case Roles.FinancialEmployee:
+        return 'موظف إدارة مالية';
       default:
         return 'موظف تخطيط';
     }
@@ -150,7 +169,7 @@ export class Users {
     this.fPhone.set('');
     this.fPassword.set('');
     this.fConfirm.set('');
-    this.fRole.set(Roles.PlanningEmployee);
+    this.fRole.set(this.isFinancialManager() ? Roles.FinancialEmployee : Roles.PlanningEmployee);
     this.formError.set(null);
     this.showForm.set(true);
   }
@@ -181,7 +200,9 @@ export class Users {
     if (user.role === Roles.SuperAdmin) {
       return false;
     }
-    return this.isSuperAdmin() || user.role === Roles.PlanningEmployee;
+    if (this.isSuperAdmin()) return true;
+    if (this.isPlanningManager()) return user.role === Roles.PlanningEmployee;
+    return this.isFinancialManager() && user.role === Roles.FinancialEmployee;
   }
 
   protected submitForm(): void {

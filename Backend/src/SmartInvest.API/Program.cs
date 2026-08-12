@@ -128,7 +128,14 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-    string[] roles = { Roles.SuperAdmin, Roles.PlanningEmployee, Roles.PlanningManager };
+    string[] roles =
+    {
+        Roles.SuperAdmin,
+        Roles.PlanningEmployee,
+        Roles.PlanningManager,
+        Roles.FinancialEmployee,
+        Roles.FinancialManager,
+    };
 
     foreach (var role in roles)
     {
@@ -136,27 +143,6 @@ using (var scope = app.Services.CreateScope())
         if (!exists)
         {
             await roleManager.CreateAsync(new IdentityRole(role));
-        }
-    }
-
-    const string adminEmail = "admin@gmail.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            UserName = "admin",
-            Email = adminEmail,
-            FullName = "مدير النظام",
-            EmailConfirmed = true,
-            IsActive = true
-        };
-
-        var createResult = await userManager.CreateAsync(adminUser, "Admin@123");
-        if (createResult.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, Roles.PlanningManager);
         }
     }
 

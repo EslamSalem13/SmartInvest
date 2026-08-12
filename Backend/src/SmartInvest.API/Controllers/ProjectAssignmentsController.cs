@@ -19,7 +19,6 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<IReadOnlyList<ProjectAssignmentDto>>> GetAll(int subProjectId, CancellationToken cancellationToken)
     {
         var result = await _assignmentService.GetBySubProjectAsync(subProjectId, cancellationToken);
@@ -43,7 +42,7 @@ public class ProjectAssignmentsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> Delete(int subProjectId, int id, CancellationToken cancellationToken)
     {
         await _assignmentService.DeleteAsync(subProjectId, id, cancellationToken);

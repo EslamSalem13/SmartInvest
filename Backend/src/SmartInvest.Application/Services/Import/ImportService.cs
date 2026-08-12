@@ -123,12 +123,12 @@ public class ImportService : IImportService
         var file = _sessionStore.Get(dto.ImportId)
             ?? throw new BusinessRuleException("انتهت صلاحية جلسة الاستيراد — برجاء رفع الملف مرة أخرى");
 
-        if (file.Mode == ImportMode.Approved && _currentUser.Role != Roles.PlanningManager)
+        if (file.Mode == ImportMode.Approved && _currentUser.Role is not Roles.PlanningManager and not Roles.SuperAdmin)
         {
             throw new ForbiddenAccessException("اعتماد المشروعات عن طريق الاستيراد يتطلب صلاحية مدير التخطيط");
         }
 
-        if (_currentUser.Role != Roles.PlanningManager)
+        if (_currentUser.Role is not Roles.PlanningManager and not Roles.SuperAdmin)
         {
             // Recording AI-extracted measurements mutates global Measurement/Unit lookup records
             // (via MeasurementResolutionService), which is a PlanningManager-only capability.

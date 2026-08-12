@@ -32,8 +32,29 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._user() !== null);
   readonly role = computed(() => this._user()?.role ?? null);
   readonly isSuperAdmin = computed(() => this._user()?.role === Roles.SuperAdmin);
+  readonly isPlanningManager = computed(() => this._user()?.role === Roles.PlanningManager);
+  readonly isFinancialManager = computed(() => this._user()?.role === Roles.FinancialManager);
   readonly isManager = computed(
     () => this._user()?.role === Roles.PlanningManager || this.isSuperAdmin(),
+  );
+  readonly isFinancial = computed(
+    () =>
+      this._user()?.role === Roles.FinancialManager ||
+      this._user()?.role === Roles.FinancialEmployee,
+  );
+  readonly canEditProjects = computed(() => {
+    const role = this._user()?.role;
+    return role === Roles.PlanningEmployee || role === Roles.PlanningManager || role === Roles.SuperAdmin;
+  });
+  readonly canManageProjects = computed(() => this.isPlanningManager() || this.isSuperAdmin());
+  readonly canEditFinancial = computed(() => {
+    const role = this._user()?.role;
+    return role === Roles.FinancialEmployee || role === Roles.FinancialManager || role === Roles.SuperAdmin;
+  });
+  readonly canManageFinancial = computed(() => this.isFinancialManager() || this.isSuperAdmin());
+  readonly canManageContractors = computed(() => this.isFinancialManager() || this.isSuperAdmin());
+  readonly canManageUsers = computed(() =>
+    this.isPlanningManager() || this.isFinancialManager() || this.isSuperAdmin(),
   );
 
   constructor() {
@@ -61,10 +82,7 @@ export class AuthService {
 
   /** المسار الافتراضي بعد تسجيل الدخول حسب الدور */
   homeRouteForRole(role: string | null): string {
-    if (role === Roles.PlanningManager || role === Roles.SuperAdmin) {
-      return '/app/dashboard';
-    }
-    return '/app/projects';
+    return '/app/dashboard';
   }
 
   uploadAvatar(file: File): Observable<void> {

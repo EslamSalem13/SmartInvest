@@ -25,7 +25,7 @@ export const routes: Routes = [
       import('./layout/main-layout/main-layout').then((m) => m.MainLayout),
     canActivate: [authGuard],
     children: [
-      { path: '', redirectTo: 'projects', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'profile',
         loadComponent: () =>
@@ -33,7 +33,7 @@ export const routes: Routes = [
       },
       {
         path: 'dashboard',
-        canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
@@ -45,11 +45,13 @@ export const routes: Routes = [
       },
       {
         path: 'projects',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/projects/projects').then((m) => m.Projects),
       },
       {
         path: 'projects/:id',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/projects/details/sub-project-details').then(
             (m) => m.SubProjectDetails,
@@ -57,37 +59,44 @@ export const routes: Routes = [
       },
       {
         path: 'plans',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/plans/plan-list').then((m) => m.PlanList),
       },
       {
         path: 'plans/:id',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/plans/plan-print').then((m) => m.PlanPrint),
       },
       // ===== الإدارة المالية (قسم مستقل — مراحل الطرح) =====
       {
         path: 'financial',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/financial-list').then((m) => m.FinancialList),
       },
       {
         path: 'financial/memos',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/presentation-memos').then((m) => m.PresentationMemos),
       },
       {
         path: 'financial/:id',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/procurement-workflow').then((m) => m.ProcurementWorkflow),
       },
       {
         path: 'follow-up',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/follow-up/follow-up-list').then((m) => m.FollowUpList),
       },
       {
         path: 'settings',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/settings/settings').then((m) => m.Settings),
         children: [
@@ -162,9 +171,15 @@ export const routes: Routes = [
           },
           {
             path: 'users',
-            canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
+            canActivate: [roleGuard([Roles.PlanningManager, Roles.FinancialManager, Roles.SuperAdmin])],
             loadComponent: () =>
               import('./features/users/users').then((m) => m.Users),
+          },
+          {
+            path: 'plan-approval-notifications',
+            canActivate: [roleGuard([Roles.SuperAdmin])],
+            loadComponent: () =>
+              import('./features/settings/plan-approval-notifications').then((m) => m.PlanApprovalNotifications),
           },
           {
             path: 'contractors',

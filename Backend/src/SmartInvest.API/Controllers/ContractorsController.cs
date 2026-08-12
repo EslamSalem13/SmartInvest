@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/contractors")]
-[Authorize(Roles = Roles.PlanningStaff)]
+[Authorize(Roles = Roles.AllStaff)]
 public class ContractorsController : ControllerBase
 {
     private readonly IContractorService _contractorService;
@@ -33,7 +33,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ContractorManagers)]
     public async Task<ActionResult<ContractorDto>> Create(CreateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.CreateAsync(dto, cancellationToken);
@@ -41,7 +41,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ContractorManagers)]
     public async Task<ActionResult<ContractorDto>> Update(int id, UpdateContractorDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.UpdateAsync(id, dto, cancellationToken);
@@ -49,7 +49,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ContractorManagers)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _contractorService.DeleteAsync(id, cancellationToken);
@@ -57,7 +57,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPut("{id:int}/will-work-again")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ContractorManagers)]
     public async Task<ActionResult<ContractorDto>> SetWillWorkAgain(int id, SetWillWorkAgainDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.SetWillWorkAgainAsync(id, dto, cancellationToken);
@@ -65,7 +65,7 @@ public class ContractorsController : ControllerBase
     }
 
     [HttpPost("{id:int}/notes")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.ContractorManagers)]
     public async Task<ActionResult<ContractorNoteDto>> AddNote(int id, CreateContractorNoteDto dto, CancellationToken cancellationToken)
     {
         var result = await _contractorService.AddNoteAsync(id, dto, cancellationToken);

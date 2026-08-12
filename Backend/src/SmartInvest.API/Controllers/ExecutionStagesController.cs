@@ -44,7 +44,7 @@ public class ExecutionStagesController : ControllerBase
 
     /// <summary>multipart/form-data: name, deadline, selfFundingSpent, bankFundingSpent, physicalProgressPercent, notes + حتى 3 ملفات (selfFundingProof / bankFundingProof / physicalProgressProof).</summary>
     [HttpPost("api/subprojects/{subProjectId:int}/execution-stages")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ExecutionStageDto>> Create(
         int subProjectId,
         [FromForm] string name,
@@ -88,16 +88,16 @@ public class ExecutionStagesController : ControllerBase
     }
 
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/complete")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ExecutionStageDto>> MarkComplete(int subProjectId, int stageId, CancellationToken cancellationToken)
     {
         var result = await _executionStageService.MarkCompleteAsync(subProjectId, stageId, cancellationToken);
         return Ok(result);
     }
 
-    /// <summary>عكس إنهاء المرحلة عن طريق الخطأ — مدير التخطيط فقط.</summary>
+    /// <summary>عكس إنهاء المرحلة عن طريق الخطأ — للمديرين المخولين فقط.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/reopen")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.FollowUpManagers)]
     public async Task<ActionResult<ExecutionStageDto>> Reopen(int subProjectId, int stageId, CancellationToken cancellationToken)
     {
         var result = await _executionStageService.ReopenAsync(subProjectId, stageId, cancellationToken);
@@ -105,7 +105,7 @@ public class ExecutionStagesController : ControllerBase
     }
 
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/penalty")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.FollowUpManagers)]
     public async Task<ActionResult<ExecutionStageDto>> SetPenalty(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken)
     {
         var result = await _executionStageService.SetPenaltyAsync(subProjectId, stageId, dto, cancellationToken);

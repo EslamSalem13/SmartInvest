@@ -6,7 +6,6 @@ import { FinancialService } from '../../core/services/financial.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ContractorsService } from '../../core/services/contractors.service';
 import { ContractTypesService } from '../../core/services/contract-types.service';
-import { Roles } from '../../core/models/auth.models';
 import { Contractor, Lookup } from '../../core/models/project.models';
 import { formatEgpAsThousands } from '../../core/utils/budget.util';
 import {
@@ -54,11 +53,8 @@ export class ProcurementWorkflow implements OnInit {
 
   protected readonly busy = signal(false);
 
-  protected readonly isStaff = computed(() => {
-    const role = this.auth.role();
-    return role === Roles.PlanningManager || role === Roles.PlanningEmployee;
-  });
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isStaff = this.auth.canEditFinancial;
+  protected readonly isManager = this.auth.canManageFinancial;
 
   protected readonly completedCount = computed(
     () => this.overview()?.stages.filter((s) => s.isCompleted).length ?? 0,

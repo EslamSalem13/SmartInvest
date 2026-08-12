@@ -24,6 +24,7 @@ public enum AiWorkload
     Default,
     ExcelImport,
     Reports,
+    PlanApprovalEmail,
 }
 
 public class AiGatewayOptions
@@ -42,5 +43,6 @@ public class AiGatewayOptions
     public string ModelId { get; set; } = string.Empty;
     public string ExcelImportModelId { get; set; } = string.Empty;
     public string ReportsModelId { get; set; } = string.Empty;
+    public string PlanApprovalEmailModelId { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
 }

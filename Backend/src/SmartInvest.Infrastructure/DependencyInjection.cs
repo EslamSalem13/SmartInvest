@@ -29,6 +29,7 @@ public static class DependencyInjection
 
         services.Configure<AiGatewayOptions>(configuration.GetSection(AiGatewayOptions.SectionName));
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
+        services.Configure<PlanApprovalNotificationOptions>(configuration.GetSection(PlanApprovalNotificationOptions.SectionName));
         services.AddHttpClient<IAiGatewayClient, AiGatewayClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
@@ -69,6 +70,11 @@ public static class DependencyInjection
         services.AddScoped<IFinancialYearService, FinancialYearService>();
         services.AddScoped<ISubProjectFinancialYearService, SubProjectFinancialYearService>();
         services.AddScoped<IPlanService, PlanService>();
+        services.AddScoped<IPlanApprovalNotificationEnqueuer, PlanApprovalNotificationEnqueuer>();
+        services.AddScoped<IPlanApprovalEmailComposer, PlanApprovalEmailComposer>();
+        services.AddScoped<IPlanApprovalNotificationService, PlanApprovalNotificationService>();
+        services.AddScoped<PlanApprovalNotificationProcessor>();
+        services.AddHostedService<PlanApprovalNotificationWorker>();
         services.AddScoped<IExecutiveAgencyService, ExecutiveAgencyService>();
         services.AddScoped<IContractorService, ContractorService>();
         services.AddScoped<IExecutionStageService, ExecutionStageService>();

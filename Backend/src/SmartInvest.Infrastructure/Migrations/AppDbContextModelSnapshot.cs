@@ -1093,6 +1093,153 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.ToTable("Plans");
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanApprovalNotification", b =>
+                {
+                    b.Property<int>("PlanApprovalNotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanApprovalNotificationId"));
+
+                    b.Property<bool>("AiGenerationUsed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ApprovedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("AvailableFunding")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BankFunding")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("HtmlBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("LockedUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PlainTextBody")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ProcessingStartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProjectCount")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("SelfFunding")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("PlanApprovalNotificationId");
+
+                    b.HasIndex("PlanId", "EventType")
+                        .IsUnique();
+
+                    b.ToTable("PlanApprovalNotifications");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanApprovalNotificationRecipient", b =>
+                {
+                    b.Property<int>("PlanApprovalNotificationRecipientId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanApprovalNotificationRecipientId"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("NotificationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("PlanApprovalNotificationRecipientId");
+
+                    b.HasIndex("NotificationId", "NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("PlanApprovalNotificationRecipients");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
                 {
                     b.Property<int>("PlanProjectId")
@@ -2719,6 +2866,28 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("FinancialYear");
                 });
 
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanApprovalNotification", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.Plan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanApprovalNotificationRecipient", b =>
+                {
+                    b.HasOne("SmartInvest.Domain.Entities.PlanApprovalNotification", "Notification")
+                        .WithMany("Recipients")
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+                });
+
             modelBuilder.Entity("SmartInvest.Domain.Entities.PlanProject", b =>
                 {
                     b.HasOne("SmartInvest.Domain.Entities.Plan", "Plan")
@@ -3322,6 +3491,11 @@ namespace SmartInvest.Infrastructure.Migrations
             modelBuilder.Entity("SmartInvest.Domain.Entities.Plan", b =>
                 {
                     b.Navigation("PlanProjects");
+                });
+
+            modelBuilder.Entity("SmartInvest.Domain.Entities.PlanApprovalNotification", b =>
+                {
+                    b.Navigation("Recipients");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemo", b =>

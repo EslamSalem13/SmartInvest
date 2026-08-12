@@ -1,5 +1,5 @@
 import { Component, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FinancialService } from '../../core/services/financial.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
@@ -19,6 +19,7 @@ import { FinancialYear } from '../../core/models/project.models';
 export class FinancialList implements OnInit {
   private readonly financial = inject(FinancialService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
@@ -251,8 +252,10 @@ export class FinancialList implements OnInit {
       next: (years) => {
         this.financialYears.set(years);
         this.yearsLoading.set(false);
+        const requestedYear = Number(this.route.snapshot.queryParamMap.get('financialYearId'));
+        const preferredYear = Number.isInteger(requestedYear) && requestedYear > 0 ? requestedYear : this.selectedYearId();
         this.selectedYearId.set(
-          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+          this.financialYearsService.resolveSelectedYearId(years, preferredYear),
         );
         this.load();
       },

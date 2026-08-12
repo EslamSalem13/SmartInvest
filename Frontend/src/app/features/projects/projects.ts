@@ -49,7 +49,10 @@ export class Projects {
 
   private pendingOpenAvailability = false;
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canEditProjects = this.auth.canEditProjects;
+  protected readonly canManageProjects = this.auth.canManageProjects;
+  protected readonly canEditFinancial = this.auth.canEditFinancial;
+  protected readonly canManageFinancial = this.auth.canManageFinancial;
   protected readonly agencies = signal<string[]>([]);
 
   protected readonly loading = signal(true);
@@ -109,7 +112,7 @@ export class Projects {
   protected readonly availabilityLoading = signal(false);
   protected readonly availabilityError = signal<string | null>(null);
   protected readonly selectedYear = computed(() => this.financialYears().find((y) => y.id === this.selectedYearId()) ?? null);
-  protected readonly canDeleteAvailability = this.auth.isManager;
+  protected readonly canDeleteAvailability = this.auth.canManageFinancial;
 
   protected readonly showAvailabilityModal = signal(false);
   protected readonly showAddAvailabilityForm = signal(false);

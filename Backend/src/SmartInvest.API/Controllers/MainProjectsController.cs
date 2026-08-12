@@ -38,6 +38,7 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<MainProjectDetailDto>> Create(CreateMainProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _mainProjectService.CreateAsync(dto, cancellationToken);
@@ -45,6 +46,7 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<MainProjectDetailDto>> Update(int id, UpdateMainProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _mainProjectService.UpdateAsync(id, dto, cancellationToken);
@@ -52,7 +54,7 @@ public class MainProjectsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _mainProjectService.DeleteAsync(id, cancellationToken);

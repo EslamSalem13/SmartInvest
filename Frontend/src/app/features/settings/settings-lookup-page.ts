@@ -17,7 +17,7 @@ export class SettingsLookupPage {
   private readonly contractTypes = inject(ContractTypesService);
   private readonly auth = inject(AuthService);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isManager = this.auth.canManageProjects;
 
   readonly tab = input.required<TabKey>();
 
