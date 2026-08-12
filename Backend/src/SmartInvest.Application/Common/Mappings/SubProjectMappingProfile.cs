@@ -96,6 +96,12 @@ public class SubProjectMappingProfile : Profile
                 dest => dest.SubProgramId,
                 opt => opt.MapFrom(src => src.MainProject.SubProgramId))
             .ForMember(
+                dest => dest.SubProgramName,
+                opt => opt.MapFrom(src => src.MainProject.SubProgram.SubProgramName))
+            .ForMember(
+                dest => dest.MainProgramName,
+                opt => opt.MapFrom(src => src.MainProject.SubProgram.MainProgram.ProgramName))
+            .ForMember(
                 dest => dest.ContractorName,
                 opt => opt.MapFrom(src => GetLatestAssignment(src).ContractorName))
             .ForMember(

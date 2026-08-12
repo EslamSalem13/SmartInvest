@@ -77,6 +77,7 @@ export class Projects {
   protected readonly fMainProgram = signal('');
   protected readonly fSubProgram = signal('');
   protected readonly fLevel = signal('');
+  protected readonly fProjectNature = signal('');
   protected readonly fAgency = signal('');
   protected readonly fMarkaz = signal('');
   protected readonly fPriority = signal('');
@@ -353,6 +354,7 @@ export class Projects {
     if (this.approvalFilter() === 'pending' && s.isApproved) return false;
     if (this.approvalFilter() === 'stalled' && !this.isStalled(s)) return false;
     if (this.fLevel() && s.projectLevelName !== this.fLevel()) return false;
+    if (this.fProjectNature() && s.projectNature !== this.fProjectNature()) return false;
     if (this.fAgency() && s.executiveAgencyName !== this.fAgency()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
@@ -466,7 +468,7 @@ export class Projects {
       this.searchTerm();
       this.approvalFilter();
       this.fMainProgram(); this.fSubProgram(); this.fLevel();
-      this.fAgency(); this.fMarkaz(); this.fPriority(); this.fFunding();
+      this.fProjectNature(); this.fAgency(); this.fMarkaz(); this.fPriority(); this.fFunding();
       this.page.set(1);
     });
   }
@@ -556,7 +558,7 @@ export class Projects {
   }
 
   protected clearFilters(): void {
-    this.fMainProgram.set(''); this.fSubProgram.set(''); this.fLevel.set('');
+    this.fMainProgram.set(''); this.fSubProgram.set(''); this.fLevel.set(''); this.fProjectNature.set('');
     this.fAgency.set(''); this.fMarkaz.set(''); this.fPriority.set(''); this.fFunding.set('');
     this.searchTerm.set(''); this.approvalFilter.set('all');
   }

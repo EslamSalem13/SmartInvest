@@ -24,6 +24,7 @@ public class SubProjectListItemDto
     public string ProjectLevelName { get; set; } = string.Empty;
     public int ComponentTypeId { get; set; }
     public string ComponentTypeName { get; set; } = string.Empty;
+    public string ProjectNature { get; set; } = string.Empty;
 
     public int MarkazId { get; set; }
     public string MarkazName { get; set; } = string.Empty;
@@ -58,6 +59,8 @@ public class SubProjectDetailDto
     public string MainProjectCode { get; set; } = string.Empty;
     public string MainProjectName { get; set; } = string.Empty;
     public int SubProgramId { get; set; }
+    public string SubProgramName { get; set; } = string.Empty;
+    public string MainProgramName { get; set; } = string.Empty;
 
     public int ProjectLevelId { get; set; }
     public string ProjectLevelName { get; set; } = string.Empty;

@@ -68,13 +68,18 @@
           <div class="sec-title"><span class="i">ⓘ</span> نظرة عامة على المشروع</div>
           <div class="info-grid">
             <div class="row"><span>المشروع الرئيسي</span><b>{{ project()!.mainProjectName }}</b></div>
+            <div class="row"><span>البرنامج الرئيسي</span><b>{{ project()!.mainProgramName || '—' }}</b></div>
+            <div class="row"><span>البرنامج الفرعي</span><b>{{ project()!.subProgramName || '—' }}</b></div>
             <div class="row"><span>المستوى</span><b>{{ project()!.projectLevelName }}</b></div>
             <div class="row"><span>المركز</span><b>{{ project()!.markazName }}</b></div>
             <div class="row"><span>المحافظة</span><b>{{ project()!.governorateName }}</b></div>
             <div class="row"><span>المكوّن العيني</span><b>{{ project()!.componentTypeName || '—' }}</b></div>
             <div class="row"><span>الوحدة الحسابية</span><b>{{ project()!.accountingUnitName || '—' }}</b></div>
-            <div class="row"><span>طبيعة المشروع</span><b>{{ project()!.projectNature || '—' }}</b></div>
+            <div class="row"><span>نوع المشروع</span><b>{{ project()!.projectNature || '—' }}</b></div>
+            <div class="row"><span>جهة التنفيذ</span><b>{{ project()!.executiveAgencyName || '—' }}</b></div>
+            <div class="row"><span>الأولوية</span><b>{{ project()!.priorityName || '—' }}</b></div>
             <div class="row"><span>حالة المشروع</span><b>{{ project()!.statusName }}</b></div>
+            <div class="row"><span>نسبة السماح بتجاوز الميزانية</span><b>{{ project()!.overrunPercentage != null ? project()!.overrunPercentage + '%' : 'غير مسموح' }}</b></div>
           </div>
           @if (project()!.description) {
             <div class="sec-title mt">وصف المشروع</div>
@@ -87,16 +92,20 @@
             <div class="frow"><span>تمويل بنكي</span><b>{{ thousandsLabel(project()!.bankFunding) }}</b></div>
             <div class="frow"><span>تمويل ذاتي</span><b>{{ thousandsLabel(project()!.selfFunding) }}</b></div>
             <div class="frow total"><span>إجمالي التكلفة التقديرية</span><b>{{ thousandsLabel(project()!.totalCost) }}</b></div>
-            <div class="frow last"><span>الأولوية</span><b>{{ project()!.priorityName }}</b></div>
           </div>
 
-          @if (project()!.financialYears.length) {
-            <div class="fy-chips">
+          <div class="financial-years-card">
+            <div class="financial-years-title">السنوات المالية المرتبطة</div>
+            @if (project()!.financialYears.length) {
+              <div class="fy-chips">
               @for (fy of project()!.financialYears; track fy.id) {
                 <span class="fy-chip">{{ fy.financialYearName }}</span>
               }
-            </div>
-          }
+              </div>
+            } @else {
+              <span class="financial-years-empty">لا توجد سنوات مالية مرتبطة</span>
+            }
+          </div>
 
         </div>
       </div>

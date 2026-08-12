@@ -89,6 +89,13 @@
           @for (l of projectLevels(); track l.id) { <option [value]="l.name">{{ l.name }}</option> }
         </select>
       </div>
+      <div class="fld"><label>نوع المشروع</label>
+        <select [ngModel]="fProjectNature()" (ngModelChange)="fProjectNature.set($event)">
+          <option value="">الكل</option>
+          <option value="توريدات">توريدات</option>
+          <option value="مقاولات">مقاولات</option>
+        </select>
+      </div>
       <div class="fld"><label>جهة التنفيذ</label>
         <select [ngModel]="fAgency()" (ngModelChange)="fAgency.set($event)">
           <option value="">الكل</option>

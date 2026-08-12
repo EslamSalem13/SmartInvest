@@ -47,6 +47,7 @@ export interface SubProjectListItem {
   projectLevelName: string;
   componentTypeId: number;
   componentTypeName: string;
+  projectNature: string;
   markazId: number;
   markazName: string;
   priorityId: number;
@@ -73,6 +74,8 @@ export interface SubProjectDetail {
   mainProjectCode: string;
   mainProjectName: string;
   subProgramId: number;
+  subProgramName: string;
+  mainProgramName: string;
   projectLevelId: number;
   projectLevelName: string;
   componentTypeId: number;
