@@ -68,16 +68,19 @@ export const routes: Routes = [
       // ===== الإدارة المالية (قسم مستقل — مراحل الطرح) =====
       {
         path: 'financial',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/financial-list').then((m) => m.FinancialList),
       },
       {
         path: 'financial/memos',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/presentation-memos').then((m) => m.PresentationMemos),
       },
       {
         path: 'financial/:id',
+        canActivate: [roleGuard([Roles.PlanningEmployee, Roles.PlanningManager, Roles.FinancialEmployee, Roles.FinancialManager, Roles.SuperAdmin])],
         loadComponent: () =>
           import('./features/financial/procurement-workflow').then((m) => m.ProcurementWorkflow),
       },

@@ -249,6 +249,8 @@
                 <option [value]="Roles.PlanningEmployee">موظف تخطيط</option>
                 @if (isSuperAdmin()) {
                   <option [value]="Roles.PlanningManager">مدير التخطيط</option>
+                  <option [value]="Roles.FinancialManager">مدير الإدارة المالية</option>
+                  <option [value]="Roles.FinancialEmployee">موظف إدارة مالية</option>
                 }
               </select>
             </div>

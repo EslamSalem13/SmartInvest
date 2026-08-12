@@ -35,6 +35,11 @@ export class AuthService {
   readonly isManager = computed(
     () => this._user()?.role === Roles.PlanningManager || this.isSuperAdmin(),
   );
+  readonly isFinancial = computed(
+    () =>
+      this._user()?.role === Roles.FinancialManager ||
+      this._user()?.role === Roles.FinancialEmployee,
+  );
 
   constructor() {
     if (this._user()?.hasAvatar) {
@@ -61,6 +66,9 @@ export class AuthService {
 
   /** المسار الافتراضي بعد تسجيل الدخول حسب الدور */
   homeRouteForRole(role: string | null): string {
+    if (role === Roles.FinancialManager || role === Roles.FinancialEmployee) {
+      return '/app/financial';
+    }
     if (role === Roles.PlanningManager || role === Roles.SuperAdmin) {
       return '/app/dashboard';
     }

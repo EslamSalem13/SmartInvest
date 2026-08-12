@@ -49,7 +49,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>رفع إصدار جديد — multipart/form-data: حقل لكل ملف باسم مفتاح الخانة + حقل notes اختياري.</summary>
     [HttpPost("api/subprojects/{subProjectId:int}/procurement/{stage}/versions")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<ActionResult<ProcurementVersionDto>> UploadVersion(
         int subProjectId,
         string stage,
@@ -84,7 +84,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>إكمال المرحلة رسميًا.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/complete")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> Complete(int subProjectId, string stage, CancellationToken cancellationToken)
     {
         await _procurementService.SetCompletionAsync(subProjectId, ParseStage(stage), true, cancellationToken);
@@ -93,7 +93,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>إعادة فتح مرحلة مكتملة — مدير التخطيط فقط.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/reopen")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Reopen(int subProjectId, string stage, CancellationToken cancellationToken)
     {
         await _procurementService.SetCompletionAsync(subProjectId, ParseStage(stage), false, cancellationToken);
@@ -102,7 +102,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>تأكيد/إلغاء تأكيد صرف الدفعة المقدمة — خاص بمرحلة العقد والترسية.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/advance-payment")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> SetAdvancePaymentDone(int subProjectId, SetAdvancePaymentDoneDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetAdvancePaymentDoneAsync(subProjectId, dto.Done, cancellationToken);
@@ -111,7 +111,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>حفظ بيانات الترسية: المقاول، الدفعة المقدمة، مدة التنفيذ، الشرط الجزائي.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/details")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> SetContractAwardDetails(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetContractAwardDetailsAsync(subProjectId, dto, cancellationToken);
@@ -120,7 +120,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>تسجيل تسليم أرضية المشروع للمقاول — multipart/form-data: handoverDate + ملف proof.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/site-handover")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<IActionResult> SetSiteHandover(
         int subProjectId,
         [FromForm] DateTime handoverDate,

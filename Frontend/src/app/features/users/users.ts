@@ -117,6 +117,10 @@ export class Users {
         return 'سوبر أدمن';
       case Roles.PlanningManager:
         return 'مدير التخطيط';
+      case Roles.FinancialManager:
+        return 'مدير الإدارة المالية';
+      case Roles.FinancialEmployee:
+        return 'موظف إدارة مالية';
       default:
         return 'موظف تخطيط';
     }

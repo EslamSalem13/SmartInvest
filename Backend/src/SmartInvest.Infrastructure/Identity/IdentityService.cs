@@ -137,14 +137,19 @@ public class IdentityService : IIdentityService
 
     public async Task<UserDto> CreateEmployeeAsync(CreateEmployeeDto dto, CancellationToken cancellationToken = default)
     {
-        if (dto.Role != Roles.PlanningEmployee && dto.Role != Roles.PlanningManager)
+        if (!IsManageableRole(dto.Role))
         {
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
         }
 
-        if (dto.Role == Roles.PlanningManager && _currentUser.Role != Roles.SuperAdmin)
+        if (IsManagerRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
         {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حساب مدير تخطيط");
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حسابات المديرين");
+        }
+
+        if (IsFinancialRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
+        {
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حسابات الإدارة المالية");
         }
 
         var user = new ApplicationUser
@@ -193,14 +198,19 @@ public class IdentityService : IIdentityService
         var currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
         EnsureCanManageTarget(currentRole);
 
-        if (dto.Role != Roles.PlanningEmployee && dto.Role != Roles.PlanningManager)
+        if (!IsManageableRole(dto.Role))
         {
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
         }
 
-        if (dto.Role == Roles.PlanningManager && _currentUser.Role != Roles.SuperAdmin)
+        if (IsManagerRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
         {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين مدير تخطيط");
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين أدوار المديرين");
+        }
+
+        if (IsFinancialRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
+        {
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين أدوار الإدارة المالية");
         }
 
         var fullName = dto.FullName.Trim();
@@ -461,6 +471,20 @@ public class IdentityService : IIdentityService
             throw new ForbiddenAccessException("مدير التخطيط يمكنه إدارة حسابات الموظفين فقط");
         }
     }
+
+    private static bool IsManageableRole(string role) => role is
+        Roles.PlanningEmployee or
+        Roles.PlanningManager or
+        Roles.FinancialEmployee or
+        Roles.FinancialManager;
+
+    private static bool IsManagerRole(string role) => role is
+        Roles.PlanningManager or
+        Roles.FinancialManager;
+
+    private static bool IsFinancialRole(string role) => role is
+        Roles.FinancialEmployee or
+        Roles.FinancialManager;
 
     private static string BuildEmailTemplate(
         string title,

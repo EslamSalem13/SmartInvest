@@ -30,7 +30,7 @@ public class BankAvailabilitiesController : ControllerBase
 
     /// <summary>multipart/form-data: amount, receivedDate, notes (اختياري) + مستند إثبات واحد أو أكثر.</summary>
     [HttpPost]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<ActionResult<BankAvailabilityDto>> Create(
         int financialYearId,
         [FromForm] decimal amount,
@@ -59,7 +59,7 @@ public class BankAvailabilitiesController : ControllerBase
 
     /// <summary>multipart/form-data: amount, receivedDate, notes، keepDocumentIds (متكررة لكل معرف يُحتفظ به) + مستندات جديدة اختيارية.</summary>
     [HttpPut("{availabilityId:int}")]
-    [Authorize(Roles = Roles.PlanningStaff)]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
     public async Task<ActionResult<BankAvailabilityDto>> Update(
         int financialYearId,
         int availabilityId,
@@ -91,7 +91,7 @@ public class BankAvailabilitiesController : ControllerBase
 
     /// <summary>حذف نهائي (hard delete) للإتاحة وكل مستنداتها — مدير التخطيط وسوبر أدمن فقط.</summary>
     [HttpDelete("{availabilityId:int}")]
-    [Authorize(Roles = Roles.ManagementStaff)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Delete(int financialYearId, int availabilityId, CancellationToken cancellationToken)
     {
         await _bankAvailabilityService.DeleteAsync(financialYearId, availabilityId, cancellationToken);
