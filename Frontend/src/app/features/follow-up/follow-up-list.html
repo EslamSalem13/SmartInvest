@@ -134,13 +134,13 @@
                         }
                       </td>
                       <td class="tnum" data-label="ذاتي">
-                        {{ money(s.selfFundingSpent) }}
+                        {{ thousandsLabel(s.selfFundingSpent) }}
                         @if (s.hasSelfFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف الذاتي" (click)="downloadProof(s, 'self')">📎</button>
                         }
                       </td>
                       <td class="tnum" data-label="بنكي">
-                        {{ money(s.bankFundingSpent) }}
+                        {{ thousandsLabel(s.bankFundingSpent) }}
                         @if (s.hasBankFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف البنكي" (click)="downloadProof(s, 'bank')">📎</button>
                         }
@@ -169,7 +169,7 @@
                             <button class="si-btn sm" (click)="cancelEditPenalty()">إلغاء</button>
                           </div>
                         } @else {
-                          {{ s.penaltyAmount != null ? money(s.penaltyAmount) : '—' }}
+                          {{ s.penaltyAmount != null ? thousandsLabel(s.penaltyAmount) : '—' }}
                           @if (s.penaltyAmount != null) {
                             <span class="chip" [class.warn-chip]="!s.penaltyPaid">{{ s.penaltyPaid ? 'مدفوعة' : 'غير مدفوعة' }}</span>
                           }

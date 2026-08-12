@@ -101,7 +101,7 @@
                         @if (c.totalFines > 0) {
                           <div class="fines-row">
                             <span>إجمالي الغرامات</span>
-                            <b class="tnum warn">{{ c.totalFines }} ج.م ({{ c.unpaidFines }} غير مسددة)</b>
+                            <b class="tnum warn">{{ thousandsLabel(c.totalFines) }} ({{ thousandsLabel(c.unpaidFines) }} غير مسددة)</b>
                           </div>
                         }
 

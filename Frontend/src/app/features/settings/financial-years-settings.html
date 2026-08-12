@@ -28,7 +28,7 @@
               <td data-label="السنة المالية"><b>{{ year.name }}</b></td>
               <td class="tnum" data-label="البداية">{{ year.startDate.slice(0, 10) }}</td>
               <td class="tnum" data-label="النهاية">{{ year.endDate.slice(0, 10) }}</td>
-              <td class="tnum" data-label="الموازنة">{{ money(year.budget) }} ج.م</td>
+              <td class="tnum" data-label="الموازنة">{{ thousandsLabel(year.budget) }}</td>
               <td data-label="الحالة">{{ year.isClosed ? 'مقفولة' : 'مفتوحة' }}</td>
               <td data-label="إجراءات">
                 @if (isManager()) {
@@ -114,7 +114,7 @@
             </div>
             <div class="si-fld">
               <label>الموازنة</label>
-              <input [value]="money(target.budget) + ' ج.م'" disabled />
+              <input [value]="thousandsLabel(target.budget)" disabled />
             </div>
           </div>
           <div class="si-err">سيتم حذف السنة المالية نهائيًا. لا يمكن التراجع عن هذا الإجراء.</div>

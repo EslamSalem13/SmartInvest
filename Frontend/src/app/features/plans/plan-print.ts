@@ -3,6 +3,7 @@ import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PlansService } from '../../core/services/plans.service';
 import { PlanDetail } from '../../core/models/project.models';
+import { formatEgpAsThousands } from '../../core/utils/budget.util';
 
 @Component({
   selector: 'app-plan-print',
@@ -36,8 +37,8 @@ export class PlanPrint {
     });
   }
 
-  protected money(value: number): string {
-    return (value ?? 0).toLocaleString('en-US');
+  protected thousandsLabel(value: number): string {
+    return formatEgpAsThousands(value);
   }
 
   protected statusLabel(status: string): string {

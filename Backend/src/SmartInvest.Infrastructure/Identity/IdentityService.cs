@@ -181,6 +181,86 @@ public class IdentityService : IIdentityService
         return userDto;
     }
 
+    public async Task<UserDto> UpdateUserAsync(string userId, UpdateUserDto dto, CancellationToken cancellationToken = default)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException("المستخدم غير موجود");
+        }
+
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        var currentRole = currentRoles.FirstOrDefault() ?? string.Empty;
+        EnsureCanManageTarget(currentRole);
+
+        if (dto.Role != Roles.PlanningEmployee && dto.Role != Roles.PlanningManager)
+        {
+            throw new BusinessRuleException("الدور الوظيفي غير صحيح");
+        }
+
+        if (dto.Role == Roles.PlanningManager && _currentUser.Role != Roles.SuperAdmin)
+        {
+            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين مدير تخطيط");
+        }
+
+        var fullName = dto.FullName.Trim();
+        var userName = dto.UserName.Trim();
+        var email = dto.Email.Trim();
+        if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(email))
+        {
+            throw new BusinessRuleException("الاسم الكامل واسم المستخدم والبريد الإلكتروني مطلوبون");
+        }
+
+        var userWithName = await _userManager.FindByNameAsync(userName);
+        if (userWithName != null && userWithName.Id != user.Id)
+        {
+            throw new BusinessRuleException("اسم المستخدم مستخدم بالفعل");
+        }
+
+        var userWithEmail = await _userManager.FindByEmailAsync(email);
+        if (userWithEmail != null && userWithEmail.Id != user.Id)
+        {
+            throw new BusinessRuleException("البريد الإلكتروني مستخدم بالفعل");
+        }
+
+        user.FullName = fullName;
+        user.UserName = userName;
+        user.Email = email;
+        user.PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim();
+
+        var updateResult = await _userManager.UpdateAsync(user);
+        EnsureSucceeded(updateResult);
+
+        if (currentRole != dto.Role)
+        {
+            var addRoleResult = await _userManager.AddToRoleAsync(user, dto.Role);
+            EnsureSucceeded(addRoleResult);
+
+            if (!string.IsNullOrEmpty(currentRole))
+            {
+                var removeRoleResult = await _userManager.RemoveFromRoleAsync(user, currentRole);
+                if (!removeRoleResult.Succeeded)
+                {
+                    await _userManager.RemoveFromRoleAsync(user, dto.Role);
+                    EnsureSucceeded(removeRoleResult);
+                }
+            }
+        }
+
+        return new UserDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            UserName = user.UserName ?? string.Empty,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber,
+            Role = dto.Role,
+            IsActive = user.IsActive,
+            HasAvatar = user.AvatarContent is { Length: > 0 },
+            CreatedAt = user.CreatedAt
+        };
+    }
+
     public async Task ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId);
@@ -188,6 +268,9 @@ public class IdentityService : IIdentityService
         {
             throw new NotFoundException("المستخدم غير موجود");
         }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        EnsureCanManageTarget(roles.FirstOrDefault() ?? string.Empty);
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
         var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
@@ -205,6 +288,9 @@ public class IdentityService : IIdentityService
         {
             throw new NotFoundException("المستخدم غير موجود");
         }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        EnsureCanManageTarget(roles.FirstOrDefault() ?? string.Empty);
 
         user.IsActive = isActive;
         await _userManager.UpdateAsync(user);
@@ -361,6 +447,19 @@ public class IdentityService : IIdentityService
 
         var errors = string.Join(" - ", result.Errors.Select(e => e.Description));
         throw new BusinessRuleException(errors);
+    }
+
+    private void EnsureCanManageTarget(string targetRole)
+    {
+        if (targetRole == Roles.SuperAdmin)
+        {
+            throw new ForbiddenAccessException("لا يمكن إدارة حساب السوبر أدمن من شاشة المستخدمين");
+        }
+
+        if (_currentUser.Role != Roles.SuperAdmin && targetRole != Roles.PlanningEmployee)
+        {
+            throw new ForbiddenAccessException("مدير التخطيط يمكنه إدارة حسابات الموظفين فقط");
+        }
     }
 
     private static string BuildEmailTemplate(

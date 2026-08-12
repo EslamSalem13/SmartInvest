@@ -104,13 +104,13 @@
                     <!-- ميزانية المشروع معروضة من البداية -->
                     <div class="award-budget">
                       <div class="ab-item">
-                        <span>إجمالي التكلفة</span><b class="tnum">{{ money(aw.totalCost) }} ج.م</b>
+                        <span>إجمالي التكلفة</span><b class="tnum">{{ thousandsLabel(aw.totalCost) }}</b>
                       </div>
                       <div class="ab-item">
-                        <span>تمويل ذاتي</span><b class="tnum">{{ money(aw.selfFunding) }} ج.م</b>
+                        <span>تمويل ذاتي</span><b class="tnum">{{ thousandsLabel(aw.selfFunding) }}</b>
                       </div>
                       <div class="ab-item">
-                        <span>تمويل بنكي</span><b class="tnum">{{ money(aw.bankFunding) }} ج.م</b>
+                        <span>تمويل بنكي</span><b class="tnum">{{ thousandsLabel(aw.bankFunding) }}</b>
                       </div>
                       <div class="ab-item">
                         <span>نوع المشروع</span><b>{{ aw.projectNature || '—' }}</b>
@@ -143,7 +143,7 @@
                           @if (profile.totalFines > 0) {
                             <div class="cs-row">
                               <span>إجمالي الغرامات</span>
-                              <b class="tnum warn">{{ profile.totalFines | number }} ج.م ({{ profile.unpaidFines | number }} غير مسددة)</b>
+                              <b class="tnum warn">{{ thousandsLabel(profile.totalFines) }} ({{ thousandsLabel(profile.unpaidFines) }} غير مسددة)</b>
                             </div>
                           }
                           @if (profile.notes.length > 0) {
@@ -179,7 +179,7 @@
                         <div class="si-fld">
                           <label>النسبة (%) <span class="req">*</span></label>
                           <input type="number" min="1" max="100" [ngModel]="aAdvancePercentage()" (ngModelChange)="aAdvancePercentage.set($event)" [disabled]="!awardEditable()" />
-                          <span class="hint tnum">= {{ money(advanceAmount()) }} ج.م</span>
+                          <span class="hint tnum">= {{ thousandsLabel(advanceAmount()) }}</span>
                         </div>
                         <div class="si-fld">
                           <label>من التمويل الذاتي</label>
@@ -191,7 +191,7 @@
                         </div>
                         <div class="si-fld">
                           <label>المتبقي للتوزيع</label>
-                          <input class="tnum" [value]="money(advanceRemaining()) + ' ج.م'" disabled />
+                          <input class="tnum" [value]="thousandsLabel(advanceRemaining())" disabled />
                           <span class="hint">يجب أن يصل إلى صفر</span>
                         </div>
                         <div class="si-fld full">

@@ -130,10 +130,9 @@ export class PresentationMemos implements OnInit {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
-        const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        if (sorted.length > 0) {
-          this.selectedYearId.set(sorted[0].id);
-        }
+        this.selectedYearId.set(
+          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+        );
         this.loadSubProjects();
       },
       error: () => this.loadSubProjects(),
@@ -142,6 +141,7 @@ export class PresentationMemos implements OnInit {
 
   protected onYearChange(id: number | null): void {
     this.selectedYearId.set(id);
+    this.financialYearsService.rememberSelectedYearId(id);
     this.fSubProjectIds.set([]);
     this.pickerSearch.set('');
     this.loadSubProjects();

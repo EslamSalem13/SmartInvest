@@ -7,7 +7,7 @@
   </header>
 
   <div class="toolbar">
-    <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="selectedYearId.set($event)">
+    <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">
       @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
     </select>
     <button

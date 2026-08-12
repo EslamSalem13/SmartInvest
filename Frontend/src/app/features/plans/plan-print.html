@@ -39,7 +39,7 @@
                 <td data-label="المشروع الفرعي">{{ p.subProjectName }}</td>
                 <td data-label="المستوى">{{ p.projectLevelName }}</td>
                 <td data-label="المكوّن العيني">{{ p.componentTypeName }}</td>
-                <td class="tnum" data-label="الإجمالي">{{ money(p.totalCost) }}</td>
+                <td class="tnum" data-label="الإجمالي">{{ thousandsLabel(p.totalCost) }}</td>
               </tr>
             } @empty {
               <tr><td colspan="5" class="empty si-table-empty">لا توجد مشروعات في هذه الخطة.</td></tr>
@@ -48,7 +48,7 @@
           <tfoot>
             <tr>
               <td colspan="4" data-label="الإجمالي">الإجمالي</td>
-              <td class="tnum" data-label="القيمة">{{ money(totalCost()) }}</td>
+              <td class="tnum" data-label="القيمة">{{ thousandsLabel(totalCost()) }}</td>
             </tr>
           </tfoot>
         </table>

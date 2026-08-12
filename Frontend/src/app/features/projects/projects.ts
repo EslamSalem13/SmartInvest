@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ProjectsService } from '../../core/services/projects.service';
 import { LookupsService } from '../../core/services/lookups.service';
@@ -45,6 +45,7 @@ export class Projects {
   private readonly bankAvailabilitiesService = inject(BankAvailabilitiesService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   private pendingOpenAvailability = false;
 
@@ -516,12 +517,9 @@ export class Projects {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
-        const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        const selected = this.selectedYearId();
-        if ((selected == null || !years.some((y) => y.id === selected)) && sorted.length > 0) {
-          // لا توجد سنة مختارة، أو السنة القادمة من الرابط (financialYearId) غير صحيحة — نرجع للافتراضي.
-          this.selectedYearId.set(sorted[0].id);
-        }
+        this.selectedYearId.set(
+          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+        );
         this.load();
         if (this.pendingOpenAvailability) {
           this.pendingOpenAvailability = false;
@@ -538,6 +536,13 @@ export class Projects {
 
   protected onYearChange(id: number): void {
     this.selectedYearId.set(id);
+    this.financialYearsService.rememberSelectedYearId(id);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { financialYearId: id },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
     this.load();
   }
 
@@ -655,6 +660,7 @@ export class Projects {
           this.showAddYearForm.set(false);
           this.financialYears.update((list) => [...list, year]);
           this.selectedYearId.set(year.id);
+          this.financialYearsService.rememberSelectedYearId(year.id);
           this.load();
         },
         error: (err) => {

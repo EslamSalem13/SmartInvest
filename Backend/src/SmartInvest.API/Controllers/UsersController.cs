@@ -8,7 +8,7 @@ namespace SmartInvest.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = Roles.PlanningManager)]
+[Authorize(Roles = Roles.ManagementStaff)]
 public class UsersController : ControllerBase
 {
     private readonly IIdentityService _identityService;
@@ -29,6 +29,13 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserDto>> CreateEmployee(CreateEmployeeDto dto, CancellationToken cancellationToken)
     {
         var user = await _identityService.CreateEmployeeAsync(dto, cancellationToken);
+        return Ok(user);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult<UserDto>> Update(string id, UpdateUserDto dto, CancellationToken cancellationToken)
+    {
+        var user = await _identityService.UpdateUserAsync(id, dto, cancellationToken);
         return Ok(user);
     }
 

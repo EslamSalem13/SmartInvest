@@ -14,6 +14,8 @@ public interface IIdentityService
 
     Task<UserDto> CreateEmployeeAsync(CreateEmployeeDto dto, CancellationToken cancellationToken = default);
 
+    Task<UserDto> UpdateUserAsync(string userId, UpdateUserDto dto, CancellationToken cancellationToken = default);
+
     Task ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default);
 
     Task SetActiveStatusAsync(string userId, bool isActive, CancellationToken cancellationToken = default);

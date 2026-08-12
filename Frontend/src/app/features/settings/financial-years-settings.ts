@@ -4,7 +4,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FinancialYear } from '../../core/models/project.models';
-import { egpToThousands, thousandsToEgp } from '../../core/utils/budget.util';
+import { egpToThousands, formatEgpAsThousands, thousandsToEgp } from '../../core/utils/budget.util';
 
 @Component({
   selector: 'app-financial-years-settings',
@@ -113,8 +113,8 @@ export class FinancialYearsSettings {
       });
   }
 
-  protected money(value: number | null | undefined): string {
-    return (value ?? 0).toLocaleString('en-US');
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
   }
 
   protected openDeleteConfirm(year: FinancialYear): void {

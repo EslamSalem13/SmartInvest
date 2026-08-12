@@ -40,6 +40,26 @@
   --line: #E3E9E2;
   --line-strong: #CDD8CC;
 
+  /* --- semantic theme roles --- */
+  --heading: var(--green-900);
+  --link: var(--green-700);
+  --on-brand: #FFFFFF;
+  --gold-ink: #2A2107;
+  --ok-ink: #147A45;
+  --ok-line: #BCE3CC;
+  --warn-ink: #8A6206;
+  --warn-line: #ECD9A6;
+  --bad-ink: #B32A39;
+  --bad-line: #F3C6CC;
+  --info-ink: #235587;
+  --info-line: #C9DFF3;
+  --input-bg: var(--surface);
+  --overlay: rgba(7, 31, 22, .55);
+  --chart-text: #647569;
+  --chart-grid: #E3E9E2;
+  --chart-track: #EEF2EE;
+  --placeholder: #7D8E83;
+
   /* --- type scale --- */
   --font: "Tajawal", "Segoe UI", "Tahoma", "Geeza Pro", system-ui, sans-serif;
   --font-heading: "Cairo", "Tajawal", "Segoe UI", system-ui, sans-serif;
@@ -107,6 +127,107 @@ h1, h2, h3, h4 {
 }
 a { color: inherit; }
 button { font-family: inherit; cursor: pointer; }
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder);
+  opacity: 1;
+}
+
+.search input::placeholder,
+input.search::placeholder {
+  font-weight: 600;
+}
+
+/* ===== Site-wide select dropdown theme ===== */
+select {
+  color-scheme: inherit;
+  font-family: inherit;
+}
+
+select option {
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
+select option:checked {
+  background-color: var(--green-700);
+  color: #fff;
+}
+
+select option:disabled {
+  color: var(--muted-2);
+}
+
+/* Chromium's customizable select API; other browsers keep the themed native fallback above. */
+@supports (appearance: base-select) {
+  select:not([multiple]) {
+    appearance: base-select;
+  }
+
+  select:not([multiple])::picker-icon {
+    color: var(--green-700);
+    margin-inline-start: 10px;
+    transition: rotate .18s var(--ease);
+  }
+
+  select:not([multiple]):open::picker-icon {
+    rotate: 180deg;
+  }
+
+  ::picker(select) {
+    appearance: base-select;
+    margin-block-start: 6px;
+    padding: 6px;
+    max-height: min(320px, 50vh);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  select:not([multiple]) option {
+    min-height: 40px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .15s var(--ease), color .15s var(--ease);
+  }
+
+  select:not([multiple]) option:hover,
+  select:not([multiple]) option:focus-visible {
+    outline: none;
+    background: var(--green-50);
+    color: var(--heading);
+  }
+
+  select:not([multiple]) option:checked {
+    background: linear-gradient(155deg, var(--green-600), var(--green-800));
+    color: #fff;
+  }
+
+  select:not([multiple]) option::checkmark {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  select:not([multiple]) {
+    text-align: center;
+    text-align-last: center;
+  }
+
+  select:not([multiple]) option {
+    text-align: center;
+  }
+
+  @supports (appearance: base-select) {
+    select:not([multiple]) {
+      justify-content: center;
+    }
+  }
+}
 
 :focus-visible { outline: 3px solid var(--gold-soft); outline-offset: 2px; border-radius: 6px; }
 

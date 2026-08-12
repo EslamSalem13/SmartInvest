@@ -47,7 +47,7 @@
       aria-label="عرض سجل الإتاحات البنكية"
     >
       <span class="lab">المتاح</span>
-      <b class="val tnum">{{ selectedYearId() == null ? '—' : money(kpiAvailable()) + ' ' }}<small>@if (selectedYearId() != null) { ج.م }</small></b>
+      <b class="val tnum" [title]="selectedYearId() == null ? '' : money(kpiAvailable()) + ' ج.م'">{{ selectedYearId() == null ? '—' : thousandsLabel(kpiAvailable()) }}</b>
     </button>
   </div>
 
@@ -250,9 +250,9 @@
         </div>
         <div class="si-modal-body">
           <div class="avail-summary">
-            <div class="avail-stat"><span class="lab">إجمالي التمويل البنكي</span><b class="tnum">{{ money(availabilityData()?.totalBankFunding ?? 0) }} ج.م</b></div>
-            <div class="avail-stat"><span class="lab">إجمالي المتاح</span><b class="tnum">{{ money(availabilityData()?.totalAvailable ?? 0) }} ج.م</b></div>
-            <div class="avail-stat"><span class="lab">المتبقي الممكن إتاحته</span><b class="tnum">{{ money(availabilityData()?.remainingAvailable ?? 0) }} ج.م</b></div>
+            <div class="avail-stat"><span class="lab">إجمالي التمويل البنكي</span><b class="tnum">{{ thousandsLabel(availabilityData()?.totalBankFunding ?? 0) }}</b></div>
+            <div class="avail-stat"><span class="lab">إجمالي المتاح</span><b class="tnum">{{ thousandsLabel(availabilityData()?.totalAvailable ?? 0) }}</b></div>
+            <div class="avail-stat"><span class="lab">المتبقي الممكن إتاحته</span><b class="tnum">{{ thousandsLabel(availabilityData()?.remainingAvailable ?? 0) }}</b></div>
           </div>
 
           @if (!showAddAvailabilityForm()) {
@@ -363,14 +363,14 @@
               @for (a of availabilityData()!.items; track a.id) {
                 <div class="avail-row">
                   <div class="avail-row-main">
-                    <b class="tnum">{{ money(a.amount) }} ج.م</b>
+                    <b class="tnum">{{ thousandsLabel(a.amount) }}</b>
                     <div class="avail-row-acts">
                       <span class="avail-dates">استلام: {{ dateOnly(a.receivedDate) }} · تسجيل: {{ dateOnly(a.createdAt) }}</span>
-                      <button type="button" class="act" title="تعديل الإتاحة" aria-label="تعديل الإتاحة بقيمة {{ money(a.amount) }} جنيه" (click)="openEditAvailabilityForm(a)">
+                      <button type="button" class="act" title="تعديل الإتاحة" aria-label="تعديل الإتاحة بقيمة {{ thousandsLabel(a.amount) }}" (click)="openEditAvailabilityForm(a)">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                       </button>
                       @if (canDeleteAvailability()) {
-                        <button type="button" class="act danger" title="حذف الإتاحة" aria-label="حذف الإتاحة بقيمة {{ money(a.amount) }} جنيه" (click)="openDeleteConfirm(a)">
+                        <button type="button" class="act danger" title="حذف الإتاحة" aria-label="حذف الإتاحة بقيمة {{ thousandsLabel(a.amount) }}" (click)="openDeleteConfirm(a)">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M10 11v6M14 11v6" /></svg>
                         </button>
                       }
@@ -407,7 +407,7 @@
         </div>
         <div class="si-modal-body">
           <p class="avail-delete-msg">
-            سيتم حذف الإتاحة البنكية بقيمة <b class="tnum">{{ money(deleteTarget()!.amount) }} ج.م</b>
+            سيتم حذف الإتاحة البنكية بقيمة <b class="tnum">{{ thousandsLabel(deleteTarget()!.amount) }}</b>
             المسجّلة بتاريخ استلام <b class="tnum">{{ dateOnly(deleteTarget()!.receivedDate) }}</b>
             وكل مستنداتها المرفقة ({{ deleteTarget()!.documents.length }}) نهائيًا.
           </p>

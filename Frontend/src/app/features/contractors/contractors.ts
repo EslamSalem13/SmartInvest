@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { ContractorsService } from '../../core/services/contractors.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Contractor, CreateContractor } from '../../core/models/project.models';
+import { formatEgpAsThousands } from '../../core/utils/budget.util';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -302,6 +303,10 @@ export class Contractors {
         this.formError.set(err?.error?.message ?? 'تعذّر حفظ بيانات المقاول');
       },
     });
+  }
+
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
   }
 
   protected deleteContractor(c: Contractor, event: Event): void {

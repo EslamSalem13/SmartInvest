@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AppUser, CreateEmployee } from '../models/user.models';
+import { AppUser, CreateEmployee, UpdateEmployee } from '../models/user.models';
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
@@ -15,6 +15,10 @@ export class UsersService {
 
   createEmployee(dto: CreateEmployee): Observable<AppUser> {
     return this.http.post<AppUser>(this.base, dto);
+  }
+
+  updateEmployee(id: string, dto: UpdateEmployee): Observable<AppUser> {
+    return this.http.put<AppUser>(`${this.base}/${id}`, dto);
   }
 
   resetPassword(id: string, newPassword: string): Observable<void> {

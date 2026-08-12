@@ -72,13 +72,17 @@ export class PlanList {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
-        const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        if (this.selectedYearId() == null && sorted.length > 0) {
-          this.selectedYearId.set(sorted[0].id);
-        }
+        this.selectedYearId.set(
+          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+        );
       },
       error: () => {},
     });
+  }
+
+  protected onYearChange(id: number | null): void {
+    this.selectedYearId.set(id);
+    this.financialYearsService.rememberSelectedYearId(id);
   }
 
   protected loadPlans(): void {

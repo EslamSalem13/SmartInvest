@@ -84,9 +84,9 @@
         <div>
           <div class="fund">
             <h4>البيانات المالية للتخطيط</h4>
-            <div class="frow"><span>تمويل بنكي</span><b>{{ money(project()!.bankFunding) }} ج.م</b></div>
-            <div class="frow"><span>تمويل ذاتي</span><b>{{ money(project()!.selfFunding) }} ج.م</b></div>
-            <div class="frow total"><span>إجمالي التكلفة التقديرية</span><b>{{ money(project()!.totalCost) }} ج.م</b></div>
+            <div class="frow"><span>تمويل بنكي</span><b>{{ thousandsLabel(project()!.bankFunding) }}</b></div>
+            <div class="frow"><span>تمويل ذاتي</span><b>{{ thousandsLabel(project()!.selfFunding) }}</b></div>
+            <div class="frow total"><span>إجمالي التكلفة التقديرية</span><b>{{ thousandsLabel(project()!.totalCost) }}</b></div>
             <div class="frow last"><span>الأولوية</span><b>{{ project()!.priorityName }}</b></div>
           </div>
 
@@ -108,7 +108,7 @@
             <div class="row"><span>المقاول</span><b>{{ project()!.contractorName }}</b></div>
             <div class="row"><span>نوع العقد</span><b>{{ project()!.contractTypeName || '—' }}</b></div>
             <div class="row"><span>رقم العقد</span><b>{{ project()!.contractNumber || '—' }}</b></div>
-            <div class="row"><span>قيمة العقد</span><b>{{ project()!.contractValue != null ? (money(project()!.contractValue) + ' ج.م') : '—' }}</b></div>
+            <div class="row"><span>قيمة العقد</span><b>{{ project()!.contractValue != null ? thousandsLabel(project()!.contractValue) : '—' }}</b></div>
           </div>
         </div>
       }

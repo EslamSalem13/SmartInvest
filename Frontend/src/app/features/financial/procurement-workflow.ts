@@ -1,5 +1,4 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
@@ -9,6 +8,7 @@ import { ContractorsService } from '../../core/services/contractors.service';
 import { ContractTypesService } from '../../core/services/contract-types.service';
 import { Roles } from '../../core/models/auth.models';
 import { Contractor, Lookup } from '../../core/models/project.models';
+import { formatEgpAsThousands } from '../../core/utils/budget.util';
 import {
   ContractAwardDetails,
   ProcurementOverview,
@@ -19,7 +19,7 @@ import {
 
 @Component({
   selector: 'app-procurement-workflow',
-  imports: [RouterLink, FormsModule, DecimalPipe],
+  imports: [RouterLink, FormsModule],
   templateUrl: './procurement-workflow.html',
   styleUrl: './financial.css',
 })
@@ -240,8 +240,8 @@ export class ProcurementWorkflow implements OnInit {
     });
   }
 
-  protected money(value: number | null | undefined): string {
-    return (value ?? 0).toLocaleString('en-US');
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
   }
 
   protected reload(): void {

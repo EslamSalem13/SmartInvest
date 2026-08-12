@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FollowUpService } from '../../core/services/follow-up.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -9,6 +9,7 @@ import { FinancialService } from '../../core/services/financial.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExecutionStage, FollowUpListItem } from '../../core/models/follow-up.models';
 import { FinancialYear } from '../../core/models/project.models';
+import { formatEgpAsThousands } from '../../core/utils/budget.util';
 
 @Component({
   selector: 'app-follow-up-list',
@@ -23,6 +24,7 @@ export class FollowUpList implements OnInit {
   private readonly financial = inject(FinancialService);
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly isManager = this.auth.isManager;
 
@@ -66,12 +68,9 @@ export class FollowUpList implements OnInit {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
-        const sorted = [...years].sort((a, b) => b.startDate.localeCompare(a.startDate));
-        const selected = this.selectedYearId();
-        if ((selected == null || !years.some((y) => y.id === selected)) && sorted.length > 0) {
-          // لا توجد سنة مختارة، أو السنة القادمة من الرابط (financialYearId) غير صحيحة — نرجع للافتراضي.
-          this.selectedYearId.set(sorted[0].id);
-        }
+        this.selectedYearId.set(
+          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+        );
         this.load();
       },
       error: () => this.load(),
@@ -80,6 +79,13 @@ export class FollowUpList implements OnInit {
 
   protected onYearChange(id: number | null): void {
     this.selectedYearId.set(id);
+    this.financialYearsService.rememberSelectedYearId(id);
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { financialYearId: id },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
     this.load();
   }
 
@@ -348,8 +354,8 @@ export class FollowUpList implements OnInit {
       .subscribe((blob) => this.followUp.saveBlob(blob, fileName));
   }
 
-  protected money(value: number | null | undefined): string {
-    return (value ?? 0).toLocaleString('en-US');
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
   }
 
   protected overdue(item: FollowUpListItem): boolean {

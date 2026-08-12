@@ -106,6 +106,9 @@ export class Dashboard implements OnDestroy {
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
+        this.selectedYearId.set(
+          this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
+        );
         this.load();
       },
       error: () => this.load(),
@@ -119,6 +122,7 @@ export class Dashboard implements OnDestroy {
       next: (data) => {
         this.overview.set(data);
         this.selectedYearId.set(data.year.financialYearId);
+        this.financialYearsService.rememberSelectedYearId(data.year.financialYearId);
         this.loading.set(false);
         setTimeout(() => this.renderAllCharts(), 0);
       },
@@ -131,6 +135,7 @@ export class Dashboard implements OnDestroy {
 
   protected onYearChange(id: number): void {
     this.selectedYearId.set(id);
+    this.financialYearsService.rememberSelectedYearId(id);
     this.load();
   }
 

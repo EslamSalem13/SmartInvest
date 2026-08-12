@@ -15,13 +15,17 @@ import {
 
 const TOKEN_KEY = 'smartinvest_token';
 const USER_KEY = 'smartinvest_user';
+const AVATAR_CACHE_PREFIX = 'smartinvest_avatar_';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
 
   private readonly _user = signal<CurrentUser | null>(this.loadUser());
-  private readonly _avatarUrl = signal<string | null>(null);
+  private readonly _avatarUrl = signal<string | null>(this.loadCachedAvatar(this._user()));
+  private avatarRequestId = 0;
+  private avatarRetryCount = 0;
+  private avatarRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly user = this._user.asReadonly();
   readonly avatarUrl = this._avatarUrl.asReadonly();
@@ -45,10 +49,10 @@ export class AuthService {
   }
 
   logout(): void {
+    this.clearAvatarUrl();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
-    this.clearAvatarUrl();
   }
 
   getToken(): string | null {
@@ -118,30 +122,69 @@ export class AuthService {
   }
 
   refreshAvatar(): void {
-    const userId = this._user()?.userId;
+    const currentUser = this._user();
+    const userId = currentUser?.userId;
     if (!userId) {
       return;
     }
+
+    const requestId = ++this.avatarRequestId;
     this.http
-      .get(`${environment.apiUrl}/auth/users/${userId}/avatar`, { responseType: 'blob' })
+      .get(`${environment.apiUrl}/auth/users/${userId}/avatar?v=${Date.now()}`, {
+        responseType: 'blob',
+      })
       .subscribe({
         next: (blob) => {
-          this.clearAvatarUrl();
-          this._avatarUrl.set(URL.createObjectURL(blob));
+          this.blobToDataUrl(blob)
+            .then((dataUrl) => {
+              if (requestId !== this.avatarRequestId || this._user()?.userId !== userId) {
+                return;
+              }
+
+              this.avatarRetryCount = 0;
+              this.clearAvatarRetry();
+              this._avatarUrl.set(dataUrl);
+              this.cacheAvatar(userId, dataUrl);
+            })
+            .catch(() => this.handleAvatarLoadFailure(requestId, userId));
         },
-        error: () => this.clearAvatarUrl(),
+        error: (error) => {
+          if (requestId !== this.avatarRequestId) {
+            return;
+          }
+
+          if (error?.status === 404) {
+            this.markAvatarMissing();
+            return;
+          }
+
+          this.handleAvatarLoadFailure(requestId, userId);
+        },
       });
   }
 
   private clearAvatarUrl(): void {
+    this.avatarRequestId++;
+    this.avatarRetryCount = 0;
+    this.clearAvatarRetry();
+
     const existing = this._avatarUrl();
-    if (existing) {
+    if (existing?.startsWith('blob:')) {
       URL.revokeObjectURL(existing);
+    }
+    const userId = this._user()?.userId;
+    if (userId) {
+      try {
+        sessionStorage.removeItem(`${AVATAR_CACHE_PREFIX}${userId}`);
+      } catch {
+        // Ignore browsers where session storage is unavailable.
+      }
     }
     this._avatarUrl.set(null);
   }
 
   private setSession(result: AuthResult): void {
+    this.clearAvatarUrl();
     const user: CurrentUser = {
       userId: result.userId,
       fullName: result.fullName,
@@ -192,5 +235,68 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  private loadCachedAvatar(user: CurrentUser | null): string | null {
+    if (!user?.hasAvatar) {
+      return null;
+    }
+
+    try {
+      return sessionStorage.getItem(`${AVATAR_CACHE_PREFIX}${user.userId}`);
+    } catch {
+      return null;
+    }
+  }
+
+  private cacheAvatar(userId: string, dataUrl: string): void {
+    try {
+      sessionStorage.setItem(`${AVATAR_CACHE_PREFIX}${userId}`, dataUrl);
+    } catch {
+      // A large image can exceed storage quota; the in-memory image still remains valid.
+    }
+  }
+
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Invalid avatar'));
+      reader.onerror = () => reject(reader.error ?? new Error('Unable to read avatar'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private handleAvatarLoadFailure(requestId: number, userId: string): void {
+    if (
+      requestId !== this.avatarRequestId ||
+      this._user()?.userId !== userId ||
+      this._avatarUrl() ||
+      this.avatarRetryCount >= 2
+    ) {
+      return;
+    }
+
+    const delay = 600 * 2 ** this.avatarRetryCount;
+    this.avatarRetryCount++;
+    this.clearAvatarRetry();
+    this.avatarRetryTimer = setTimeout(() => this.refreshAvatar(), delay);
+  }
+
+  private clearAvatarRetry(): void {
+    if (this.avatarRetryTimer) {
+      clearTimeout(this.avatarRetryTimer);
+      this.avatarRetryTimer = null;
+    }
+  }
+
+  private markAvatarMissing(): void {
+    const current = this._user();
+    if (current) {
+      const updated = { ...current, hasAvatar: false };
+      this._user.set(updated);
+      localStorage.setItem(USER_KEY, JSON.stringify(updated));
+    }
+    this.clearAvatarUrl();
   }
 }

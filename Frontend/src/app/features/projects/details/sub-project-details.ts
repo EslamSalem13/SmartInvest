@@ -8,6 +8,7 @@ import { LookupsService } from '../../../core/services/lookups.service';
 import { MeasurementResolutionService } from '../../../core/services/measurement-resolution.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { FinancialService } from '../../../core/services/financial.service';
+import { formatEgpAsThousands } from '../../../core/utils/budget.util';
 import {
   Lookup,
   Measurement,
@@ -284,8 +285,8 @@ export class SubProjectDetails implements OnDestroy {
     });
   }
 
-  protected money(value: number | null | undefined): string {
-    return (value ?? 0).toLocaleString('en-US');
+  protected thousandsLabel(value: number | null | undefined): string {
+    return formatEgpAsThousands(value);
   }
 
   // ===== إدارة القياسات =====

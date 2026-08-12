@@ -50,7 +50,9 @@ export class Users {
   // ===== pagination =====
   protected readonly page = signal(1);
   protected readonly pageSize = 8;
-  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
+  protected readonly totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.filtered().length / this.pageSize)),
+  );
   protected readonly paged = computed(() => {
     const start = (this.page() - 1) * this.pageSize;
     return this.filtered().slice(start, start + this.pageSize);
@@ -70,6 +72,7 @@ export class Users {
 
   // ===== add-user modal =====
   protected readonly showForm = signal(false);
+  protected readonly editingUser = signal<AppUser | null>(null);
   protected readonly fFullName = signal('');
   protected readonly fUserName = signal('');
   protected readonly fEmail = signal('');
@@ -140,6 +143,7 @@ export class Users {
 
   // ===== add form =====
   protected openForm(): void {
+    this.editingUser.set(null);
     this.fFullName.set('');
     this.fUserName.set('');
     this.fEmail.set('');
@@ -151,8 +155,33 @@ export class Users {
     this.showForm.set(true);
   }
 
+  protected openEditForm(user: AppUser): void {
+    if (!this.canManage(user)) {
+      return;
+    }
+
+    this.editingUser.set(user);
+    this.fFullName.set(user.fullName);
+    this.fUserName.set(user.userName);
+    this.fEmail.set(user.email);
+    this.fPhone.set(user.phoneNumber ?? '');
+    this.fPassword.set('');
+    this.fConfirm.set('');
+    this.fRole.set(user.role);
+    this.formError.set(null);
+    this.showForm.set(true);
+  }
+
   protected closeForm(): void {
     this.showForm.set(false);
+    this.editingUser.set(null);
+  }
+
+  protected canManage(user: AppUser): boolean {
+    if (user.role === Roles.SuperAdmin) {
+      return false;
+    }
+    return this.isSuperAdmin() || user.role === Roles.PlanningEmployee;
   }
 
   protected submitForm(): void {
@@ -163,35 +192,41 @@ export class Users {
       this.formError.set('الاسم الكامل واسم المستخدم والبريد الإلكتروني مطلوبين');
       return;
     }
-    if (!this.fPassword()) {
-      this.formError.set('برجاء إدخال كلمة المرور');
-      return;
-    }
-    if (this.fPassword() !== this.fConfirm()) {
-      this.formError.set('كلمة المرور وتأكيدها غير متطابقين');
-      return;
+    const editing = this.editingUser();
+    if (!editing) {
+      if (!this.fPassword()) {
+        this.formError.set('برجاء إدخال كلمة المرور');
+        return;
+      }
+      if (this.fPassword() !== this.fConfirm()) {
+        this.formError.set('كلمة المرور وتأكيدها غير متطابقين');
+        return;
+      }
     }
 
     this.saving.set(true);
-    this.usersService
-      .createEmployee({
-        fullName: this.fFullName().trim(),
-        userName: this.fUserName().trim(),
-        email: this.fEmail().trim(),
-        phoneNumber: this.fPhone().trim() || null,
-        password: this.fPassword(),
-        role: this.fRole(),
-      })
-      .subscribe({
-        next: () => {
-          this.saving.set(false);
-          this.showForm.set(false);
-          this.load();
-        },
-        error: (err) => {
-          this.saving.set(false);
-          this.formError.set(err?.error?.message ?? 'تعذّر إنشاء المستخدم');
-        },
-      });
+    const payload = {
+      fullName: this.fFullName().trim(),
+      userName: this.fUserName().trim(),
+      email: this.fEmail().trim(),
+      phoneNumber: this.fPhone().trim() || null,
+      role: this.fRole(),
+    };
+    const request = editing
+      ? this.usersService.updateEmployee(editing.id, payload)
+      : this.usersService.createEmployee({ ...payload, password: this.fPassword() });
+
+    request.subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showForm.set(false);
+        this.editingUser.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.formError.set(err?.error?.message ?? 'تعذّر إنشاء المستخدم');
+      },
+    });
   }
 }

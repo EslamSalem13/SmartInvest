@@ -18,3 +18,11 @@ export interface CreateEmployee {
   password: string;
   role: string;
 }
+
+export interface UpdateEmployee {
+  fullName: string;
+  userName: string;
+  email: string;
+  phoneNumber?: string | null;
+  role: string;
+}
