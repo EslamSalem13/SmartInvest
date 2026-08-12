@@ -38,6 +38,12 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
+        path: 'reports',
+        canActivate: [roleGuard([Roles.SuperAdmin])],
+        loadComponent: () =>
+          import('./features/reports/reports').then((m) => m.Reports),
+      },
+      {
         path: 'projects',
         loadComponent: () =>
           import('./features/projects/projects').then((m) => m.Projects),

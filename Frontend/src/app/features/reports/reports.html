@@ -1,0 +1,233 @@
+<div class="reports-page">
+  <header class="reports-hero">
+    <div class="hero-copy">
+      <div class="eyebrow">
+        <span class="eyebrow-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+          </svg>
+        </span>
+        مركز التقارير والتحليلات
+      </div>
+      <h1>تقارير استثمارية دقيقة في ملف Excel</h1>
+      <p>اختر تقريرًا جاهزًا أو صف احتياجك بالعربية، وسيتم تجميع أحدث البيانات المصرح بها مباشرةً من النظام.</p>
+    </div>
+
+    <div class="year-filter si-card">
+      <div class="year-filter-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M16 3v4M8 3v4M3 10h18" />
+        </svg>
+      </div>
+      <div class="year-filter-field">
+        <label for="reports-year">نطاق البيانات</label>
+        <select
+          id="reports-year"
+          [ngModel]="selectedYearId()"
+          (ngModelChange)="onYearChange($event)"
+          [disabled]="loading()"
+        >
+          <option [ngValue]="null">كل السنوات</option>
+          @for (year of sortedYears(); track year.id) {
+            <option [ngValue]="year.id">{{ year.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <div class="access-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+    <div>
+      <b>مساحة مخصصة للسوبر أدمن</b>
+      <span>يتم إنشاء التقارير للقراءة والتنزيل فقط، ولا تؤدي أي عملية هنا إلى تعديل بيانات المشروع.</span>
+    </div>
+  </div>
+
+  @if (loadError()) {
+    <div class="load-note" role="alert">
+      <span>{{ loadError() }}</span>
+      <button type="button" class="si-btn" (click)="load()" [disabled]="loading()">إعادة المحاولة</button>
+    </div>
+  }
+
+  <section class="catalog-section" aria-labelledby="catalog-title">
+    <div class="section-head">
+      <div>
+        <span class="section-kicker">10 تقارير جاهزة</span>
+        <h2 id="catalog-title">مكتبة التقارير</h2>
+        <p>كل تقرير يحتوي على بيانات تفصيلية ومنظمة، ويُنشأ وفق نطاق السنة المحدد.</p>
+      </div>
+      <span class="scope-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+        {{ yearScopeLabel() }}
+      </span>
+    </div>
+
+    <div class="reports-grid" [attr.aria-busy]="loading()">
+      @if (loading()) {
+        @for (index of [1,2,3,4,5,6,7,8,9,10]; track index) {
+          <div class="report-card report-skeleton" aria-hidden="true">
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line"></div>
+            <div class="skeleton-chips"></div>
+            <div class="skeleton-button"></div>
+          </div>
+        }
+      } @else {
+        @for (report of reportCards(); track report.key; let index = $index) {
+          <article class="report-card">
+            <div class="report-card-top">
+              <span class="report-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                  <path [attr.d]="report.icon" />
+                </svg>
+              </span>
+              <div class="report-meta">
+                <span class="report-number">{{ (index + 1).toString().padStart(2, '0') }}</span>
+                <span class="report-category">{{ report.category }}</span>
+              </div>
+            </div>
+
+            <h3>{{ report.title }}</h3>
+            <p class="report-description">{{ report.description }}</p>
+
+            <div class="included">
+              <span class="included-label">يتضمن</span>
+              <div class="detail-chips">
+                @for (field of report.includedFields; track field) {
+                  <span>{{ field }}</span>
+                }
+              </div>
+            </div>
+
+            <div class="report-card-foot">
+              <span class="file-type" aria-label="صيغة الملف Excel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                  <path d="M14 2v6h6M8 13l4 5m0-5-4 5" />
+                </svg>
+                Excel
+              </span>
+              <button
+                type="button"
+                class="si-btn primary report-download"
+                (click)="download(report)"
+                [disabled]="downloadingKey() !== null || aiGenerating()"
+              >
+                @if (isDownloading(report.key)) {
+                  <span class="spinner" aria-hidden="true"></span>
+                  جارٍ التجهيز
+                } @else {
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+                    <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+                  </svg>
+                  إنشاء التقرير
+                }
+              </button>
+            </div>
+          </article>
+        }
+      }
+    </div>
+  </section>
+
+  <section class="ai-studio" aria-labelledby="ai-title">
+    <div class="ai-intro">
+      <span class="ai-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="m12 3 1.4 4.1L18 8.5l-4.6 1.4L12 14l-1.4-4.1L6 8.5l4.6-1.4L12 3ZM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
+        </svg>
+        منشئ التقارير الذكي
+      </span>
+      <h2 id="ai-title">صف التقرير الذي تحتاجه بلغتك</h2>
+      <p>اكتب المطلوب بوضوح، وسيحوّله النظام إلى تقرير آمن من البيانات المتاحة ثم يقدمه كملف Excel منظم.</p>
+
+      <div class="ai-features">
+        <div>
+          <span aria-hidden="true">01</span>
+          <p><b>يفهم الطلب</b> ويحدد نوع التقرير والفلاتر والترتيب المناسب.</p>
+        </div>
+        <div>
+          <span aria-hidden="true">02</span>
+          <p><b>يقرأ فقط</b> من البيانات المصرح بها دون تعديلها.</p>
+        </div>
+        <div>
+          <span aria-hidden="true">03</span>
+          <p><b>ينظم النتيجة</b> في أعمدة واضحة داخل Excel.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-panel">
+      <div class="ai-panel-head">
+        <div>
+          <span>طلب جديد</span>
+          <h3>ما التقرير الذي تريد إنشاءه؟</h3>
+        </div>
+        <span class="scope-pill compact">{{ yearScopeLabel() }}</span>
+      </div>
+
+      <label class="prompt-label" for="ai-report-prompt">وصف التقرير</label>
+      <div class="prompt-box" [class.invalid]="promptLength() > maxAiPromptLength">
+        <textarea
+          id="ai-report-prompt"
+          rows="6"
+          [ngModel]="aiPrompt()"
+          (ngModelChange)="aiPrompt.set($event); actionError.set(null)"
+          [attr.maxlength]="maxAiPromptLength"
+          placeholder="مثال: اعمل تقرير بالمشروعات المعتمدة فقط في مركز منوف، مرتبًا من الأعلى تمويلًا..."
+        ></textarea>
+        <span class="prompt-count">{{ promptLength() }} / {{ maxAiPromptLength }}</span>
+      </div>
+
+      <div class="examples">
+        <span class="examples-label">أمثلة سريعة</span>
+        <div class="example-list">
+          @for (example of examples; track example) {
+            <button type="button" (click)="useExample(example)">{{ example }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="safety-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+          <path d="M12 8v4m0 4h.01" />
+        </svg>
+        <p><b>تنفيذ آمن ومقيد:</b> الذكاء الاصطناعي لا يتصل بقاعدة البيانات من المتصفح ولا ينفذ أوامر كتابة؛ الخادم يتحقق من نوع التقرير والفلاتر والترتيب المسموح قبل إنشاء الملف.</p>
+      </div>
+
+      @if (actionError()) {
+        <p class="action-error" role="alert" aria-live="assertive">{{ actionError() }}</p>
+      }
+
+      <button
+        type="button"
+        class="si-btn primary ai-generate"
+        (click)="generateAiReport()"
+        [disabled]="!canGenerateAi() || downloadingKey() !== null"
+      >
+        @if (aiGenerating()) {
+          <span class="spinner" aria-hidden="true"></span>
+          جارٍ تحليل البيانات وإنشاء التقرير
+        } @else {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
+            <path d="m12 3 1.4 4.1L18 8.5l-4.6 1.4L12 14l-1.4-4.1L6 8.5l4.6-1.4L12 3Z" />
+            <path d="M5 15v5h14v-5" />
+          </svg>
+          إنشاء التقرير الذكي وتنزيله
+        }
+      </button>
+    </div>
+  </section>
+</div>

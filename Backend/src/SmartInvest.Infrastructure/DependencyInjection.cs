@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<IPresentationMemoService, Services.PresentationMemoService>();
         services.AddScoped<IBankAvailabilityService, Services.BankAvailabilityService>();
         services.AddScoped<IDashboardService, Services.DashboardService>();
+        services.AddScoped<IReportsService, Services.ReportsService>();
 
         return services;
     }
