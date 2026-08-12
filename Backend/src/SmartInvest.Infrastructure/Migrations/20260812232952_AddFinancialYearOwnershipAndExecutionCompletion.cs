@@ -38,13 +38,16 @@ namespace SmartInvest.Infrastructure.Migrations
                 FROM PresentationMemos AS memo
                 CROSS APPLY (
                     SELECT MIN(spfy.FinancialYearId) AS FinancialYearId,
-                           COUNT(DISTINCT spfy.FinancialYearId) AS YearCount
+                           COUNT(DISTINCT spfy.FinancialYearId) AS YearCount,
+                           COUNT(DISTINCT link.SubProjectId) AS LinkedProjectCount,
+                           COUNT(DISTINCT CASE WHEN spfy.FinancialYearId IS NOT NULL THEN link.SubProjectId END) AS ResolvedProjectCount
                     FROM PresentationMemoSubProjects AS link
-                    INNER JOIN SubProjectFinancialYear AS spfy
+                    LEFT JOIN SubProjectFinancialYear AS spfy
                         ON spfy.SubProjectId = link.SubProjectId
                     WHERE link.PresentationMemoId = memo.Id
                 ) AS resolved
-                WHERE resolved.YearCount = 1;
+                WHERE resolved.YearCount = 1
+                  AND resolved.LinkedProjectCount = resolved.ResolvedProjectCount;
                 """);
 
             // Execution stages are assigned only when their project belongs to one
