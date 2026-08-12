@@ -88,3 +88,40 @@ tr:hover td { background: var(--surface-2); }
 .act.danger:hover { background: var(--bad-bg); color: var(--bad); }
 .act.approve { color: var(--ok); border-color: #BFE6CD; }
 .act.approve:hover { background: var(--ok-bg); }
+
+@media (max-width: 768px) {
+  .page { padding: 18px 16px; }
+
+  .page-head {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .page-head > div { width: 100%; }
+  .page-head .si-btn {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+
+  .kpis { grid-template-columns: minmax(0, 1fr); }
+  .kpi, .card { width: 100%; min-width: 0; }
+
+  .toolbar {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .search { width: 100%; min-width: 0; }
+  .search input { min-width: 0; }
+  .seg {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .seg button { width: 100%; padding-inline: 8px; }
+
+  .tblfoot { align-items: stretch; flex-direction: column; }
+  .pager { width: 100%; justify-content: center; }
+  .state { padding: 28px 18px; }
+  .state .si-btn { width: 100%; }
+}
