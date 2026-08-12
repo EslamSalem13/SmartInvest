@@ -30,3 +30,47 @@ public class ChangePasswordDto
 
     public string NewPassword { get; set; } = string.Empty;
 }
+
+public class ProfileDto
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string FullName { get; set; } = string.Empty;
+
+    public string UserName { get; set; } = string.Empty;
+
+    public string Email { get; set; } = string.Empty;
+
+    public string? PhoneNumber { get; set; }
+
+    public string Role { get; set; } = string.Empty;
+
+    public bool IsActive { get; set; }
+
+    public bool HasAvatar { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+}
+
+public class UpdateProfileDto
+{
+    public string FullName { get; set; } = string.Empty;
+
+    public string Email { get; set; } = string.Empty;
+
+    public string? PhoneNumber { get; set; }
+}
+
+public class ForgotPasswordDto
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ResetPasswordWithTokenDto
+{
+    public string Email { get; set; } = string.Empty;
+
+    public string Token { get; set; } = string.Empty;
+
+    public string NewPassword { get; set; } = string.Empty;
+}

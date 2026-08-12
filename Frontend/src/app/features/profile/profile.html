@@ -1,0 +1,193 @@
+<main class="profile-page">
+  <header class="profile-head">
+    <div>
+      <span class="eyebrow">الحساب الشخصي</span>
+      <h1>الملف الشخصي</h1>
+      <p>إدارة بياناتك وصورتك وأمان حسابك من مكان واحد</p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-card si-card">
+      <span class="spinner"></span>
+      <b>جاري تحميل بيانات الحساب…</b>
+    </div>
+  } @else if (loadError()) {
+    <div class="si-err">{{ loadError() }}</div>
+  } @else if (profile(); as currentProfile) {
+    <section class="profile-grid">
+      <aside class="identity-card si-card">
+        <div class="avatar-wrap">
+          <span class="profile-avatar si-avatar">
+            @if (avatarUrl()) {
+              <img [src]="avatarUrl()" alt="الصورة الشخصية" />
+            } @else {
+              {{ initial() }}
+            }
+          </span>
+          <span class="online-dot" aria-hidden="true"></span>
+        </div>
+        <h2>{{ currentProfile.fullName }}</h2>
+        <p class="username">&#64;{{ currentProfile.userName }}</p>
+        <span class="role-pill">{{ roleLabel() }}</span>
+
+        <div class="avatar-actions">
+          <button
+            class="si-btn primary"
+            type="button"
+            (click)="avatarInput.click()"
+            [disabled]="avatarBusy()"
+          >
+            {{ currentProfile.hasAvatar ? 'تغيير الصورة' : 'رفع صورة' }}
+          </button>
+          @if (currentProfile.hasAvatar) {
+            <button
+              class="si-btn danger soft-danger"
+              type="button"
+              (click)="deleteAvatar()"
+              [disabled]="avatarBusy()"
+            >
+              حذف الصورة
+            </button>
+          }
+          <input
+            #avatarInput
+            hidden
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onAvatarSelected($event)"
+          />
+        </div>
+        <small>PNG أو JPG أو WEBP — بحد أقصى 2 ميجابايت</small>
+
+        <dl class="account-meta">
+          <div>
+            <dt>حالة الحساب</dt>
+            <dd><span class="status-dot"></span> نشط</dd>
+          </div>
+          <div>
+            <dt>تاريخ الإنشاء</dt>
+            <dd class="tnum">{{ currentProfile.createdAt | date: 'dd/MM/yyyy' }}</dd>
+          </div>
+        </dl>
+      </aside>
+
+      <div class="profile-content">
+        <section class="section-card si-card">
+          <div class="section-title">
+            <span class="section-icon">✎</span>
+            <div>
+              <h2>البيانات الشخصية</h2>
+              <p>حدّث بيانات التواصل والاسم الظاهر في النظام</p>
+            </div>
+          </div>
+          <form class="form-grid" (ngSubmit)="saveProfile()">
+            <div class="si-fld">
+              <label for="profile-name">الاسم بالكامل</label>
+              <input
+                id="profile-name"
+                name="fullName"
+                autocomplete="name"
+                [ngModel]="fullName()"
+                (ngModelChange)="fullName.set($event)"
+              />
+            </div>
+            <div class="si-fld">
+              <label for="profile-username">اسم المستخدم</label>
+              <input id="profile-username" [value]="currentProfile.userName" disabled />
+              <span class="hint">اسم المستخدم ثابت، ويمكن تسجيل الدخول به</span>
+            </div>
+            <div class="si-fld">
+              <label for="profile-email">البريد الإلكتروني</label>
+              <input
+                id="profile-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                [ngModel]="email()"
+                (ngModelChange)="email.set($event)"
+              />
+            </div>
+            <div class="si-fld">
+              <label for="profile-phone">رقم الهاتف</label>
+              <input
+                id="profile-phone"
+                name="phone"
+                type="tel"
+                autocomplete="tel"
+                placeholder="اختياري"
+                [ngModel]="phoneNumber()"
+                (ngModelChange)="phoneNumber.set($event)"
+              />
+            </div>
+            <div class="form-actions">
+              <button class="si-btn primary" type="submit" [disabled]="saving()">
+                {{ saving() ? 'جاري الحفظ…' : 'حفظ التعديلات' }}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="section-card si-card">
+          <div class="section-title">
+            <span class="section-icon lock-icon">⌁</span>
+            <div>
+              <h2>تغيير كلمة المرور</h2>
+              <p>استخدم كلمة قوية لا تستعملها في حساب آخر</p>
+            </div>
+          </div>
+          <form class="password-grid" (ngSubmit)="changePassword()">
+            <div class="si-fld full-field">
+              <label for="current-password">كلمة المرور الحالية</label>
+              <input
+                id="current-password"
+                name="currentPassword"
+                type="password"
+                autocomplete="current-password"
+                [ngModel]="currentPassword()"
+                (ngModelChange)="currentPassword.set($event)"
+              />
+            </div>
+            <div class="si-fld">
+              <label for="new-password">كلمة المرور الجديدة</label>
+              <input
+                id="new-password"
+                name="newPassword"
+                type="password"
+                autocomplete="new-password"
+                [ngModel]="newPassword()"
+                (ngModelChange)="newPassword.set($event)"
+              />
+            </div>
+            <div class="si-fld">
+              <label for="confirm-password">تأكيد كلمة المرور</label>
+              <input
+                id="confirm-password"
+                name="confirmPassword"
+                type="password"
+                autocomplete="new-password"
+                [ngModel]="confirmPassword()"
+                (ngModelChange)="confirmPassword.set($event)"
+              />
+            </div>
+            <div class="password-actions">
+              <button class="si-btn primary" type="submit" [disabled]="passwordBusy()">
+                {{ passwordBusy() ? 'جاري التغيير…' : 'تغيير كلمة المرور' }}
+              </button>
+              <button
+                class="text-action"
+                type="button"
+                (click)="sendPasswordReset()"
+                [disabled]="resetBusy()"
+              >
+                {{
+                  resetBusy() ? 'جاري إرسال الرابط…' : 'نسيت كلمة المرور؟ أرسل رابطًا إلى البريد'
+                }}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </section>
+  }
+</main>

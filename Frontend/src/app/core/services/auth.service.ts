@@ -2,7 +2,16 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResult, CurrentUser, LoginRequest, Roles } from '../models/auth.models';
+import {
+  AuthResult,
+  ChangePasswordRequest,
+  CurrentUser,
+  LoginRequest,
+  ResetPasswordRequest,
+  Roles,
+  UpdateProfileRequest,
+  UserProfile,
+} from '../models/auth.models';
 
 const TOKEN_KEY = 'smartinvest_token';
 const USER_KEY = 'smartinvest_user';
@@ -70,7 +79,45 @@ export class AuthService {
     );
   }
 
-  private refreshAvatar(): void {
+  getProfile(): Observable<UserProfile> {
+    return this.http.get<UserProfile>(`${environment.apiUrl}/auth/me`).pipe(
+      tap((profile) => this.updateCachedUser(profile)),
+    );
+  }
+
+  updateProfile(request: UpdateProfileRequest): Observable<UserProfile> {
+    return this.http.put<UserProfile>(`${environment.apiUrl}/auth/me`, request).pipe(
+      tap((profile) => this.updateCachedUser(profile)),
+    );
+  }
+
+  changePassword(request: ChangePasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/change-password`, request);
+  }
+
+  deleteAvatar(): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/auth/me/avatar`).pipe(
+      tap(() => {
+        const current = this._user();
+        if (current) {
+          const updated = { ...current, hasAvatar: false };
+          this._user.set(updated);
+          localStorage.setItem(USER_KEY, JSON.stringify(updated));
+        }
+        this.clearAvatarUrl();
+      }),
+    );
+  }
+
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  resetPassword(request: ResetPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/reset-password`, request);
+  }
+
+  refreshAvatar(): void {
     const userId = this._user()?.userId;
     if (!userId) {
       return;
@@ -108,6 +155,29 @@ export class AuthService {
     if (user.hasAvatar) {
       this.refreshAvatar();
     } else {
+      this.clearAvatarUrl();
+    }
+  }
+
+  private updateCachedUser(profile: UserProfile): void {
+    const current = this._user();
+    if (!current) {
+      return;
+    }
+
+    const updated: CurrentUser = {
+      ...current,
+      fullName: profile.fullName,
+      email: profile.email,
+      hasAvatar: profile.hasAvatar,
+    };
+    this._user.set(updated);
+    localStorage.setItem(USER_KEY, JSON.stringify(updated));
+
+    if (profile.hasAvatar && !this._avatarUrl()) {
+      this.refreshAvatar();
+    }
+    if (!profile.hasAvatar) {
       this.clearAvatarUrl();
     }
   }

@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
@@ -38,6 +39,34 @@ public class AuthController : ControllerBase
 
         await _identityService.ChangePasswordAsync(userId, dto.CurrentPassword, dto.NewPassword, cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<ProfileDto>> GetProfile(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var profile = await _identityService.GetProfileAsync(userId, cancellationToken);
+        return Ok(profile);
+    }
+
+    [HttpPut("me")]
+    [Authorize]
+    public async Task<ActionResult<ProfileDto>> UpdateProfile(UpdateProfileDto dto, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var profile = await _identityService.UpdateProfileAsync(userId, dto, cancellationToken);
+        return Ok(profile);
     }
 
     private static readonly HashSet<string> AllowedAvatarTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -78,6 +107,20 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("me/avatar")]
+    [Authorize]
+    public async Task<IActionResult> DeleteAvatar(CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _identityService.DeleteAvatarAsync(userId, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("users/{userId}/avatar")]
     [Authorize]
     public async Task<IActionResult> GetAvatar(string userId, CancellationToken cancellationToken)
@@ -89,5 +132,23 @@ public class AuthController : ControllerBase
         }
 
         return File(avatar.Content, avatar.ContentType);
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("email-actions")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto, CancellationToken cancellationToken)
+    {
+        await _identityService.SendPasswordResetAsync(dto.Email, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting("email-actions")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordWithTokenDto dto, CancellationToken cancellationToken)
+    {
+        await _identityService.ResetPasswordByEmailAsync(dto.Email, dto.Token, dto.NewPassword, cancellationToken);
+        return NoContent();
     }
 }

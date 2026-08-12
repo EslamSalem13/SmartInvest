@@ -42,33 +42,20 @@
 
     <div class="grow"></div>
 
-    @if (avatarError()) {
-      <div class="avatar-err">{{ avatarError() }}</div>
-    }
-
-    <div class="me">
-      <button class="me-avatar-btn" type="button" (click)="avatarInput.click()" [disabled]="avatarUploading()" aria-label="تغيير الصورة الشخصية">
-        <span class="av si-avatar">
-          @if (avatarUrl()) {
-            <img [src]="avatarUrl()" alt="" />
-          } @else {
-            {{ initial() }}
-          }
-        </span>
-        <span class="av-edit" [class.busy]="avatarUploading()">
-          @if (avatarUploading()) {
-            <span class="spinner"></span>
-          } @else {
-            <svg viewBox="0 0 24 24" width="11" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 13v6a1 1 0 0 0 1 1h6M20 11V5a1 1 0 0 0-1-1h-6M14 10l7-7M10 14l-7 7" /></svg>
-          }
-        </span>
-      </button>
-      <input #avatarInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onAvatarFileSelected($event)" />
+    <a class="me" routerLink="/app/profile" routerLinkActive="profile-active" (click)="closeMobileNav()" aria-label="فتح الملف الشخصي">
+      <span class="av si-avatar">
+        @if (avatarUrl()) {
+          <img [src]="avatarUrl()" alt="" />
+        } @else {
+          {{ initial() }}
+        }
+      </span>
       <div class="me-txt">
         <b>{{ user()?.fullName }}</b>
         <span>{{ roleLabel() }}</span>
       </div>
-    </div>
+      <svg class="me-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" /></svg>
+    </a>
     <button class="logout" (click)="logout()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />

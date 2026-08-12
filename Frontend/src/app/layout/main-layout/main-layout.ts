@@ -12,8 +12,6 @@ interface NavItem {
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'smartinvest_sidebar_collapsed';
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-const ALLOWED_AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 @Component({
   selector: 'app-main-layout',
@@ -45,9 +43,6 @@ export class MainLayout {
   protected readonly sidebarCollapsed = signal(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true');
   protected readonly mobileNavOpen = signal(false);
 
-  protected readonly avatarUploading = signal(false);
-  protected readonly avatarError = signal<string | null>(null);
-
   protected toggleSidebar(): void {
     const next = !this.sidebarCollapsed();
     this.sidebarCollapsed.set(next);
@@ -60,35 +55,6 @@ export class MainLayout {
 
   protected closeMobileNav(): void {
     this.mobileNavOpen.set(false);
-  }
-
-  protected onAvatarFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) {
-      return;
-    }
-
-    this.avatarError.set(null);
-
-    if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-      this.avatarError.set('صيغة الصورة غير مدعومة، برجاء اختيار PNG أو JPG أو WEBP');
-      return;
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      this.avatarError.set('حجم الصورة يجب ألا يتجاوز 2 ميجابايت');
-      return;
-    }
-
-    this.avatarUploading.set(true);
-    this.auth.uploadAvatar(file).subscribe({
-      next: () => this.avatarUploading.set(false),
-      error: () => {
-        this.avatarUploading.set(false);
-        this.avatarError.set('تعذّر رفع الصورة، حاول مرة أخرى');
-      },
-    });
   }
 
   private readonly allNav: NavItem[] = [

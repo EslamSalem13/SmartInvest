@@ -1,0 +1,83 @@
+<main class="auth-page">
+  <div class="auth-glow"></div>
+  <a class="brand" routerLink="/">
+    <img src="/Menoufia-Logo.png" alt="شعار محافظة المنوفية" />
+    <span><b>SmartInvest</b><small>محافظة المنوفية</small></span>
+  </a>
+
+  <section class="auth-card si-card">
+    <span class="auth-icon">⌁</span>
+    @if (success()) {
+      <h1>{{ resetMode ? 'تم تعيين كلمة المرور' : 'راجع بريدك الإلكتروني' }}</h1>
+      <p>
+        @if (resetMode) {
+          يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.
+        } @else {
+          إذا كان البريد مسجلًا لدينا فستصلك رسالة تحتوي على رابط آمن لإعادة تعيين كلمة المرور.
+        }
+      </p>
+      <a class="si-btn primary wide" routerLink="/">العودة لتسجيل الدخول</a>
+    } @else {
+      <h1>{{ resetMode ? 'كلمة مرور جديدة' : 'استعادة كلمة المرور' }}</h1>
+      <p>
+        {{
+          resetMode ? 'اختر كلمة مرور قوية جديدة لحسابك' : 'أدخل بريد حسابك وسنرسل لك رابطًا آمنًا'
+        }}
+      </p>
+
+      @if (error()) {
+        <div class="si-err">{{ error() }}</div>
+      }
+
+      <form (ngSubmit)="submit()">
+        <div class="si-fld">
+          <label for="recovery-email">البريد الإلكتروني</label>
+          <input
+            id="recovery-email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            dir="ltr"
+            [readOnly]="resetMode"
+            [ngModel]="email()"
+            (ngModelChange)="email.set($event)"
+          />
+        </div>
+        @if (resetMode) {
+          <div class="si-fld">
+            <label for="recovery-password">كلمة المرور الجديدة</label>
+            <input
+              id="recovery-password"
+              name="newPassword"
+              type="password"
+              autocomplete="new-password"
+              [ngModel]="newPassword()"
+              (ngModelChange)="newPassword.set($event)"
+            />
+          </div>
+          <div class="si-fld">
+            <label for="recovery-confirm">تأكيد كلمة المرور</label>
+            <input
+              id="recovery-confirm"
+              name="confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              [ngModel]="confirmPassword()"
+              (ngModelChange)="confirmPassword.set($event)"
+            />
+          </div>
+        }
+        <button class="si-btn primary wide" type="submit" [disabled]="loading()">
+          {{
+            loading()
+              ? 'جاري التنفيذ…'
+              : resetMode
+                ? 'حفظ كلمة المرور الجديدة'
+                : 'إرسال رابط الاستعادة'
+          }}
+        </button>
+      </form>
+      <a class="back-link" routerLink="/">العودة لتسجيل الدخول</a>
+    }
+  </section>
+</main>

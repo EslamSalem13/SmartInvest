@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SmartInvest.Application.Common.Ai;
+using SmartInvest.Application.Common;
 using SmartInvest.Application.Interfaces;
 using SmartInvest.Application.Services;
 using SmartInvest.Application.Services.Import;
@@ -27,6 +28,7 @@ public static class DependencyInjection
                 sql => sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
         services.Configure<AiGatewayOptions>(configuration.GetSection(AiGatewayOptions.SectionName));
+        services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddHttpClient<IAiGatewayClient, AiGatewayClient>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(60);
@@ -63,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<IProjectSpecificationService, ProjectSpecificationService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
         services.AddScoped<IFinancialYearService, FinancialYearService>();
         services.AddScoped<ISubProjectFinancialYearService, SubProjectFinancialYearService>();
         services.AddScoped<IPlanService, PlanService>();

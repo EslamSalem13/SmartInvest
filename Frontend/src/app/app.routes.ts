@@ -10,12 +10,27 @@ export const routes: Routes = [
   },
   { path: 'login', redirectTo: '', pathMatch: 'full' },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/account-recovery').then((m) => m.AccountRecovery),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/account-recovery').then((m) => m.AccountRecovery),
+  },
+  {
     path: 'app',
     loadComponent: () =>
       import('./layout/main-layout/main-layout').then((m) => m.MainLayout),
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'projects', pathMatch: 'full' },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile').then((m) => m.Profile),
+      },
       {
         path: 'dashboard',
         canActivate: [roleGuard([Roles.PlanningManager, Roles.SuperAdmin])],
