@@ -122,7 +122,7 @@
                       </button>
                     }
                   </div>
-                } @else if (isManager()) {
+                } @else if (stageDetail()!.stage !== 'contract-award' && isManager()) {
                   <div class="stage-actions">
                     <div class="si-fld" style="min-width:160px">
                       <label>المدة القصوى — أيام</label>

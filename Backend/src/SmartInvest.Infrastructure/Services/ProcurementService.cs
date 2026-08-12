@@ -379,6 +379,11 @@ public class ProcurementService : IProcurementService
             throw new BusinessRuleException("مرحلة الإعلان لها قاعدة موعد ثابتة (15 يومًا من تاريخ الإعلان) ولا تقبل تحديد مدة يدويًا");
         }
 
+        if (stage == ProcurementStage.ContractAward)
+        {
+            throw new BusinessRuleException("مرحلة العقد والترسية لا تقبل مدة مرحلة عامة؛ استخدم مدة تنفيذ العقد بالشهور والأيام");
+        }
+
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
         await _stages[stage].SetDurationAsync(subProjectId, durationDays, cancellationToken);
     }
