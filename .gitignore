@@ -517,17 +517,10 @@ appsettings.*.Local.json
 # OS / misc
 # ══════════════════════════════════════════════════════════════
 .claude/
+CLAUDE.md
 Backend/.claude/
 .DS_Store
 Thumbs.db
 
 # Subagent-driven-development scratch (task briefs, review packages, ledger)
 .superpowers/
-
-
-
-
-
-
-
-CLAUDE.md
