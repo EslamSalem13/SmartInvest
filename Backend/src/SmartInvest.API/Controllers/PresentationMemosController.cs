@@ -22,9 +22,9 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<PresentationMemoDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<PresentationMemoDto>>> GetAll([FromQuery] int? financialYearId, CancellationToken cancellationToken)
     {
-        var result = await _memoService.GetAllAsync(cancellationToken);
+        var result = await _memoService.GetAllAsync(financialYearId, cancellationToken);
         return Ok(result);
     }
 

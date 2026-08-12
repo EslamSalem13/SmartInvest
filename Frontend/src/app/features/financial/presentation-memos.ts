@@ -158,7 +158,6 @@ export class PresentationMemos implements OnInit {
   protected readonly isManager = this.auth.canManageFinancial;
 
   ngOnInit(): void {
-    this.reload();
     this.financialYearsService.getAll().subscribe({
       next: (years) => {
         this.financialYears.set(years);
@@ -166,11 +165,14 @@ export class PresentationMemos implements OnInit {
         this.selectedYearId.set(
           this.financialYearsService.resolveSelectedYearId(years, this.selectedYearId()),
         );
+        this.reload();
         this.loadSubProjects(() => this.openCreateFromQueryParams());
       },
       error: () => {
         this.yearsLoading.set(false);
         this.yearsError.set(true);
+        // فشل تحميل السنوات — نعرض كل المذكرات بلا تقييد بدل شاشة فارغة عالقة
+        this.reload();
         this.loadSubProjects(() => this.openCreateFromQueryParams());
       },
     });
@@ -200,6 +202,7 @@ export class PresentationMemos implements OnInit {
     this.fSubProjectIds.set([]);
     this.pickerSearch.set('');
     this.loadSubProjects();
+    this.reload();
   }
 
   private loadSubProjects(onLoaded?: () => void): void {
@@ -219,7 +222,7 @@ export class PresentationMemos implements OnInit {
   }
 
   protected reload(): void {
-    this.financial.getMemos().subscribe({
+    this.financial.getMemos(this.selectedYearId()).subscribe({
       next: (memos) => {
         this.memos.set(memos);
         this.loading.set(false);

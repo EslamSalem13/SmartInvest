@@ -145,8 +145,12 @@ export class FinancialService {
   }
 
   // ===== مذكرات العرض =====
-  getMemos(): Observable<PresentationMemo[]> {
-    return this.http.get<PresentationMemo[]>(`${this.base}/presentation-memos`);
+  getMemos(financialYearId?: number | null): Observable<PresentationMemo[]> {
+    const params: Record<string, number> = {};
+    if (financialYearId != null) {
+      params['financialYearId'] = financialYearId;
+    }
+    return this.http.get<PresentationMemo[]>(`${this.base}/presentation-memos`, { params });
   }
 
   getMemo(id: number): Observable<PresentationMemoDetail> {

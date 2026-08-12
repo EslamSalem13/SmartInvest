@@ -23,9 +23,11 @@ public class PresentationMemoService : IPresentationMemoService
         _context = context;
     }
 
-    public async Task<IReadOnlyList<PresentationMemoDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PresentationMemoDto>> GetAllAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
     {
         var memos = await _context.PresentationMemos.AsNoTracking()
+            .Where(m => financialYearId == null
+                || m.MemoSubProjects.Any(x => x.SubProject.FinancialYears.Any(y => y.FinancialYearId == financialYearId)))
             .OrderByDescending(m => m.Id)
             .Select(m => new PresentationMemoDto
             {
