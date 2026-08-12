@@ -170,6 +170,12 @@ export const routes: Routes = [
               import('./features/users/users').then((m) => m.Users),
           },
           {
+            path: 'plan-approval-notifications',
+            canActivate: [roleGuard([Roles.SuperAdmin])],
+            loadComponent: () =>
+              import('./features/settings/plan-approval-notifications').then((m) => m.PlanApprovalNotifications),
+          },
+          {
             path: 'contractors',
             loadComponent: () =>
               import('./features/contractors/contractors').then((m) => m.Contractors),

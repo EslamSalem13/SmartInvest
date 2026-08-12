@@ -1,0 +1,129 @@
+<section class="notifications-page" dir="rtl">
+  <header class="page-intro">
+    <div>
+      <span class="eyebrow">متابعة موثوقة</span>
+      <h2>إشعارات اعتماد الخطط</h2>
+      <p>تتبّع رسائل الإدارة المالية والسوبر أدمن، واعرف حالة كل مستلم وأعد محاولة الرسائل الفاشلة.</p>
+    </div>
+    <button class="refresh" type="button" [disabled]="loading()" (click)="load(page())">تحديث السجل</button>
+  </header>
+
+  <div class="filters">
+    <label>
+      <span>اسم الخطة</span>
+      <input type="search" placeholder="ابحث باسم الخطة" [ngModel]="planNameFilter()" (ngModelChange)="planNameFilter.set($event)" (keyup.enter)="load(1)" />
+    </label>
+    <label>
+      <span>حالة الإرسال</span>
+      <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event === '' ? null : +$event); load(1)">
+        <option value="">كل الحالات</option>
+        <option [value]="Status.Pending">بانتظار الإرسال</option>
+        <option [value]="Status.Processing">جاري الإرسال</option>
+        <option [value]="Status.Sent">تم الإرسال</option>
+        <option [value]="Status.PartiallyFailed">إرسال جزئي</option>
+        <option [value]="Status.Failed">فشل الإرسال</option>
+        <option [value]="Status.NoRecipients">لا يوجد مستلمون</option>
+      </select>
+    </label>
+    <label>
+      <span>السنة المالية</span>
+      <select [ngModel]="yearFilter()" (ngModelChange)="yearFilter.set($event === '' ? null : +$event); load(1)">
+        <option value="">كل السنوات</option>
+        @for (year of years(); track year.id) { <option [value]="year.id">{{ year.name }}</option> }
+      </select>
+    </label>
+    <label>
+      <span>من تاريخ</span>
+      <input type="date" [ngModel]="fromFilter()" (ngModelChange)="fromFilter.set($event); load(1)" />
+    </label>
+    <label>
+      <span>إلى تاريخ</span>
+      <input type="date" [ngModel]="toFilter()" (ngModelChange)="toFilter.set($event); load(1)" />
+    </label>
+    <button class="primary apply-filter" type="button" (click)="load(1)">تطبيق البحث</button>
+  </div>
+
+  @if (loading()) {
+    <div class="state"><span class="spinner"></span> جاري تحميل سجل الإرسال…</div>
+  } @else if (error()) {
+    <div class="state error">{{ error() }}</div>
+  } @else if (items().length === 0) {
+    <div class="state">لا توجد إشعارات مطابقة للفلاتر الحالية.</div>
+  } @else {
+    <div class="notification-grid">
+      @for (item of items(); track item.id) {
+        <article class="notification-card">
+          <div class="card-head">
+            <span class="status" [class]="'status ' + statusClass(item.status)">{{ statusLabel(item.status) }}</span>
+            <time>{{ item.createdAtUtc | date:'yyyy/MM/dd - h:mm a' }}</time>
+          </div>
+          <h3>{{ item.planName }}</h3>
+          <p class="year">السنة المالية {{ item.financialYearName }}</p>
+          <div class="delivery">
+            <span><b>{{ item.recipientCount }}</b> مستلم</span>
+            <span class="sent"><b>{{ item.sentCount }}</b> تم</span>
+            <span class="failed"><b>{{ item.failedCount }}</b> فشل</span>
+          </div>
+          @if (item.lastError) { <p class="last-error">{{ item.lastError }}</p> }
+          <div class="actions">
+            <button type="button" class="secondary" (click)="openDetail(item.id)">عرض التفاصيل</button>
+            @if (item.failedCount > 0) {
+              <button type="button" class="primary" [disabled]="retryingId() != null" (click)="retry(item)">
+                {{ retryingId() === item.id ? 'جاري الجدولة…' : 'إعادة محاولة الفاشل' }}
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+    <footer class="pagination">
+      <span>إجمالي {{ totalCount() }} إشعار</span>
+      <div>
+        <button type="button" [disabled]="!hasPrevious()" (click)="load(page() - 1)">السابق</button>
+        <span>صفحة {{ page() }}</span>
+        <button type="button" [disabled]="!hasNext()" (click)="load(page() + 1)">التالي</button>
+      </div>
+    </footer>
+  }
+
+  @if (detail(); as selected) {
+    <div class="si-overlay" (click)="closeDetail()">
+      <div class="si-modal detail-modal" (click)="$event.stopPropagation()">
+        <div class="si-modal-head">
+          <div class="grow">
+            <span class="status" [class]="'status ' + statusClass(selected.status)">{{ statusLabel(selected.status) }}</span>
+            <h3>{{ selected.planName }}</h3>
+          </div>
+          <button class="si-x" type="button" (click)="closeDetail()" aria-label="إغلاق">×</button>
+        </div>
+        <div class="si-modal-body">
+          <div class="summary-grid">
+            <div><span>السنة المالية</span><b>{{ selected.financialYearName }}</b></div>
+            <div><span>عدد المشروعات</span><b>{{ selected.projectCount }}</b></div>
+            <div><span>تمويل بنكي</span><b>{{ money(selected.bankFunding) }}</b></div>
+            <div><span>تمويل ذاتي</span><b>{{ money(selected.selfFunding) }}</b></div>
+            <div><span>المتاح</span><b>{{ money(selected.availableFunding) }}</b></div>
+            <div><span>صياغة الرسالة</span><b>{{ selected.aiGenerationUsed ? 'بالذكاء الاصطناعي' : 'النص الاحتياطي' }}</b></div>
+          </div>
+          @if (selected.subject) { <p class="subject"><span>عنوان الرسالة</span><b>{{ selected.subject }}</b></p> }
+          <h4>المستلمون</h4>
+          <div class="recipients">
+            @for (recipient of selected.recipients; track recipient.id) {
+              <article>
+                <div><b>{{ recipient.fullName }}</b><span>{{ roleLabel(recipient.role) }}</span></div>
+                <div><b>{{ recipient.email }}</b><span>{{ recipientStatusLabel(recipient.status) }}</span></div>
+                @if (recipient.lastError) { <p>{{ recipient.lastError }}</p> }
+              </article>
+            }
+          </div>
+        </div>
+        <div class="si-modal-foot">
+          @if (selected.failedCount > 0) {
+            <button class="si-btn primary" type="button" [disabled]="retryingId() != null" (click)="retry(selected)">إعادة محاولة الرسائل الفاشلة</button>
+          }
+          <button class="si-btn" type="button" (click)="closeDetail()">إغلاق</button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

@@ -2,11 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { PlansService } from '../../core/services/plans.service';
 import { ProjectsService } from '../../core/services/projects.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ToastService } from '../../core/services/toast.service';
 import { FinancialYear, Plan } from '../../core/models/project.models';
 
 @Component({
@@ -20,6 +21,7 @@ export class PlanList {
   private readonly projectsService = inject(ProjectsService);
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   protected readonly isManager = this.auth.isManager;
@@ -165,26 +167,80 @@ export class PlanList {
             ? result.items.filter((s) => s.isApproved).map((s) => s.id)
             : result.items.map((s) => s.id);
 
-        this.plansService
-          .create({
-            planName: type === 'Approved' ? `الخطة المعتمدة - ${year.name}` : `الخطة المقترحة - ${year.name}`,
-            startDate: year.startDate,
-            endDate: year.endDate,
-            planStatus: type,
-            approvalDate,
-            financialYearId: yearId,
-          })
-          .subscribe({
-            next: (plan) => this.addAllThenGo(plan.planId, subProjectIds),
-            error: (err) => {
-              this.generating.set(false);
-              alert(err?.error?.message ?? 'تعذّر إنشاء الخطة');
-            },
-          });
+        if (type === 'Approved') {
+          this.createOrApproveSuggestedPlan(
+            yearId,
+            year.name,
+            year.startDate,
+            year.endDate,
+            approvalDate!,
+            subProjectIds,
+          );
+          return;
+        }
+
+        this.plansService.create({
+          planName: `الخطة المقترحة - ${year.name}`,
+          startDate: year.startDate,
+          endDate: year.endDate,
+          planStatus: 'Suggested',
+          approvalDate: null,
+          financialYearId: yearId,
+        }).subscribe({
+          next: (plan) => this.addAllThenGo(plan.planId, subProjectIds),
+          error: (err) => {
+            this.generating.set(false);
+            this.toast.error(err?.error?.message ?? 'تعذّر إنشاء الخطة');
+          },
+        });
       },
       error: () => {
         this.generating.set(false);
-        alert('تعذّر تحميل مشروعات السنة المالية');
+        this.toast.error('تعذّر تحميل مشروعات السنة المالية');
+      },
+    });
+  }
+
+  private createOrApproveSuggestedPlan(
+    yearId: number,
+    yearName: string,
+    startDate: string,
+    endDate: string,
+    approvalDate: string,
+    subProjectIds: number[],
+  ): void {
+    const existing = this.plans().find(
+      (plan) => plan.financialYearId === yearId && plan.planStatus === 'Suggested',
+    );
+    const plan$ = existing
+      ? of({ planId: existing.planId })
+      : this.plansService.create({
+          planName: `الخطة المقترحة - ${yearName}`,
+          startDate,
+          endDate,
+          planStatus: 'Suggested',
+          approvalDate: null,
+          financialYearId: yearId,
+        });
+
+    plan$.pipe(
+      switchMap((plan) => {
+        const links$ = subProjectIds.length
+          ? forkJoin(subProjectIds.map((id) => this.plansService.addExistingProject(plan.planId, id)))
+          : of([]);
+        return links$.pipe(
+          switchMap(() => this.plansService.approve(plan.planId, { approvalDate })),
+        );
+      }),
+    ).subscribe({
+      next: (approvedPlan) => {
+        this.generating.set(false);
+        this.toast.success('تم اعتماد الخطة بنجاح، وتمت جدولة إشعارات الإدارة المالية للإرسال.');
+        this.router.navigate(['/app/plans', approvedPlan.planId]);
+      },
+      error: (err) => {
+        this.generating.set(false);
+        this.toast.error(err?.error?.message ?? 'تعذّر اعتماد الخطة. لم يتم إرسال أي إشعار.');
       },
     });
   }
@@ -203,7 +259,7 @@ export class PlanList {
       },
       error: () => {
         this.generating.set(false);
-        alert('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
+        this.toast.error('تعذّر إضافة بعض المشروعات للخطة، قد تكون الخطة المطبوعة غير مكتملة');
         this.router.navigate(['/app/plans', planId]);
       },
     });
