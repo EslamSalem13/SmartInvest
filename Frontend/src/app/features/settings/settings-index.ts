@@ -34,7 +34,7 @@ const LOOKUP_DESCRIPTIONS: Record<string, string> = {
 })
 export class SettingsIndex {
   private readonly auth = inject(AuthService);
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canManageUsers = this.auth.canManageUsers;
   protected readonly isSuperAdmin = this.auth.isSuperAdmin;
 
   protected readonly cards: SettingsCard[] = [

@@ -34,7 +34,7 @@
         <h2>{{ project()!.name }}</h2>
         <div class="sub">ضمن مشروع: {{ project()!.mainProjectName }}</div>
       </div>
-      @if (isManager() && project()!.isApproved) {
+      @if (canManageProjects() && project()!.isApproved) {
         @if (project()!.statusName === 'متعثر') {
           <button class="si-btn status-action" (click)="reactivate()" [disabled]="savingStatus()">إلغاء التعثر</button>
         } @else {
@@ -152,10 +152,12 @@
         <div class="card-head">
           <h3>القياسات</h3>
           <div class="grow"></div>
-          <button class="si-btn primary" (click)="openAddMeasurement()">
-            <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
-            إضافة قياس
-          </button>
+          @if (canEditProjects()) {
+            <button class="si-btn primary" (click)="openAddMeasurement()">
+              <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
+              إضافة قياس
+            </button>
+          }
         </div>
         <div class="tbl-wrap si-responsive-table-wrap">
           <table class="si-responsive-table">
@@ -167,10 +169,12 @@
                   <td class="tnum" data-label="القيمة">{{ v.value }}</td>
                   <td data-label="الوحدة">{{ v.unitName }}</td>
                   <td data-label="إجراءات">
-                    <div class="acts">
-                      <button class="act" title="تعديل" (click)="openEditMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
-                      <button class="act danger" title="حذف" (click)="deleteMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
-                    </div>
+                    @if (canEditProjects()) {
+                      <div class="acts">
+                        <button class="act" title="تعديل" (click)="openEditMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg></button>
+                        <button class="act danger" title="حذف" (click)="deleteMeasurement(v)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" /></svg></button>
+                      </div>
+                    }
                   </td>
                 </tr>
               } @empty {
@@ -196,9 +200,11 @@
                 لم يُحدَّد موقع بعد
               }
             </div>
+            @if (canEditProjects()) {
             <button class="si-btn primary" [disabled]="!locationChanged() || savingLocation()" (click)="saveLocation()">
               @if (savingLocation()) { جاري الحفظ… } @else { حفظ الموقع }
             </button>
+            }
             @if (locationSaved() && !locationChanged()) {
               <span class="saved-hint">تم الحفظ ✓</span>
             }

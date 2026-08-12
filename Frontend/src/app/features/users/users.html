@@ -2,7 +2,7 @@
   <header class="page-head">
     <div>
       <h1>إدارة المستخدمين</h1>
-      <p>إنشاء وإدارة حسابات موظفي إدارة التخطيط</p>
+      <p>إنشاء وإدارة الحسابات المسموحة لدورك الوظيفي</p>
     </div>
     <button class="si-btn gold" (click)="openForm()">
       <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -24,7 +24,7 @@
       <span class="lab">المعطّلين</span><b class="val tnum">{{ inactiveCount() }}</b>
     </div>
     <div class="kpi gold">
-      <span class="lab">مديرو التخطيط</span><b class="val tnum">{{ managerCount() }}</b>
+      <span class="lab">{{ managedRoleLabel() }}</span><b class="val tnum">{{ managedRoleCount() }}</b>
     </div>
   </div>
 
@@ -199,7 +199,7 @@
             <h3>{{ editingUser() ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد' }}</h3>
             <p>
               {{
-                editingUser() ? 'تحديث البيانات المسموح بتعديلها' : 'إنشاء حساب موظف بإدارة التخطيط'
+                editingUser() ? 'تحديث البيانات المسموح بتعديلها' : 'إنشاء حساب جديد داخل نطاق إدارتك'
               }}
             </p>
           </div>
@@ -246,11 +246,15 @@
             <div class="si-fld">
               <label>الدور الوظيفي <span class="req">*</span></label>
               <select [ngModel]="fRole()" (ngModelChange)="fRole.set($event)">
-                <option [value]="Roles.PlanningEmployee">موظف تخطيط</option>
+                @if (isSuperAdmin() || isPlanningManager()) {
+                  <option [value]="Roles.PlanningEmployee">موظف تخطيط</option>
+                }
+                @if (isSuperAdmin() || isFinancialManager()) {
+                  <option [value]="Roles.FinancialEmployee">موظف إدارة مالية</option>
+                }
                 @if (isSuperAdmin()) {
                   <option [value]="Roles.PlanningManager">مدير التخطيط</option>
                   <option [value]="Roles.FinancialManager">مدير الإدارة المالية</option>
-                  <option [value]="Roles.FinancialEmployee">موظف إدارة مالية</option>
                 }
               </select>
             </div>

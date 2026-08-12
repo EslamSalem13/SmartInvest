@@ -16,7 +16,7 @@ export class FinancialYearsSettings {
   private readonly financialYearsService = inject(FinancialYearsService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isManager = this.auth.canManageProjects;
 
   protected readonly years = signal<FinancialYear[]>([]);
   protected readonly loading = signal(true);

@@ -26,7 +26,9 @@ export class FollowUpList implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isManager = computed(() =>
+    this.auth.isPlanningManager() || this.auth.isFinancialManager() || this.auth.isSuperAdmin(),
+  );
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

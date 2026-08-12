@@ -26,7 +26,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("priorities")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreatePriority(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreatePriorityAsync(dto, cancellationToken);
@@ -34,7 +34,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("priorities/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdatePriority(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdatePriorityAsync(id, dto, cancellationToken);
@@ -42,7 +42,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("priorities/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeletePriority(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeletePriorityAsync(id, cancellationToken);
@@ -57,7 +57,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("statuses")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateStatus(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateStatusAsync(dto, cancellationToken);
@@ -65,7 +65,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("statuses/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateStatus(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateStatusAsync(id, dto, cancellationToken);
@@ -73,7 +73,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("statuses/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteStatus(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteStatusAsync(id, cancellationToken);
@@ -88,7 +88,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("main-programs")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateMainProgram(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateMainProgramAsync(dto, cancellationToken);
@@ -96,7 +96,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("main-programs/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateMainProgram(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateMainProgramAsync(id, dto, cancellationToken);
@@ -104,7 +104,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("main-programs/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteMainProgram(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteMainProgramAsync(id, cancellationToken);
@@ -119,7 +119,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("sub-programs")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<SubProgramLookupDto>> CreateSubProgram(CreateSubProgramDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateSubProgramAsync(dto, cancellationToken);
@@ -127,7 +127,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("sub-programs/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<SubProgramLookupDto>> UpdateSubProgram(int id, UpdateSubProgramDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateSubProgramAsync(id, dto, cancellationToken);
@@ -135,7 +135,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("sub-programs/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteSubProgram(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteSubProgramAsync(id, cancellationToken);
@@ -150,7 +150,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("governorates")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateGovernorate(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateGovernorateAsync(dto, cancellationToken);
@@ -158,7 +158,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("governorates/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateGovernorate(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateGovernorateAsync(id, dto, cancellationToken);
@@ -166,7 +166,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("governorates/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteGovernorate(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteGovernorateAsync(id, cancellationToken);
@@ -181,7 +181,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("markaz")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<MarkazLookupDto>> CreateMarkaz(CreateMarkazDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateMarkazAsync(dto, cancellationToken);
@@ -189,7 +189,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("markaz/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<MarkazLookupDto>> UpdateMarkaz(int id, UpdateMarkazDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateMarkazAsync(id, dto, cancellationToken);
@@ -197,7 +197,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("markaz/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteMarkaz(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteMarkazAsync(id, cancellationToken);
@@ -212,7 +212,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("villages")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<VillageLookupDto>> CreateVillage(CreateVillageDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateVillageAsync(dto, cancellationToken);
@@ -220,7 +220,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("villages/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<VillageLookupDto>> UpdateVillage(int id, UpdateVillageDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateVillageAsync(id, dto, cancellationToken);
@@ -228,7 +228,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("villages/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteVillage(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteVillageAsync(id, cancellationToken);
@@ -243,7 +243,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("component-types")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateComponentType(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateComponentTypeAsync(dto, cancellationToken);
@@ -251,7 +251,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("component-types/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateComponentType(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateComponentTypeAsync(id, dto, cancellationToken);
@@ -259,7 +259,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("component-types/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteComponentType(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteComponentTypeAsync(id, cancellationToken);
@@ -274,7 +274,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("project-levels")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateProjectLevel(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateProjectLevelAsync(dto, cancellationToken);
@@ -282,7 +282,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("project-levels/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateProjectLevel(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateProjectLevelAsync(id, dto, cancellationToken);
@@ -290,7 +290,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("project-levels/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteProjectLevel(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteProjectLevelAsync(id, cancellationToken);
@@ -305,7 +305,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("accounting-units")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateAccountingUnit(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateAccountingUnitAsync(dto, cancellationToken);
@@ -313,7 +313,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("accounting-units/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateAccountingUnit(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateAccountingUnitAsync(id, dto, cancellationToken);
@@ -321,7 +321,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("accounting-units/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteAccountingUnit(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteAccountingUnitAsync(id, cancellationToken);
@@ -336,7 +336,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPost("units")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> CreateUnit(CreateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.CreateUnitAsync(dto, cancellationToken);
@@ -344,7 +344,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpPut("units/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<LookupDto>> UpdateUnit(int id, UpdateNamedLookupDto dto, CancellationToken cancellationToken)
     {
         var result = await _lookupService.UpdateUnitAsync(id, dto, cancellationToken);
@@ -352,7 +352,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpDelete("units/{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeleteUnit(int id, CancellationToken cancellationToken)
     {
         await _lookupService.DeleteUnitAsync(id, cancellationToken);

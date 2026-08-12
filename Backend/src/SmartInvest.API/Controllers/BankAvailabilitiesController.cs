@@ -8,7 +8,7 @@ using SmartInvest.Domain.Common;
 
 namespace SmartInvest.API.Controllers;
 
-/// <summary>سجل الإتاحات البنكية لكل سنة مالية — إضافة وتعديل لأي من PlanningStaff، وحذف لمدير التخطيط وسوبر أدمن فقط.</summary>
+/// <summary>سجل الإتاحات البنكية لكل سنة مالية — تعديله محصور على الإدارة المالية والسوبر أدمن.</summary>
 [ApiController]
 [Authorize]
 [Route("api/financial-years/{financialYearId:int}/bank-availabilities")]
@@ -89,7 +89,7 @@ public class BankAvailabilitiesController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>حذف نهائي (hard delete) للإتاحة وكل مستنداتها — مدير التخطيط وسوبر أدمن فقط.</summary>
+    /// <summary>حذف نهائي (hard delete) للإتاحة وكل مستنداتها — مدير الإدارة المالية والسوبر أدمن فقط.</summary>
     [HttpDelete("{availabilityId:int}")]
     [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Delete(int financialYearId, int availabilityId, CancellationToken cancellationToken)

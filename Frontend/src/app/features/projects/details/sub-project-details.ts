@@ -37,7 +37,8 @@ export class SubProjectDetails implements OnDestroy {
   private readonly financialService = inject(FinancialService);
   private readonly auth = inject(AuthService);
 
-  protected readonly isManager = this.auth.isManager;
+  protected readonly canEditProjects = this.auth.canEditProjects;
+  protected readonly canManageProjects = this.auth.canManageProjects;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);

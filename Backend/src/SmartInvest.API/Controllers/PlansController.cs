@@ -54,6 +54,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> AddPlan(AddAndEditPlanInfoDto Plandto)
     {
         var plan = mapper.Map<Plan>(Plandto);
@@ -63,6 +64,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> UpdatePlan(int id, AddAndEditPlanInfoDto planDto)
     {
         var plan = planService.GetPlanDetails(id);
@@ -83,6 +85,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> DeletePlan(int id)
     {
         await planService.DeletePlanById(id);
@@ -92,6 +95,7 @@ public class PlansController : ControllerBase
     //// manage Projects in A Plan /////
 
     [HttpPost("{planId}/newProject")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> AddNewProjectToPlan(int planId, AddNewProjectDto projectDto)
     {
         // AddNewProjectDto's ProjectLevel/ComponentType/AccountingUnit are now FK-based (Name فقط للقراءة)،
@@ -124,6 +128,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpPost("{Planid}/existingProject/{ProjectId}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> AddExistingProjectToPlan(int Planid, int ProjectId)
     {
         await planService.AddExistingProjectToPlan(Planid, ProjectId);
@@ -131,6 +136,7 @@ public class PlansController : ControllerBase
     }
 
     [HttpDelete("{planId}/projects/{ProjectId}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> DeleteProjectFromPlan(int planId, int ProjectId)
     {
         await planService.DeleteProjectFromPlan(planId, ProjectId);

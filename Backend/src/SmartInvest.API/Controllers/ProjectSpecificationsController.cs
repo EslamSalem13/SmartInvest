@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
+using SmartInvest.Domain.Common;
 
 namespace SmartInvest.API.Controllers;
 
@@ -25,6 +26,7 @@ public class ProjectSpecificationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProjectSpecificationDto>> Create(int subProjectId, CreateProjectSpecificationDto dto, CancellationToken cancellationToken)
     {
         var result = await _specificationService.CreateAsync(subProjectId, dto, cancellationToken);
@@ -32,6 +34,7 @@ public class ProjectSpecificationsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<ProjectSpecificationDto>> Update(int subProjectId, int id, UpdateProjectSpecificationDto dto, CancellationToken cancellationToken)
     {
         var result = await _specificationService.UpdateAsync(id, dto, cancellationToken);
@@ -39,6 +42,7 @@ public class ProjectSpecificationsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<IActionResult> Delete(int subProjectId, int id, CancellationToken cancellationToken)
     {
         await _specificationService.DeleteAsync(id, cancellationToken);

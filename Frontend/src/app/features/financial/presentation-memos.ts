@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
-import { Roles } from '../../core/models/auth.models';
 import { FinancialYear } from '../../core/models/project.models';
 import {
   CONTRACTING_METHODS,
@@ -154,11 +153,8 @@ export class PresentationMemos implements OnInit {
 
   protected readonly busy = signal(false);
 
-  protected readonly isStaff = computed(() => {
-    const role = this.auth.role();
-    return role === Roles.PlanningManager || role === Roles.PlanningEmployee;
-  });
-  protected readonly isManager = this.auth.isManager;
+  protected readonly isStaff = this.auth.canEditFinancial;
+  protected readonly isManager = this.auth.canManageFinancial;
 
   ngOnInit(): void {
     this.reload();

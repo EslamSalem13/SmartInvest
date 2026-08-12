@@ -142,15 +142,7 @@ public class IdentityService : IIdentityService
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
         }
 
-        if (IsManagerRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
-        {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حسابات المديرين");
-        }
-
-        if (IsFinancialRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
-        {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه إنشاء حسابات الإدارة المالية");
-        }
+        EnsureCanAssignRole(dto.Role);
 
         var user = new ApplicationUser
         {
@@ -203,15 +195,7 @@ public class IdentityService : IIdentityService
             throw new BusinessRuleException("الدور الوظيفي غير صحيح");
         }
 
-        if (IsManagerRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
-        {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين أدوار المديرين");
-        }
-
-        if (IsFinancialRole(dto.Role) && _currentUser.Role != Roles.SuperAdmin)
-        {
-            throw new ForbiddenAccessException("السوبر أدمن فقط يمكنه تعيين أدوار الإدارة المالية");
-        }
+        EnsureCanAssignRole(dto.Role);
 
         var fullName = dto.FullName.Trim();
         var userName = dto.UserName.Trim();
@@ -314,6 +298,11 @@ public class IdentityService : IIdentityService
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? string.Empty;
+            if (!CanViewRole(role))
+            {
+                continue;
+            }
 
             var userDto = new UserDto
             {
@@ -322,7 +311,7 @@ public class IdentityService : IIdentityService
                 UserName = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
                 PhoneNumber = user.PhoneNumber,
-                Role = roles.FirstOrDefault() ?? string.Empty,
+                Role = role,
                 IsActive = user.IsActive,
                 HasAvatar = user.AvatarContent is { Length: > 0 },
                 CreatedAt = user.CreatedAt
@@ -466,23 +455,45 @@ public class IdentityService : IIdentityService
             throw new ForbiddenAccessException("لا يمكن إدارة حساب السوبر أدمن من شاشة المستخدمين");
         }
 
-        if (_currentUser.Role != Roles.SuperAdmin && targetRole != Roles.PlanningEmployee)
+        var canManage = _currentUser.Role switch
         {
-            throw new ForbiddenAccessException("مدير التخطيط يمكنه إدارة حسابات الموظفين فقط");
+            Roles.SuperAdmin => true,
+            Roles.PlanningManager => targetRole == Roles.PlanningEmployee,
+            Roles.FinancialManager => targetRole == Roles.FinancialEmployee,
+            _ => false,
+        };
+        if (!canManage)
+        {
+            throw new ForbiddenAccessException("لا تملك صلاحية إدارة هذا المستخدم");
         }
     }
+
+    private void EnsureCanAssignRole(string role)
+    {
+        var canAssign = _currentUser.Role switch
+        {
+            Roles.SuperAdmin => IsManageableRole(role),
+            Roles.PlanningManager => role == Roles.PlanningEmployee,
+            Roles.FinancialManager => role == Roles.FinancialEmployee,
+            _ => false,
+        };
+        if (!canAssign)
+        {
+            throw new ForbiddenAccessException("لا تملك صلاحية تعيين هذا الدور الوظيفي");
+        }
+    }
+
+    private bool CanViewRole(string role) => _currentUser.Role switch
+    {
+        Roles.SuperAdmin => true,
+        Roles.PlanningManager => role == Roles.PlanningEmployee,
+        Roles.FinancialManager => role == Roles.FinancialEmployee,
+        _ => false,
+    };
 
     private static bool IsManageableRole(string role) => role is
         Roles.PlanningEmployee or
         Roles.PlanningManager or
-        Roles.FinancialEmployee or
-        Roles.FinancialManager;
-
-    private static bool IsManagerRole(string role) => role is
-        Roles.PlanningManager or
-        Roles.FinancialManager;
-
-    private static bool IsFinancialRole(string role) => role is
         Roles.FinancialEmployee or
         Roles.FinancialManager;
 

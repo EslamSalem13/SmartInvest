@@ -51,6 +51,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<SubProjectDetailDto>> Create(CreateSubProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _subProjectService.CreateAsync(dto, cancellationToken);
@@ -58,6 +59,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = Roles.PlanningStaff)]
     public async Task<ActionResult<SubProjectDetailDto>> Update(int id, UpdateSubProjectDto dto, CancellationToken cancellationToken)
     {
         var result = await _subProjectService.UpdateAsync(id, dto, cancellationToken);
@@ -79,7 +81,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}/approve")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<SubProjectDetailDto>> Approve(
         int id,
         ApproveSubProjectDto dto,
@@ -94,7 +96,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}/mark-stalled")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<SubProjectDetailDto>> MarkStalled(
         int id,
         MarkStalledDto dto,
@@ -105,7 +107,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpPut("{id:int}/reactivate")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<ActionResult<SubProjectDetailDto>> Reactivate(int id, CancellationToken cancellationToken)
     {
         var result = await _subProjectService.ReactivateAsync(id, cancellationToken);
@@ -113,7 +115,7 @@ public class SubProjectsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = Roles.PlanningManager)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         await _subProjectService.DeleteAsync(id, cancellationToken);
