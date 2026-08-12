@@ -22,6 +22,11 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .act.danger { color: var(--bad); border-color: #F3C6CC; }
 .act.danger:hover { background: var(--bad-bg); }
 
+@media (min-width: 769px) {
+  th:last-child, td:last-child { width: 120px; text-align: end; }
+  td:last-child .acts { display: flex; justify-content: flex-end; width: 100%; }
+}
+
 @media (max-width: 768px) {
   .lookup-panel, .panel-head, .panel-head > div, .search { width: 100%; min-width: 0; }
   .panel-head { align-items: stretch; flex-direction: column; }
