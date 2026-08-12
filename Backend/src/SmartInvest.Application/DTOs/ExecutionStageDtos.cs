@@ -4,6 +4,7 @@ public class ExecutionStageDto
 {
     public int Id { get; set; }
     public int SubProjectId { get; set; }
+    public int? FinancialYearId { get; set; }
     public string Name { get; set; } = string.Empty;
     /// <summary>null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية.</summary>
     public DateTime? Deadline { get; set; }
@@ -37,6 +38,7 @@ public class ExecutionStageDto
 /// <summary>يُبنى في الـ Controller من multipart/form-data (حقول + حتى 3 ملفات) — نفس نمط UploadProcurementVersionDto.</summary>
 public class CreateExecutionStageDto
 {
+    public int FinancialYearId { get; set; }
     public string Name { get; set; } = string.Empty;
     public DateTime Deadline { get; set; }
     public decimal SelfFundingSpent { get; set; }
@@ -46,6 +48,10 @@ public class CreateExecutionStageDto
     public decimal PhysicalProgressPercent { get; set; }
     public FileUploadDto? PhysicalProgressProofFile { get; set; }
     public string? Notes { get; set; }
+}
+
+public class UpdateExecutionStageDto : CreateExecutionStageDto
+{
 }
 
 public class SetExecutionStagePenaltyDto

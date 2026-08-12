@@ -59,6 +59,9 @@
         public DateTime? ApprovedAt { get; set; }
         public DateTime? ApprovalCancelledAt { get; set; }
 
+        /// <summary>تاريخ إكمال دورة التنفيذ بعد اجتياز الشروط المالية والعينية.</summary>
+        public DateTime? ExecutionCompletedAt { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal BankFunding { get; set; }
 

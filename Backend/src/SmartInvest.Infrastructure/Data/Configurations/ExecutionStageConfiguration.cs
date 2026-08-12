@@ -22,6 +22,15 @@ public class ExecutionStageConfiguration : IEntityTypeConfiguration<ExecutionSta
                .HasForeignKey(x => x.SubProjectId)
                .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.SubProjectFinancialYear)
+               .WithMany(x => x.ExecutionStages)
+               .HasForeignKey(x => x.SubProjectFinancialYearId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => new { x.SubProjectFinancialYearId, x.IsFinalDelivery })
+               .IsUnique()
+               .HasFilter("[IsFinalDelivery] = 1 AND [SubProjectFinancialYearId] IS NOT NULL");
+
         builder.OwnsStoredFile(x => x.SelfFundingProofFile, "SelfFundingProof_");
         builder.OwnsStoredFile(x => x.BankFundingProofFile, "BankFundingProof_");
         builder.OwnsStoredFile(x => x.PhysicalProgressProofFile, "PhysicalProgressProof_");

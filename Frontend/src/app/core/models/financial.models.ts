@@ -154,6 +154,8 @@ export interface MemoSubProject {
 
 export interface PresentationMemo {
   id: number;
+  financialYearId: number | null;
+  financialYearName: string | null;
   title: string;
   currentVersionNumber: number;
   isCompleted: boolean;
@@ -169,6 +171,7 @@ export interface PresentationMemoDetail extends PresentationMemo {
 }
 
 export interface CreatePresentationMemo {
+  financialYearId: number;
   title: string;
   subProjectIds: number[];
   contractingMethod: number | null;

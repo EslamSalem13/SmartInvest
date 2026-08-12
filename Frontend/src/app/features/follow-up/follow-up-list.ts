@@ -136,8 +136,10 @@ export class FollowUpList implements OnInit {
   }
 
   protected loadStages(subProjectId: number): void {
+    const financialYearId = this.selectedYearId();
+    if (financialYearId == null) return;
     this.stagesLoading.set(true);
-    this.followUp.getStages(subProjectId).subscribe({
+    this.followUp.getStages(subProjectId, financialYearId).subscribe({
       next: (stages) => {
         this.stages.set(stages);
         this.stagesLoading.set(false);
@@ -237,7 +239,8 @@ export class FollowUpList implements OnInit {
 
   protected saveNewStage(): void {
     const item = this.selectedItem();
-    if (!item || this.savingStage()) return;
+    const financialYearId = this.selectedYearId();
+    if (!item || financialYearId == null || this.savingStage()) return;
 
     if (!this.newStageName().trim() || !this.newStageDeadline()) {
       this.stageError.set('اسم المرحلة والموعد النهائي مطلوبان');
@@ -248,7 +251,7 @@ export class FollowUpList implements OnInit {
     this.stageError.set(null);
 
     this.followUp
-      .createStage(item.subProjectId, {
+      .createStage(item.subProjectId, financialYearId, {
         name: this.newStageName().trim(),
         deadline: this.newStageDeadline(),
         selfFundingSpent: this.newStageSelfSpent(),
@@ -275,8 +278,9 @@ export class FollowUpList implements OnInit {
 
   protected completeStage(stage: ExecutionStage): void {
     const item = this.selectedItem();
-    if (!item) return;
-    this.followUp.markComplete(item.subProjectId, stage.id).subscribe({
+    const financialYearId = this.selectedYearId();
+    if (!item || financialYearId == null) return;
+    this.followUp.markComplete(item.subProjectId, stage.id, financialYearId).subscribe({
       next: () => {
         this.toast.success('تم إنهاء المرحلة');
         this.loadStages(item.subProjectId);
@@ -289,8 +293,9 @@ export class FollowUpList implements OnInit {
   /** عكس إنهاء مرحلة عن طريق الخطأ — مدير التخطيط فقط */
   protected reopenStage(stage: ExecutionStage): void {
     const item = this.selectedItem();
-    if (!item) return;
-    this.followUp.reopenStage(item.subProjectId, stage.id).subscribe({
+    const financialYearId = this.selectedYearId();
+    if (!item || financialYearId == null) return;
+    this.followUp.reopenStage(item.subProjectId, stage.id, financialYearId).subscribe({
       next: () => {
         this.toast.success('تم إعادة فتح المرحلة');
         this.loadStages(item.subProjectId);
@@ -321,10 +326,11 @@ export class FollowUpList implements OnInit {
 
   protected savePenalty(stage: ExecutionStage): void {
     const item = this.selectedItem();
-    if (!item || this.savingPenalty()) return;
+    const financialYearId = this.selectedYearId();
+    if (!item || financialYearId == null || this.savingPenalty()) return;
     this.savingPenalty.set(true);
     this.followUp
-      .setPenalty(item.subProjectId, stage.id, this.penaltyAmountDraft(), this.penaltyPaidDraft())
+      .setPenalty(item.subProjectId, stage.id, financialYearId, this.penaltyAmountDraft(), this.penaltyPaidDraft())
       .subscribe({
         next: () => {
           this.savingPenalty.set(false);
@@ -343,6 +349,8 @@ export class FollowUpList implements OnInit {
    * عبر HttpClient (نفس نمط FinancialService.downloadStageFile/saveBlob) بدل رابط مباشر.
    */
   protected downloadProof(stage: ExecutionStage, key: 'self' | 'bank' | 'progress'): void {
+    const financialYearId = this.selectedYearId();
+    if (financialYearId == null) return;
     const label = key === 'self' ? 'ذاتي' : key === 'bank' ? 'بنكي' : 'تنفيذ-عيني';
     const realName =
       key === 'self'
@@ -352,7 +360,7 @@ export class FollowUpList implements OnInit {
           : stage.physicalProgressProofFileName;
     const fileName = realName && realName.trim() ? realName : `${stage.name}-${label}`;
     this.followUp
-      .downloadFile(stage.subProjectId, stage.id, key)
+      .downloadFile(stage.subProjectId, stage.id, financialYearId, key)
       .subscribe((blob) => this.followUp.saveBlob(blob, fileName));
   }
 

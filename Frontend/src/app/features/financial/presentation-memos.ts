@@ -251,8 +251,13 @@ export class PresentationMemos implements OnInit {
   }
 
   private loadDetail(id: number): void {
+    const financialYearId = this.selectedYearId();
+    if (financialYearId == null) {
+      this.memoDetail.set(null);
+      return;
+    }
     this.detailLoading.set(true);
-    this.financial.getMemo(id).subscribe({
+    this.financial.getMemo(id, financialYearId).subscribe({
       next: (detail) => {
         this.memoDetail.set(detail);
         this.detailLoading.set(false);
@@ -312,10 +317,16 @@ export class PresentationMemos implements OnInit {
       this.formError.set('اختر نوع التعاقد');
       return;
     }
+    const financialYearId = this.selectedYearId();
+    if (financialYearId == null) {
+      this.formError.set('اختر السنة المالية');
+      return;
+    }
 
     this.saving.set(true);
     this.formError.set(null);
     const dto = {
+      financialYearId,
       title: this.fTitle().trim(),
       subProjectIds: this.fSubProjectIds(),
       contractingMethod: this.fContractingMethod(),

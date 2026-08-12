@@ -36,9 +36,9 @@ public class ExecutionStagesController : ControllerBase
     }
 
     [HttpGet("api/subprojects/{subProjectId:int}/execution-stages")]
-    public async Task<ActionResult<IReadOnlyList<ExecutionStageDto>>> GetBySubProject(int subProjectId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ExecutionStageDto>>> GetBySubProject(int subProjectId, [FromQuery] int financialYearId, CancellationToken cancellationToken)
     {
-        var result = await _executionStageService.GetBySubProjectAsync(subProjectId, cancellationToken);
+        var result = await _executionStageService.GetBySubProjectAsync(subProjectId, financialYearId, cancellationToken);
         return Ok(result);
     }
 
@@ -47,6 +47,7 @@ public class ExecutionStagesController : ControllerBase
     [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ExecutionStageDto>> Create(
         int subProjectId,
+        [FromForm] int financialYearId,
         [FromForm] string name,
         [FromForm] DateTime deadline,
         [FromForm] decimal selfFundingSpent,
@@ -57,6 +58,7 @@ public class ExecutionStagesController : ControllerBase
     {
         var dto = new CreateExecutionStageDto
         {
+            FinancialYearId = financialYearId,
             Name = name,
             Deadline = deadline,
             SelfFundingSpent = selfFundingSpent,
@@ -87,35 +89,69 @@ public class ExecutionStagesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}")]
+    [Authorize(Roles = Roles.FollowUpStaff)]
+    public async Task<ActionResult<ExecutionStageDto>> Update(
+        int subProjectId,
+        int stageId,
+        [FromForm] int financialYearId,
+        [FromForm] string name,
+        [FromForm] DateTime deadline,
+        [FromForm] decimal selfFundingSpent,
+        [FromForm] decimal bankFundingSpent,
+        [FromForm] decimal physicalProgressPercent,
+        [FromForm] string? notes,
+        CancellationToken cancellationToken)
+    {
+        var dto = new UpdateExecutionStageDto
+        {
+            FinancialYearId = financialYearId,
+            Name = name,
+            Deadline = deadline,
+            SelfFundingSpent = selfFundingSpent,
+            BankFundingSpent = bankFundingSpent,
+            PhysicalProgressPercent = physicalProgressPercent,
+            Notes = notes,
+        };
+        var selfFile = Request.Form.Files["selfFundingProof"];
+        if (selfFile is { Length: > 0 }) dto.SelfFundingProofFile = await FileRequestHelpers.ToUploadDtoAsync(selfFile, cancellationToken);
+        var bankFile = Request.Form.Files["bankFundingProof"];
+        if (bankFile is { Length: > 0 }) dto.BankFundingProofFile = await FileRequestHelpers.ToUploadDtoAsync(bankFile, cancellationToken);
+        var progressFile = Request.Form.Files["physicalProgressProof"];
+        if (progressFile is { Length: > 0 }) dto.PhysicalProgressProofFile = await FileRequestHelpers.ToUploadDtoAsync(progressFile, cancellationToken);
+
+        return Ok(await _executionStageService.UpdateAsync(subProjectId, stageId, dto, cancellationToken));
+    }
+
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/complete")]
     [Authorize(Roles = Roles.FollowUpStaff)]
-    public async Task<ActionResult<ExecutionStageDto>> MarkComplete(int subProjectId, int stageId, CancellationToken cancellationToken)
+    public async Task<ActionResult<ExecutionStageDto>> MarkComplete(int subProjectId, int stageId, [FromQuery] int financialYearId, CancellationToken cancellationToken)
     {
-        var result = await _executionStageService.MarkCompleteAsync(subProjectId, stageId, cancellationToken);
+        var result = await _executionStageService.MarkCompleteAsync(subProjectId, stageId, financialYearId, cancellationToken);
         return Ok(result);
     }
 
     /// <summary>عكس إنهاء المرحلة عن طريق الخطأ — للمديرين المخولين فقط.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/reopen")]
     [Authorize(Roles = Roles.FollowUpManagers)]
-    public async Task<ActionResult<ExecutionStageDto>> Reopen(int subProjectId, int stageId, CancellationToken cancellationToken)
+    public async Task<ActionResult<ExecutionStageDto>> Reopen(int subProjectId, int stageId, [FromQuery] int financialYearId, CancellationToken cancellationToken)
     {
-        var result = await _executionStageService.ReopenAsync(subProjectId, stageId, cancellationToken);
+        var result = await _executionStageService.ReopenAsync(subProjectId, stageId, financialYearId, cancellationToken);
         return Ok(result);
     }
 
     [HttpPut("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/penalty")]
     [Authorize(Roles = Roles.FollowUpManagers)]
-    public async Task<ActionResult<ExecutionStageDto>> SetPenalty(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken)
+    public async Task<ActionResult<ExecutionStageDto>> SetPenalty(int subProjectId, int stageId, [FromQuery] int financialYearId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken)
     {
-        var result = await _executionStageService.SetPenaltyAsync(subProjectId, stageId, dto, cancellationToken);
+        var result = await _executionStageService.SetPenaltyAsync(subProjectId, stageId, financialYearId, dto, cancellationToken);
         return Ok(result);
     }
 
     [HttpGet("api/subprojects/{subProjectId:int}/execution-stages/{stageId:int}/files/{fileKey}")]
-    public async Task<IActionResult> DownloadFile(int subProjectId, int stageId, string fileKey, CancellationToken cancellationToken)
+    public async Task<IActionResult> DownloadFile(int subProjectId, int stageId, string fileKey, [FromQuery] int financialYearId, CancellationToken cancellationToken)
     {
-        var file = await _executionStageService.DownloadFileAsync(subProjectId, stageId, fileKey, cancellationToken);
+        var file = await _executionStageService.DownloadFileAsync(subProjectId, stageId, financialYearId, fileKey, cancellationToken);
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 }

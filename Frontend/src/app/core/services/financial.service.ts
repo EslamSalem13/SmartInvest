@@ -153,8 +153,10 @@ export class FinancialService {
     return this.http.get<PresentationMemo[]>(`${this.base}/presentation-memos`, { params });
   }
 
-  getMemo(id: number): Observable<PresentationMemoDetail> {
-    return this.http.get<PresentationMemoDetail>(`${this.base}/presentation-memos/${id}`);
+  getMemo(id: number, financialYearId: number): Observable<PresentationMemoDetail> {
+    return this.http.get<PresentationMemoDetail>(`${this.base}/presentation-memos/${id}`, {
+      params: { financialYearId },
+    });
   }
 
   createMemo(dto: CreatePresentationMemo): Observable<PresentationMemo> {

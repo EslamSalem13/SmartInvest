@@ -14,6 +14,10 @@ public class ExecutionStage
     public int SubProjectId { get; set; }
     public virtual SubProject SubProject { get; set; } = null!;
 
+    /// <summary>دورة التنفيذ المالية. null فقط للمراحل القديمة ذات الملكية الزمنية الغامضة.</summary>
+    public int? SubProjectFinancialYearId { get; set; }
+    public virtual SubProjectFinancialYear? SubProjectFinancialYear { get; set; }
+
     public string Name { get; set; } = string.Empty;
     public DateTime? Deadline { get; set; }
 

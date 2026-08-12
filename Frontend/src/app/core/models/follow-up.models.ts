@@ -14,6 +14,7 @@ export interface FollowUpListItem {
 export interface ExecutionStage {
   id: number;
   subProjectId: number;
+  financialYearId: number | null;
   name: string;
   /** null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية */
   deadline: string | null;

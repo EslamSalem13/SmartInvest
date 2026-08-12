@@ -10,6 +10,8 @@ public class MemoSubProjectDto
 public class PresentationMemoDto
 {
     public int Id { get; set; }
+    public int? FinancialYearId { get; set; }
+    public string? FinancialYearName { get; set; }
     public string Title { get; set; } = string.Empty;
     public int CurrentVersionNumber { get; set; }
     public bool IsCompleted { get; set; }
@@ -30,6 +32,7 @@ public class PresentationMemoDetailDto : PresentationMemoDto
 
 public class CreatePresentationMemoDto
 {
+    public int FinancialYearId { get; set; }
     public string Title { get; set; } = string.Empty;
     public List<int> SubProjectIds { get; set; } = [];
     public int? ContractingMethod { get; set; }
@@ -37,6 +40,7 @@ public class CreatePresentationMemoDto
 
 public class UpdatePresentationMemoDto
 {
+    public int FinancialYearId { get; set; }
     public string Title { get; set; } = string.Empty;
     public List<int> SubProjectIds { get; set; } = [];
     public int? ContractingMethod { get; set; }

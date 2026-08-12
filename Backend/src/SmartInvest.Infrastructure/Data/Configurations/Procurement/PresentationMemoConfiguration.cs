@@ -11,6 +11,11 @@ public class PresentationMemoConfiguration : IEntityTypeConfiguration<Presentati
         builder.Property(x => x.Title)
                .HasMaxLength(300)
                .IsRequired();
+
+        builder.HasOne(x => x.FinancialYear)
+               .WithMany(x => x.PresentationMemos)
+               .HasForeignKey(x => x.FinancialYearId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

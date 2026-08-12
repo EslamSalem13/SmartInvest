@@ -8,7 +8,7 @@ public interface IPresentationMemoService
     /// <summary><paramref name="financialYearId"/>: عند تحديدها، تُقصر النتائج على مذكرات ترتبط بمشروع فرعي تابع لهذه السنة.</summary>
     Task<IReadOnlyList<PresentationMemoDto>> GetAllAsync(int? financialYearId = null, CancellationToken cancellationToken = default);
 
-    Task<PresentationMemoDetailDto> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<PresentationMemoDetailDto> GetByIdAsync(int id, int? financialYearId = null, CancellationToken cancellationToken = default);
 
     Task<PresentationMemoDto> CreateAsync(CreatePresentationMemoDto dto, CancellationToken cancellationToken = default);
 

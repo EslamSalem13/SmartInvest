@@ -26,12 +26,13 @@ public class PresentationMemoService : IPresentationMemoService
     public async Task<IReadOnlyList<PresentationMemoDto>> GetAllAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
     {
         var memos = await _context.PresentationMemos.AsNoTracking()
-            .Where(m => financialYearId == null
-                || m.MemoSubProjects.Any(x => x.SubProject.FinancialYears.Any(y => y.FinancialYearId == financialYearId)))
+            .Where(m => financialYearId == null || m.FinancialYearId == financialYearId)
             .OrderByDescending(m => m.Id)
             .Select(m => new PresentationMemoDto
             {
                 Id = m.Id,
+                FinancialYearId = m.FinancialYearId,
+                FinancialYearName = m.FinancialYear != null ? m.FinancialYear.Name : null,
                 Title = m.Title,
                 CurrentVersionNumber = m.CurrentVersionNumber,
                 IsCompleted = m.IsCompleted,
@@ -57,13 +58,15 @@ public class PresentationMemoService : IPresentationMemoService
         return memos;
     }
 
-    public async Task<PresentationMemoDetailDto> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<PresentationMemoDetailDto> GetByIdAsync(int id, int? financialYearId = null, CancellationToken cancellationToken = default)
     {
         var memo = await _context.PresentationMemos.AsNoTracking()
-            .Where(m => m.Id == id)
+            .Where(m => m.Id == id && (financialYearId == null || m.FinancialYearId == financialYearId))
             .Select(m => new PresentationMemoDetailDto
             {
                 Id = m.Id,
+                FinancialYearId = m.FinancialYearId,
+                FinancialYearName = m.FinancialYear != null ? m.FinancialYear.Name : null,
                 Title = m.Title,
                 CurrentVersionNumber = m.CurrentVersionNumber,
                 IsCompleted = m.IsCompleted,
@@ -148,6 +151,7 @@ public class PresentationMemoService : IPresentationMemoService
 
     public async Task<PresentationMemoDto> CreateAsync(CreatePresentationMemoDto dto, CancellationToken cancellationToken = default)
     {
+        await EnsureFinancialYearExistsAsync(dto.FinancialYearId, cancellationToken);
         if (string.IsNullOrWhiteSpace(dto.Title))
         {
             throw new BusinessRuleException("عنوان مذكرة العرض مطلوب");
@@ -159,10 +163,11 @@ public class PresentationMemoService : IPresentationMemoService
             throw new BusinessRuleException("يجب ربط مذكرة العرض بمشروع فرعي واحد على الأقل");
         }
 
-        await EnsureSubProjectsExistAsync(subProjectIds, cancellationToken);
+        await EnsureSubProjectsBelongToYearAsync(subProjectIds, dto.FinancialYearId, cancellationToken);
 
         var memo = new PresentationMemo
         {
+            FinancialYearId = dto.FinancialYearId,
             Title = dto.Title.Trim(),
             ContractingMethod = ParseContractingMethod(dto.ContractingMethod),
         };
@@ -174,11 +179,12 @@ public class PresentationMemoService : IPresentationMemoService
         _context.PresentationMemos.Add(memo);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(memo.Id, cancellationToken);
+        return await GetByIdAsync(memo.Id, dto.FinancialYearId, cancellationToken);
     }
 
     public async Task<PresentationMemoDto> UpdateAsync(int id, UpdatePresentationMemoDto dto, CancellationToken cancellationToken = default)
     {
+        await EnsureFinancialYearExistsAsync(dto.FinancialYearId, cancellationToken);
         if (string.IsNullOrWhiteSpace(dto.Title))
         {
             throw new BusinessRuleException("عنوان مذكرة العرض مطلوب");
@@ -194,15 +200,21 @@ public class PresentationMemoService : IPresentationMemoService
             throw new BusinessRuleException("مذكرة العرض مكتملة — يجب إعادة فتحها قبل التعديل");
         }
 
+        if (memo.FinancialYearId.HasValue && memo.FinancialYearId != dto.FinancialYearId)
+        {
+            throw new BusinessRuleException("لا يمكن نقل مذكرة العرض إلى سنة مالية أخرى");
+        }
+
         var subProjectIds = dto.SubProjectIds.Distinct().ToList();
         if (subProjectIds.Count == 0)
         {
             throw new BusinessRuleException("يجب ربط مذكرة العرض بمشروع فرعي واحد على الأقل");
         }
 
-        await EnsureSubProjectsExistAsync(subProjectIds, cancellationToken);
+        await EnsureSubProjectsBelongToYearAsync(subProjectIds, dto.FinancialYearId, cancellationToken);
 
         memo.Title = dto.Title.Trim();
+        memo.FinancialYearId = dto.FinancialYearId;
         memo.ContractingMethod = ParseContractingMethod(dto.ContractingMethod);
 
         var toRemove = memo.MemoSubProjects.Where(x => !subProjectIds.Contains(x.SubProjectId)).ToList();
@@ -219,7 +231,7 @@ public class PresentationMemoService : IPresentationMemoService
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return await GetByIdAsync(id, cancellationToken);
+        return await GetByIdAsync(id, dto.FinancialYearId, cancellationToken);
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -410,10 +422,19 @@ public class PresentationMemoService : IPresentationMemoService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task EnsureSubProjectsExistAsync(List<int> subProjectIds, CancellationToken cancellationToken)
+    private async Task EnsureFinancialYearExistsAsync(int financialYearId, CancellationToken cancellationToken)
     {
-        var found = await _context.SubProjects.AsNoTracking()
-            .Where(s => subProjectIds.Contains(s.SubProjectId))
+        if (financialYearId <= 0 || !await _context.FinancialYears.AsNoTracking()
+                .AnyAsync(x => x.FinancialYearId == financialYearId, cancellationToken))
+        {
+            throw new BusinessRuleException("السنة المالية مطلوبة ويجب أن تكون صحيحة");
+        }
+    }
+
+    private async Task EnsureSubProjectsBelongToYearAsync(List<int> subProjectIds, int financialYearId, CancellationToken cancellationToken)
+    {
+        var found = await _context.Set<SubProjectFinancialYear>().AsNoTracking()
+            .Where(x => x.FinancialYearId == financialYearId && subProjectIds.Contains(x.SubProjectId))
             .Select(s => s.SubProjectId)
             .ToListAsync(cancellationToken);
 

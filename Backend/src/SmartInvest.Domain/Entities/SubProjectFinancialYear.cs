@@ -14,5 +14,6 @@ namespace SmartInvest.Domain.Entities
         public virtual FinancialYear FinancialYear { get; set; }
 
         public virtual ICollection<ProjectFollowUp> ProjectFollowUps { get; set; }
+        public virtual ICollection<ExecutionStage> ExecutionStages { get; set; }
     }
 }

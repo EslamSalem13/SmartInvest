@@ -15,6 +15,7 @@ public class ExecutionStageService : IExecutionStageService
     private readonly IGenericRepository<ExecutionStage> _stageRepository;
     private readonly ISubProjectRepository _subProjectRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUser;
 
     public const string FinalDeliveryStageName = "التسليم النهائي";
 
@@ -22,18 +23,24 @@ public class ExecutionStageService : IExecutionStageService
         AppDbContext context,
         IGenericRepository<ExecutionStage> stageRepository,
         ISubProjectRepository subProjectRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUser)
     {
         _context = context;
         _stageRepository = stageRepository;
         _subProjectRepository = subProjectRepository;
         _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
     }
 
-    public async Task<IReadOnlyList<ExecutionStageDto>> GetBySubProjectAsync(int subProjectId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ExecutionStageDto>> GetBySubProjectAsync(int subProjectId, int financialYearId, CancellationToken cancellationToken = default)
     {
+        await GetCycleAsync(subProjectId, financialYearId, cancellationToken);
+        await SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
         var stages = await _context.ExecutionStages.AsNoTracking()
-            .Where(s => s.SubProjectId == subProjectId)
+            .Include(s => s.SubProjectFinancialYear)
+            .Where(s => s.SubProjectId == subProjectId
+                && s.SubProjectFinancialYear!.FinancialYearId == financialYearId)
             .OrderBy(s => s.IsFinalDelivery)
             .ThenBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -44,6 +51,7 @@ public class ExecutionStageService : IExecutionStageService
 
     public async Task<ExecutionStageDto> CreateAsync(int subProjectId, CreateExecutionStageDto dto, CancellationToken cancellationToken = default)
     {
+        var cycle = await GetCycleAsync(subProjectId, dto.FinancialYearId, cancellationToken);
         if (string.IsNullOrWhiteSpace(dto.Name))
         {
             throw new BusinessRuleException("اسم المرحلة مطلوب");
@@ -80,6 +88,8 @@ public class ExecutionStageService : IExecutionStageService
         var subProject = await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken)
             ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
 
+        EnsureProjectOpen(subProject);
+
         var award = await _context.ContractAwards.AsNoTracking()
             .Where(a => a.SubProjectId == subProjectId)
             .Select(a => new { a.IsCompleted })
@@ -98,13 +108,13 @@ public class ExecutionStageService : IExecutionStageService
         }
 
         var existingStages = await _context.ExecutionStages.AsNoTracking()
-            .Where(s => s.SubProjectId == subProjectId)
+            .Where(s => s.SubProjectFinancialYearId == cycle.SubProjectFinancialYearId)
             .ToListAsync(cancellationToken);
 
-        var spentSoFar = existingStages.Sum(s => s.SelfFundingSpent + s.BankFundingSpent);
+        var advanceSpent = await GetAdvancePaymentTotalAsync(subProjectId, cancellationToken);
+        var spentSoFar = existingStages.Sum(s => s.SelfFundingSpent + s.BankFundingSpent) + advanceSpent;
         var newTotalSpent = spentSoFar + dto.SelfFundingSpent + dto.BankFundingSpent;
-        var overrunMultiplier = 1 + (subProject.OverrunPercentage ?? 0) / 100m;
-        var allowedCeiling = subProject.TotalCost * overrunMultiplier;
+        var allowedCeiling = await GetAllowedCeilingAsync(subProjectId, subProject, cancellationToken);
         if (newTotalSpent > allowedCeiling)
         {
             throw new BusinessRuleException(
@@ -114,6 +124,8 @@ public class ExecutionStageService : IExecutionStageService
         var stage = new ExecutionStage
         {
             SubProjectId = subProjectId,
+            SubProjectFinancialYearId = cycle.SubProjectFinancialYearId,
+            SubProjectFinancialYear = cycle,
             Name = dto.Name.Trim(),
             Deadline = dto.Deadline,
             SelfFundingSpent = dto.SelfFundingSpent,
@@ -141,9 +153,57 @@ public class ExecutionStageService : IExecutionStageService
         return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
-    public async Task<ExecutionStageDto> MarkCompleteAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default)
+    public async Task<ExecutionStageDto> UpdateAsync(int subProjectId, int stageId, UpdateExecutionStageDto dto, CancellationToken cancellationToken = default)
     {
-        var stage = await GetOwnedStageAsync(subProjectId, stageId, cancellationToken);
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, dto.FinancialYearId, cancellationToken);
+        if (stage.IsCompleted)
+        {
+            throw new BusinessRuleException("يجب إعادة فتح المرحلة المكتملة قبل تعديلها");
+        }
+
+        var subProject = await _subProjectRepository.GetByIdAsync(subProjectId, cancellationToken)
+            ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
+        EnsureProjectOpen(subProject);
+        ValidateStageValues(dto, stage);
+
+        var otherSpent = await _context.ExecutionStages.AsNoTracking()
+            .Where(x => x.SubProjectFinancialYearId == stage.SubProjectFinancialYearId && x.ExecutionStageId != stageId)
+            .SumAsync(x => x.SelfFundingSpent + x.BankFundingSpent, cancellationToken);
+        var allowedCeiling = await GetAllowedCeilingAsync(subProjectId, subProject, cancellationToken);
+        var newTotal = otherSpent + await GetAdvancePaymentTotalAsync(subProjectId, cancellationToken)
+            + dto.SelfFundingSpent + dto.BankFundingSpent;
+        if (newTotal > allowedCeiling)
+        {
+            throw new BusinessRuleException($"إجمالي المنصرف ({newTotal:N2} ج.م) يتجاوز الحد المسموح ({allowedCeiling:N2} ج.م)");
+        }
+
+        if (!stage.IsFinalDelivery)
+        {
+            stage.Name = dto.Name.Trim();
+            stage.Deadline = dto.Deadline;
+        }
+        stage.SelfFundingSpent = dto.SelfFundingSpent;
+        stage.BankFundingSpent = dto.BankFundingSpent;
+        stage.PhysicalProgressPercent = dto.PhysicalProgressPercent;
+        stage.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+        if (dto.SelfFundingProofFile != null) stage.SelfFundingProofFile = ToStoredFile(dto.SelfFundingProofFile);
+        if (dto.BankFundingProofFile != null) stage.BankFundingProofFile = ToStoredFile(dto.BankFundingProofFile);
+        if (dto.PhysicalProgressProofFile != null) stage.PhysicalProgressProofFile = ToStoredFile(dto.PhysicalProgressProofFile);
+
+        _stageRepository.Update(stage);
+        await _unitOfWork.Repository<AuditLog>().AddAsync(new AuditLog
+        {
+            EntityName = nameof(ExecutionStage), EntityId = stageId, FieldName = "ExecutionStage",
+            OldValue = "Existing", NewValue = "Updated", ChangedAt = DateTime.UtcNow,
+            ChangedByUserId = RequireCurrentUserId(),
+        }, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
+    }
+
+    public async Task<ExecutionStageDto> MarkCompleteAsync(int subProjectId, int stageId, int financialYearId, CancellationToken cancellationToken = default)
+    {
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
         stage.IsCompleted = true;
         stage.CompletedAt = DateTime.UtcNow;
 
@@ -153,9 +213,9 @@ public class ExecutionStageService : IExecutionStageService
         return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
-    public async Task<ExecutionStageDto> ReopenAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default)
+    public async Task<ExecutionStageDto> ReopenAsync(int subProjectId, int stageId, int financialYearId, CancellationToken cancellationToken = default)
     {
-        var stage = await GetOwnedStageAsync(subProjectId, stageId, cancellationToken);
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
         stage.IsCompleted = false;
         stage.CompletedAt = null;
 
@@ -165,9 +225,9 @@ public class ExecutionStageService : IExecutionStageService
         return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
-    public async Task<ExecutionStageDto> SetPenaltyAsync(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken = default)
+    public async Task<ExecutionStageDto> SetPenaltyAsync(int subProjectId, int stageId, int financialYearId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken = default)
     {
-        var stage = await GetOwnedStageAsync(subProjectId, stageId, cancellationToken);
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
         stage.PenaltyAmount = dto.PenaltyAmount;
         stage.PenaltyPaid = dto.PenaltyPaid;
 
@@ -177,9 +237,9 @@ public class ExecutionStageService : IExecutionStageService
         return ToDto(stage, await GetContractualDeliveryDateAsync(subProjectId, cancellationToken));
     }
 
-    public async Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, string fileKey, CancellationToken cancellationToken = default)
+    public async Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, int financialYearId, string fileKey, CancellationToken cancellationToken = default)
     {
-        var stage = await GetOwnedStageAsync(subProjectId, stageId, cancellationToken);
+        var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
 
         var file = fileKey switch
         {
@@ -228,7 +288,10 @@ public class ExecutionStageService : IExecutionStageService
         var subProjectIds = approved.Select(s => s.SubProjectId).ToList();
 
         var stagesByProject = (await _context.ExecutionStages.AsNoTracking()
-                .Where(s => subProjectIds.Contains(s.SubProjectId))
+                .Where(s => subProjectIds.Contains(s.SubProjectId)
+                    && financialYearId != null
+                    && s.SubProjectFinancialYear != null
+                    && s.SubProjectFinancialYear.FinancialYearId == financialYearId)
                 .Select(s => new FollowUpStageProjection
                 {
                     SubProjectId = s.SubProjectId,
@@ -262,11 +325,9 @@ public class ExecutionStageService : IExecutionStageService
                 ? 0
                 : Math.Round(stages.Sum(x => x.SelfFundingSpent + x.BankFundingSpent) / s.TotalCost * 100, 2);
 
-            var latestPhysical = stages
+            var physicalTotal = stages
                 .Where(x => !x.IsFinalDelivery)
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.ExecutionStageId)
-                .FirstOrDefault()?.PhysicalProgressPercent ?? 0;
+                .Sum(x => x.PhysicalProgressPercent);
 
             var nextDeadline = stages
                 .Where(x => !x.IsCompleted && x.Deadline != null)
@@ -284,7 +345,7 @@ public class ExecutionStageService : IExecutionStageService
                 ContractorName = contractorName,
                 IsStalled = s.Status.StatusName == "متعثر",
                 FinancialProgressPercent = financialPercent,
-                PhysicalProgressPercent = latestPhysical,
+                PhysicalProgressPercent = physicalTotal,
                 NextDeadline = nextDeadline,
                 StageCount = stages.Count,
             };
@@ -306,41 +367,102 @@ public class ExecutionStageService : IExecutionStageService
         var deadline = ComputeContractualDeliveryDate(
             award.SiteHandoverDate, award.ExecutionDurationMonths, award.ExecutionDurationDays);
 
-        var stage = await _context.ExecutionStages
-            .FirstOrDefaultAsync(s => s.SubProjectId == subProjectId && s.IsFinalDelivery, cancellationToken);
+        var cycles = await _context.Set<SubProjectFinancialYear>()
+            .Where(x => x.SubProjectId == subProjectId)
+            .ToListAsync(cancellationToken);
 
-        if (stage == null)
+        foreach (var cycle in cycles)
         {
-            stage = new ExecutionStage
+            var stage = await _context.ExecutionStages.FirstOrDefaultAsync(
+                s => s.SubProjectFinancialYearId == cycle.SubProjectFinancialYearId && s.IsFinalDelivery,
+                cancellationToken);
+
+            if (stage == null)
             {
-                SubProjectId = subProjectId,
-                Name = FinalDeliveryStageName,
-                IsFinalDelivery = true,
-                Deadline = deadline,
-            };
-            await _stageRepository.AddAsync(stage, cancellationToken);
-        }
-        else
-        {
-            // الاسم والموعد فقط يُداران تلقائيًا — الصرف والنسبة والغرامة تبقى كما سجّلها الموظف
-            stage.Name = FinalDeliveryStageName;
-            stage.Deadline = deadline;
-            _stageRepository.Update(stage);
+                await _stageRepository.AddAsync(new ExecutionStage
+                {
+                    SubProjectId = subProjectId,
+                    SubProjectFinancialYearId = cycle.SubProjectFinancialYearId,
+                    Name = FinalDeliveryStageName,
+                    IsFinalDelivery = true,
+                    Deadline = deadline,
+                }, cancellationToken);
+            }
+            else
+            {
+                stage.Name = FinalDeliveryStageName;
+                stage.Deadline = deadline;
+                _stageRepository.Update(stage);
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<ExecutionStage> GetOwnedStageAsync(int subProjectId, int stageId, CancellationToken cancellationToken)
+    private async Task<ExecutionStage> GetOwnedStageAsync(int subProjectId, int stageId, int financialYearId, CancellationToken cancellationToken)
     {
-        var stage = await _stageRepository.GetByIdAsync(stageId, cancellationToken);
-        if (stage == null || stage.SubProjectId != subProjectId)
+        var stage = await _context.ExecutionStages
+            .Include(x => x.SubProjectFinancialYear)
+            .FirstOrDefaultAsync(x => x.ExecutionStageId == stageId, cancellationToken);
+        if (stage == null || stage.SubProjectId != subProjectId
+            || stage.SubProjectFinancialYear?.FinancialYearId != financialYearId)
         {
             throw new NotFoundException($"مرحلة التنفيذ رقم {stageId} غير موجودة لهذا المشروع");
         }
 
         return stage;
     }
+
+    private async Task<SubProjectFinancialYear> GetCycleAsync(int subProjectId, int financialYearId, CancellationToken cancellationToken)
+    {
+        var cycle = await _context.Set<SubProjectFinancialYear>()
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId && x.FinancialYearId == financialYearId, cancellationToken);
+        return cycle ?? throw new BusinessRuleException("المشروع غير مرتبط بالسنة المالية المختارة");
+    }
+
+    private static void EnsureProjectOpen(SubProject subProject)
+    {
+        if (subProject.ExecutionCompletedAt != null || subProject.Status?.StatusName == "منتهي")
+            throw new BusinessRuleException("لا يمكن إضافة أو تعديل مراحل بعد إكمال المشروع");
+    }
+
+    private static void ValidateStageValues(CreateExecutionStageDto dto, ExecutionStage existing)
+    {
+        if (!existing.IsFinalDelivery && string.IsNullOrWhiteSpace(dto.Name))
+            throw new BusinessRuleException("اسم المرحلة مطلوب");
+        if (dto.Name.Trim().Length > 250)
+            throw new BusinessRuleException("اسم المرحلة يجب ألا يتجاوز 250 حرفًا");
+        if (dto.SelfFundingSpent < 0 || dto.BankFundingSpent < 0)
+            throw new BusinessRuleException("قيم المنصرف لا يمكن أن تكون سالبة");
+        if (dto.PhysicalProgressPercent < 0 || dto.PhysicalProgressPercent > 100)
+            throw new BusinessRuleException("نسبة التنفيذ العيني يجب أن تكون بين 0 و100");
+        if (dto.SelfFundingSpent > 0 && dto.SelfFundingProofFile == null && existing.SelfFundingProofFile == null)
+            throw new BusinessRuleException("إثبات الصرف الذاتي مطلوب عند تسجيل مبلغ ذاتي");
+        if (dto.BankFundingSpent > 0 && dto.BankFundingProofFile == null && existing.BankFundingProofFile == null)
+            throw new BusinessRuleException("إثبات الصرف البنكي مطلوب عند تسجيل مبلغ بنكي");
+        if (dto.PhysicalProgressPercent > 0 && dto.PhysicalProgressProofFile == null && existing.PhysicalProgressProofFile == null)
+            throw new BusinessRuleException("إثبات التنفيذ العيني مطلوب عند تسجيل نسبة تنفيذ");
+    }
+
+    private async Task<decimal> GetAllowedCeilingAsync(int subProjectId, SubProject subProject, CancellationToken cancellationToken)
+    {
+        var contractValue = await _context.ContractAwards.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId && x.IsCompleted && x.ProjectAssignmentId != null)
+            .Select(x => x.ProjectAssignment!.ContractValue)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (contractValue is null or <= 0)
+            throw new BusinessRuleException("لا توجد قيمة عقد صحيحة مسجلة للمشروع");
+        return contractValue.Value * (1 + (subProject.OverrunPercentage ?? 0) / 100m);
+    }
+
+    private async Task<decimal> GetAdvancePaymentTotalAsync(int subProjectId, CancellationToken cancellationToken) =>
+        await _context.ContractAwards.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId && x.AdvancePaymentDone)
+            .Select(x => (x.AdvancePaymentSelfAmount ?? 0) + (x.AdvancePaymentBankAmount ?? 0))
+            .FirstOrDefaultAsync(cancellationToken);
+
+    private string RequireCurrentUserId() =>
+        _currentUser.UserId ?? throw new BusinessRuleException("تعذر تحديد المستخدم الحالي لتسجيل العملية");
 
     /// <summary>تاريخ التسليم التعاقدي المحسوب — null لو الترسية غير مكتملة أو الأرضية لم تُسلَّم.</summary>
     private async Task<DateTime?> GetContractualDeliveryDateAsync(int subProjectId, CancellationToken cancellationToken)
@@ -384,6 +506,7 @@ public class ExecutionStageService : IExecutionStageService
     {
         Id = s.ExecutionStageId,
         SubProjectId = s.SubProjectId,
+        FinancialYearId = s.SubProjectFinancialYear?.FinancialYearId,
         Name = s.Name,
         Deadline = s.Deadline,
         IsFinalDelivery = s.IsFinalDelivery,

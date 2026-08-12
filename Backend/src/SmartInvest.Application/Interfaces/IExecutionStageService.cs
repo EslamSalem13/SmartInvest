@@ -7,18 +7,20 @@ namespace SmartInvest.Application.Interfaces;
 /// </summary>
 public interface IExecutionStageService
 {
-    Task<IReadOnlyList<ExecutionStageDto>> GetBySubProjectAsync(int subProjectId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ExecutionStageDto>> GetBySubProjectAsync(int subProjectId, int financialYearId, CancellationToken cancellationToken = default);
 
     Task<ExecutionStageDto> CreateAsync(int subProjectId, CreateExecutionStageDto dto, CancellationToken cancellationToken = default);
 
-    Task<ExecutionStageDto> MarkCompleteAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default);
+    Task<ExecutionStageDto> UpdateAsync(int subProjectId, int stageId, UpdateExecutionStageDto dto, CancellationToken cancellationToken = default);
+
+    Task<ExecutionStageDto> MarkCompleteAsync(int subProjectId, int stageId, int financialYearId, CancellationToken cancellationToken = default);
 
     /// <summary>عكس إنهاء المرحلة عن طريق الخطأ — يُلغي IsCompleted وتاريخ الإكمال، ولا يمس أي بيانات مسجَّلة أخرى.</summary>
-    Task<ExecutionStageDto> ReopenAsync(int subProjectId, int stageId, CancellationToken cancellationToken = default);
+    Task<ExecutionStageDto> ReopenAsync(int subProjectId, int stageId, int financialYearId, CancellationToken cancellationToken = default);
 
-    Task<ExecutionStageDto> SetPenaltyAsync(int subProjectId, int stageId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken = default);
+    Task<ExecutionStageDto> SetPenaltyAsync(int subProjectId, int stageId, int financialYearId, SetExecutionStagePenaltyDto dto, CancellationToken cancellationToken = default);
 
-    Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, string fileKey, CancellationToken cancellationToken = default);
+    Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, int financialYearId, string fileKey, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<FollowUpListItemDto>> GetFollowUpListAsync(
         int? financialYearId, int? mainProgramId, int? subProgramId, int? markazId, int? priorityId,

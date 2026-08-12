@@ -17,5 +17,6 @@ namespace SmartInvest.Domain.Entities
         public virtual ICollection<Plan> Plans { get; set; }
         public virtual ICollection<SubProjectFinancialYear> SubProjectFinancialYears { get; set; }
         public virtual ICollection<BankAvailability> BankAvailabilities { get; set; }
+        public virtual ICollection<PresentationMemo> PresentationMemos { get; set; }
     }
 }

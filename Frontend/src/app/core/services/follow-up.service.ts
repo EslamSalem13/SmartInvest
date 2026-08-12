@@ -25,12 +25,15 @@ export class FollowUpService {
     return this.http.get<FollowUpListItem[]>(`${this.base}/follow-up`, { params });
   }
 
-  getStages(subProjectId: number): Observable<ExecutionStage[]> {
-    return this.http.get<ExecutionStage[]>(`${this.base}/subprojects/${subProjectId}/execution-stages`);
+  getStages(subProjectId: number, financialYearId: number): Observable<ExecutionStage[]> {
+    return this.http.get<ExecutionStage[]>(`${this.base}/subprojects/${subProjectId}/execution-stages`, {
+      params: { financialYearId },
+    });
   }
 
-  createStage(subProjectId: number, payload: CreateExecutionStagePayload): Observable<ExecutionStage> {
+  createStage(subProjectId: number, financialYearId: number, payload: CreateExecutionStagePayload): Observable<ExecutionStage> {
     const form = new FormData();
+    form.append('financialYearId', String(financialYearId));
     form.append('name', payload.name);
     form.append('deadline', payload.deadline);
     form.append('selfFundingSpent', String(payload.selfFundingSpent));
@@ -44,42 +47,63 @@ export class FollowUpService {
     return this.http.post<ExecutionStage>(`${this.base}/subprojects/${subProjectId}/execution-stages`, form);
   }
 
-  markComplete(subProjectId: number, stageId: number): Observable<ExecutionStage> {
+  updateStage(subProjectId: number, stageId: number, financialYearId: number, payload: CreateExecutionStagePayload): Observable<ExecutionStage> {
+    const form = this.toStageForm(financialYearId, payload);
+    return this.http.put<ExecutionStage>(`${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}`, form);
+  }
+
+  markComplete(subProjectId: number, stageId: number, financialYearId: number): Observable<ExecutionStage> {
     return this.http.put<ExecutionStage>(
       `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/complete`,
-      {},
+      {}, { params: { financialYearId } },
     );
   }
 
-  reopenStage(subProjectId: number, stageId: number): Observable<ExecutionStage> {
+  reopenStage(subProjectId: number, stageId: number, financialYearId: number): Observable<ExecutionStage> {
     return this.http.put<ExecutionStage>(
       `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/reopen`,
-      {},
+      {}, { params: { financialYearId } },
     );
   }
 
   setPenalty(
     subProjectId: number,
     stageId: number,
+    financialYearId: number,
     penaltyAmount: number | null,
     penaltyPaid: boolean,
   ): Observable<ExecutionStage> {
     return this.http.put<ExecutionStage>(
       `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/penalty`,
-      { penaltyAmount, penaltyPaid },
+      { penaltyAmount, penaltyPaid }, { params: { financialYearId } },
     );
   }
 
-  downloadFileUrl(subProjectId: number, stageId: number, fileKey: 'self' | 'bank' | 'progress'): string {
-    return `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/files/${fileKey}`;
+  downloadFileUrl(subProjectId: number, stageId: number, financialYearId: number, fileKey: 'self' | 'bank' | 'progress'): string {
+    return `${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}/files/${fileKey}?financialYearId=${financialYearId}`;
   }
 
   /**
    * تنزيل ملف الإثبات كـ Blob عبر HttpClient (يمر بمصدّق auth.interceptor) — رابط <a href> مباشر
    * لا يرسل رأس Authorization فيفشل بـ 401 لأن التنقل الطبيعي للمتصفح لا يمر على الـ interceptor.
    */
-  downloadFile(subProjectId: number, stageId: number, fileKey: 'self' | 'bank' | 'progress'): Observable<Blob> {
-    return this.http.get(this.downloadFileUrl(subProjectId, stageId, fileKey), { responseType: 'blob' });
+  downloadFile(subProjectId: number, stageId: number, financialYearId: number, fileKey: 'self' | 'bank' | 'progress'): Observable<Blob> {
+    return this.http.get(this.downloadFileUrl(subProjectId, stageId, financialYearId, fileKey), { responseType: 'blob' });
+  }
+
+  private toStageForm(financialYearId: number, payload: CreateExecutionStagePayload): FormData {
+    const form = new FormData();
+    form.append('financialYearId', String(financialYearId));
+    form.append('name', payload.name);
+    form.append('deadline', payload.deadline);
+    form.append('selfFundingSpent', String(payload.selfFundingSpent));
+    form.append('bankFundingSpent', String(payload.bankFundingSpent));
+    form.append('physicalProgressPercent', String(payload.physicalProgressPercent));
+    if (payload.notes.trim()) form.append('notes', payload.notes.trim());
+    if (payload.selfFundingProof) form.append('selfFundingProof', payload.selfFundingProof, payload.selfFundingProof.name);
+    if (payload.bankFundingProof) form.append('bankFundingProof', payload.bankFundingProof, payload.bankFundingProof.name);
+    if (payload.physicalProgressProof) form.append('physicalProgressProof', payload.physicalProgressProof, payload.physicalProgressProof.name);
+    return form;
   }
 
   /** تنزيل Blob كملف في المتصفح — نفس نمط FinancialService.saveBlob */

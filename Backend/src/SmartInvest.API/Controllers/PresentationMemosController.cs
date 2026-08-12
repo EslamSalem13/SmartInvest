@@ -29,9 +29,9 @@ public class PresentationMemosController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<PresentationMemoDetailDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<PresentationMemoDetailDto>> GetById(int id, [FromQuery] int? financialYearId, CancellationToken cancellationToken)
     {
-        var result = await _memoService.GetByIdAsync(id, cancellationToken);
+        var result = await _memoService.GetByIdAsync(id, financialYearId, cancellationToken);
         return Ok(result);
     }
 
