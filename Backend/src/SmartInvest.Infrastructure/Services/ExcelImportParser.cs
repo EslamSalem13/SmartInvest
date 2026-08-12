@@ -221,7 +221,12 @@ public class ExcelImportParser : IExcelImportParser
         string outputText;
         try
         {
-            outputText = await _aiGatewayClient.CompleteAsync(systemPrompt, userMessage, 500, cancellationToken);
+            outputText = await _aiGatewayClient.CompleteAsync(
+                systemPrompt,
+                userMessage,
+                500,
+                AiWorkload.ExcelImport,
+                cancellationToken);
         }
         catch (BusinessRuleException)
         {

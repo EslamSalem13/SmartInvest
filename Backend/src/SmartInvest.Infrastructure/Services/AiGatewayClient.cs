@@ -32,20 +32,49 @@ public class AiGatewayClient : IAiGatewayClient
 
     public Task<string> CompleteAsync(string systemPrompt, string userMessage, int maxTokens, CancellationToken cancellationToken = default)
     {
+        return CompleteAsync(systemPrompt, userMessage, maxTokens, AiWorkload.Default, cancellationToken);
+    }
+
+    public Task<string> CompleteAsync(
+        string systemPrompt,
+        string userMessage,
+        int maxTokens,
+        AiWorkload workload,
+        CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             _logger.LogWarning("AI gateway call skipped: API key is not configured");
             throw new BusinessRuleException("مفتاح خدمة الذكاء الاصطناعي غير مُهيأ");
         }
 
+        var modelId = ResolveModelId(workload);
+
         return _options.Provider switch
         {
-            AiProvider.Iti => CompleteViaItiAsync(systemPrompt, userMessage, maxTokens, cancellationToken),
-            AiProvider.Anthropic => CompleteViaAnthropicAsync(systemPrompt, userMessage, maxTokens, cancellationToken),
-            AiProvider.Gemini => CompleteViaGeminiAsync(systemPrompt, userMessage, maxTokens, cancellationToken),
-            AiProvider.OpenAi => CompleteViaOpenAiAsync(systemPrompt, userMessage, maxTokens, cancellationToken),
+            AiProvider.Iti => CompleteViaItiAsync(systemPrompt, userMessage, maxTokens, modelId, cancellationToken),
+            AiProvider.Anthropic => CompleteViaAnthropicAsync(systemPrompt, userMessage, maxTokens, modelId, cancellationToken),
+            AiProvider.Gemini => CompleteViaGeminiAsync(systemPrompt, userMessage, maxTokens, modelId, cancellationToken),
+            AiProvider.OpenAi => CompleteViaOpenAiAsync(systemPrompt, userMessage, maxTokens, modelId, cancellationToken),
             _ => throw new BusinessRuleException($"مزوّد الذكاء الاصطناعي «{_options.Provider}» غير مدعوم"),
         };
+    }
+
+    private string ResolveModelId(AiWorkload workload)
+    {
+        var workloadModelId = workload switch
+        {
+            AiWorkload.ExcelImport => _options.ExcelImportModelId,
+            AiWorkload.Reports => _options.ReportsModelId,
+            _ => _options.ModelId,
+        };
+        var modelId = string.IsNullOrWhiteSpace(workloadModelId) ? _options.ModelId : workloadModelId;
+        if (string.IsNullOrWhiteSpace(modelId))
+        {
+            throw new BusinessRuleException("موديل خدمة الذكاء الاصطناعي غير مُهيأ لهذه العملية");
+        }
+
+        return modelId.Trim();
     }
 
     // ===== ITI (بروكسي وسيط للطلاب) — /student/chat بصيغة مخصصة =====
@@ -59,10 +88,10 @@ public class AiGatewayClient : IAiGatewayClient
 
     private record ItiChatResponse([property: JsonPropertyName("output_text")] string? OutputText);
 
-    private async Task<string> CompleteViaItiAsync(string systemPrompt, string userMessage, int maxTokens, CancellationToken cancellationToken)
+    private async Task<string> CompleteViaItiAsync(string systemPrompt, string userMessage, int maxTokens, string modelId, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "http://apiaccess.iti.net.eg/api/v1" : _options.BaseUrl;
-        var request = new ItiChatRequest(_options.ModelId, new List<ItiChatMessage> { new("user", userMessage) }, systemPrompt, maxTokens);
+        var request = new ItiChatRequest(modelId, new List<ItiChatMessage> { new("user", userMessage) }, systemPrompt, maxTokens);
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/student/chat")
         {
@@ -87,10 +116,10 @@ public class AiGatewayClient : IAiGatewayClient
     private record AnthropicContentBlock([property: JsonPropertyName("type")] string Type, [property: JsonPropertyName("text")] string? Text);
     private record AnthropicResponse([property: JsonPropertyName("content")] List<AnthropicContentBlock>? Content);
 
-    private async Task<string> CompleteViaAnthropicAsync(string systemPrompt, string userMessage, int maxTokens, CancellationToken cancellationToken)
+    private async Task<string> CompleteViaAnthropicAsync(string systemPrompt, string userMessage, int maxTokens, string modelId, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://api.anthropic.com/v1" : _options.BaseUrl;
-        var request = new AnthropicRequest(_options.ModelId, maxTokens, systemPrompt, new List<AnthropicMessage> { new("user", userMessage) });
+        var request = new AnthropicRequest(modelId, maxTokens, systemPrompt, new List<AnthropicMessage> { new("user", userMessage) });
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/messages")
         {
@@ -124,7 +153,7 @@ public class AiGatewayClient : IAiGatewayClient
     private record GeminiCandidate([property: JsonPropertyName("content")] GeminiResponseContent? Content);
     private record GeminiResponse([property: JsonPropertyName("candidates")] List<GeminiCandidate>? Candidates);
 
-    private async Task<string> CompleteViaGeminiAsync(string systemPrompt, string userMessage, int maxTokens, CancellationToken cancellationToken)
+    private async Task<string> CompleteViaGeminiAsync(string systemPrompt, string userMessage, int maxTokens, string modelId, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://generativelanguage.googleapis.com/v1beta/models" : _options.BaseUrl;
 
@@ -135,7 +164,7 @@ public class AiGatewayClient : IAiGatewayClient
             new List<GeminiContentEntry> { new("user", new List<GeminiTextPart> { new(userMessage) }) },
             new GeminiGenerationConfig(maxTokens, new GeminiThinkingConfig(1)));
 
-        var url = $"{baseUrl}/{_options.ModelId}:generateContent?key={Uri.EscapeDataString(_options.ApiKey)}";
+        var url = $"{baseUrl}/{modelId}:generateContent?key={Uri.EscapeDataString(_options.ApiKey)}";
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(request) };
 
         var httpResponse = await SendAsync(httpRequest, cancellationToken);
@@ -156,11 +185,11 @@ public class AiGatewayClient : IAiGatewayClient
     private record OpenAiChoice([property: JsonPropertyName("message")] OpenAiResponseMessage? Message);
     private record OpenAiResponse([property: JsonPropertyName("choices")] List<OpenAiChoice>? Choices);
 
-    private async Task<string> CompleteViaOpenAiAsync(string systemPrompt, string userMessage, int maxTokens, CancellationToken cancellationToken)
+    private async Task<string> CompleteViaOpenAiAsync(string systemPrompt, string userMessage, int maxTokens, string modelId, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(_options.BaseUrl) ? "https://api.openai.com/v1" : _options.BaseUrl;
         var messages = new List<OpenAiMessage> { new("system", systemPrompt), new("user", userMessage) };
-        var request = new OpenAiRequest(_options.ModelId, maxTokens, messages);
+        var request = new OpenAiRequest(modelId, maxTokens, messages);
 
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/chat/completions")
         {

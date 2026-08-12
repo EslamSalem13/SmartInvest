@@ -65,7 +65,12 @@ public class ProjectNatureClassificationService : IProjectNatureClassificationSe
         string outputText;
         try
         {
-            outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 1500, cancellationToken);
+            outputText = await _aiGatewayClient.CompleteAsync(
+                SystemPrompt,
+                userMessage,
+                1500,
+                AiWorkload.ExcelImport,
+                cancellationToken);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {

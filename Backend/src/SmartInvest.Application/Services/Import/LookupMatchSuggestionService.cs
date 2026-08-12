@@ -77,7 +77,12 @@ public class LookupMatchSuggestionService : ILookupMatchSuggestionService
         string outputText;
         try
         {
-            outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 6000, cancellationToken);
+            outputText = await _aiGatewayClient.CompleteAsync(
+                SystemPrompt,
+                userMessage,
+                6000,
+                AiWorkload.ExcelImport,
+                cancellationToken);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {

@@ -79,7 +79,12 @@ public class MeasurementExtractionService : IMeasurementExtractionService
         string outputText;
         try
         {
-            outputText = await _aiGatewayClient.CompleteAsync(SystemPrompt, userMessage, 2000, cancellationToken);
+            outputText = await _aiGatewayClient.CompleteAsync(
+                SystemPrompt,
+                userMessage,
+                2000,
+                AiWorkload.ExcelImport,
+                cancellationToken);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {

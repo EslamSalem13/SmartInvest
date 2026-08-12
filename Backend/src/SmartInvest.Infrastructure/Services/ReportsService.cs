@@ -173,7 +173,12 @@ public partial class ReportsService : IReportsService
             لا تضف Markdown أو تعليقًا أو مفاتيح أخرى. لا تخترع قيمًا لم يطلبها المستخدم.
             """;
 
-        var response = await _aiGatewayClient.CompleteAsync(systemPrompt, prompt, 700, cancellationToken);
+        var response = await _aiGatewayClient.CompleteAsync(
+            systemPrompt,
+            prompt,
+            700,
+            AiWorkload.Reports,
+            cancellationToken);
         try
         {
             var json = AiResponseParsing.StripMarkdownFences(response);

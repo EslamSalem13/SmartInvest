@@ -19,6 +19,13 @@ public enum AiProvider
     OpenAi,
 }
 
+public enum AiWorkload
+{
+    Default,
+    ExcelImport,
+    Reports,
+}
+
 public class AiGatewayOptions
 {
     public const string SectionName = "AiGateway";
@@ -33,5 +40,7 @@ public class AiGatewayOptions
     public string BaseUrl { get; set; } = string.Empty;
 
     public string ModelId { get; set; } = string.Empty;
+    public string ExcelImportModelId { get; set; } = string.Empty;
+    public string ReportsModelId { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
 }
