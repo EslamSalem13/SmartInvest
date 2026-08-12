@@ -10,12 +10,15 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* هيدر التفاصيل */
-.detail-head { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 22px; margin-bottom: 16px; display: flex; gap: 16px; }
-.detail-head .grow { flex: 1; }
+.detail-head { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 22px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; }
+.detail-head .grow { flex: 1; min-width: 0; }
 .codes { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
 .code-chip { background: linear-gradient(155deg, var(--green-700), var(--green-900)); color: #EAF3EC; padding: 5px 13px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 700; box-shadow: var(--shadow-xs); }
 .detail-head h2 { font-size: var(--text-xl); color: var(--green-900); }
 .detail-head .sub { color: var(--muted); font-size: var(--text-sm); margin-top: 4px; font-weight: 600; }
+.status-action { align-self: center; flex: 0 0 auto; min-width: 132px; border-radius: var(--radius-pill); font-weight: 800; }
+.detail-head .status-action.danger { background: linear-gradient(155deg, #E24A5D, #BE2F42); border-color: #BE2F42; box-shadow: 0 8px 18px rgba(190, 47, 66, .2); }
+.detail-head .status-action.danger:hover { box-shadow: 0 10px 24px rgba(190, 47, 66, .28); }
 
 /* التابات */
 .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px; margin-bottom: 16px; overflow-x: auto; box-shadow: var(--shadow-xs); }
@@ -92,3 +95,76 @@ tr.current td { background: var(--ok-bg); }
 .sec-title.reason { color: #B4441A; }
 .reason-status { font-size: 13px; margin-bottom: 8px; }
 .reason-status b { color: #B4441A; }
+
+@media (max-width: 768px) {
+  .page { width: 100%; padding: 18px 16px; overflow-x: hidden; }
+
+  .page-head {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .page-head > div { width: 100%; min-width: 0; }
+  .page-head h1, .page-head p { overflow-wrap: anywhere; }
+  .page-head .si-btn { width: 100%; margin-inline-start: 0; }
+
+  .detail-head {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    padding: 18px;
+  }
+  .detail-head .grow { width: 100%; }
+  .codes {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .code-chip {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .st-pill, .wait { justify-self: start; }
+  .detail-head h2 {
+    font-size: clamp(21px, 7vw, var(--text-xl));
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .detail-head .sub { line-height: 1.8; overflow-wrap: anywhere; }
+  .detail-head .status-action { width: 100%; min-width: 0; align-self: stretch; }
+
+  .tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .tab { width: 100%; min-width: 0; padding-inline: 8px; white-space: normal; }
+
+  .grid2, .info-grid, .info-grid.one { grid-template-columns: minmax(0, 1fr); }
+  .card, .fund, .grid2 > div { width: 100%; min-width: 0; }
+  .card.pad { padding: 16px; }
+  .info-grid .row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .info-grid .row b, .desc, .sec-title { max-width: 100%; overflow-wrap: anywhere; }
+  .fund .frow { gap: 8px 12px; flex-wrap: wrap; }
+  .fund .frow b { max-width: 100%; overflow-wrap: anywhere; }
+
+  .card-head { align-items: stretch; flex-direction: column; }
+  .card-head .grow { display: none; }
+  .card-head .si-btn { width: 100%; }
+
+  .map-real { height: 280px; }
+  .map-actions { align-items: stretch; flex-direction: column; }
+  .map-actions .coords, .map-actions .si-btn { width: 100%; text-align: center; }
+  .mt-card { width: 100%; }
+  .state { padding: 28px 18px; }
+}
