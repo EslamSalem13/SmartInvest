@@ -146,27 +146,6 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    const string adminEmail = "admin@gmail.com";
-    var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            UserName = "admin",
-            Email = adminEmail,
-            FullName = "مدير النظام",
-            EmailConfirmed = true,
-            IsActive = true
-        };
-
-        var createResult = await userManager.CreateAsync(adminUser, "Admin@123");
-        if (createResult.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, Roles.PlanningManager);
-        }
-    }
-
     const string superAdminEmail = "superadmin@gmail.com";
     var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
 
