@@ -80,6 +80,9 @@
                         [title]="completionHint(item)"
                         (click)="openCompletion(item)"
                       >{{ checkingCompletionId() === item.subProjectId ? 'جاري التحقق…' : 'إكمال المشروع' }}</button>
+                      @if (!item.completionEligibility.canCompleteProject && item.completionEligibility.blockers.length) {
+                        <small class="completion-blocker">{{ item.completionEligibility.blockers[0] }}</small>
+                      }
                     }
                   </div>
                 </td>

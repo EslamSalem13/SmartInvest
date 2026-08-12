@@ -79,6 +79,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .si-btn.complete { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; border-color: var(--green-700); }
 .si-btn.complete:disabled { opacity: .48; cursor: not-allowed; box-shadow: none; }
 .row-actions, .stage-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.completion-blocker { flex-basis: 100%; color: var(--muted); font-size: 10.5px; line-height: 1.45; max-width: 220px; }
 .existing-proof { display: block; color: var(--ok); font-size: 11px; line-height: 1.5; margin-bottom: 5px; }
 .completion-modal { width: min(620px, 100%); }
 .completion-warning { color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0 0 14px; font-weight: 700; }
@@ -281,6 +282,7 @@ td.notes { color: var(--muted); max-width: 240px; }
   .state { padding: 28px 18px; }
   .row-actions, .stage-row-actions { width: 100%; align-items: stretch; }
   .row-actions .si-btn, .stage-row-actions .si-btn { width: 100%; justify-content: center; }
+  .completion-blocker { max-width: none; text-align: center; }
   .completion-summary { grid-template-columns: minmax(0, 1fr); }
   .completion-summary .full { grid-column: auto; }
   .completion-modal .si-modal-foot { flex-direction: column; }
