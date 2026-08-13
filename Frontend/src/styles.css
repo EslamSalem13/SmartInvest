@@ -98,6 +98,9 @@
   --shadow-xl: 0 20px 48px rgba(7, 31, 22, .18), 0 6px 16px rgba(7, 31, 22, .1);
 
   --ease: cubic-bezier(.22, .8, .3, 1);
+  --dur-fast: .15s;   /* hover/press feedback — buttons, table rows, small icons */
+  --dur-base: .22s;   /* cards, modals, theme (dark/light) swap */
+  --dur-page: .32s;   /* page cross-fade on route change */
 }
 
 html { color-scheme: light; }
@@ -180,7 +183,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: var(--text-base);
   line-height: 1.6;
-  transition: background-color .22s var(--ease), color .22s var(--ease);
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
 }
 
 h1, h2, h3, h4 {
@@ -232,7 +235,7 @@ select option:disabled {
   select:not([multiple])::picker-icon {
     color: var(--green-700);
     margin-inline-start: 10px;
-    transition: rotate .18s var(--ease);
+    transition: rotate var(--dur-fast) var(--ease);
   }
 
   select:not([multiple]):open::picker-icon {
@@ -256,7 +259,7 @@ select option:disabled {
     border-radius: 7px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color .15s var(--ease), color .15s var(--ease);
+    transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
   }
 
   select:not([multiple]) option:hover,
@@ -331,10 +334,10 @@ select option:disabled {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  transition: transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease), border-color .15s var(--ease);
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .si-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); border-color: var(--line-strong); }
-.si-btn:active { transform: translateY(0); }
+.si-btn:active { transform: translateY(0) scale(.97); }
 .si-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 .si-btn.primary {
   background: linear-gradient(155deg, var(--green-600), var(--green-800));
@@ -358,8 +361,11 @@ select option:disabled {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
 }
+
+/* ===== جداول: انتقال ناعم للخلفية عند مرور الفأرة (خط أساس عام لأي جدول لا يملك قاعدة خاصة) ===== */
+tr { transition: background-color var(--dur-fast) var(--ease); }
 
 /* ===== نمط موحّد: تتحول صفوف الجداول إلى بطاقات مقروءة على الموبايل ===== */
 @media screen and (max-width: 768px) {
@@ -682,8 +688,8 @@ html[data-theme='dark'] .leaflet-popup-tip {
   table,
   th,
   td {
-    transition-property: background-color, border-color, color, box-shadow;
-    transition-duration: .22s;
+    transition-property: background-color, border-color, color, box-shadow, transform;
+    transition-duration: var(--dur-base);
     transition-timing-function: var(--ease);
   }
 }
