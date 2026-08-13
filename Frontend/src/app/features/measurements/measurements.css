@@ -32,7 +32,7 @@ td { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .group { border-bottom: 1px solid var(--line); }
 .group:last-child { border-bottom: 0; }
 .group-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: start; padding: 8px 4px; border: 0; background: transparent; font-weight: 700; font-size: 13px; color: var(--ink); }
-.chevron { transition: transform .15s ease; }
+.chevron { transition: transform var(--dur-fast) var(--ease); }
 .chevron.open { transform: rotate(90deg); }
 .group-body { display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 10px 26px; }
 

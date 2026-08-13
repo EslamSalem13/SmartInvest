@@ -9,7 +9,7 @@
 .head-tools select.mini {
   border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm);
   padding: 10px 14px; font-family: inherit; font-weight: 700; font-size: 13px; color: var(--ink);
-  min-height: 44px; transition: border-color .15s var(--ease);
+  min-height: 44px; transition: border-color var(--dur-fast) var(--ease);
 }
 .head-tools select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0 0 0 4px var(--green-100); }
 
@@ -34,7 +34,7 @@
   background: linear-gradient(175deg, var(--surface) 0%, var(--surface-2) 145%);
   border: 1px solid var(--line); border-radius: var(--radius-lg);
   padding: 18px 20px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
-  transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
   display: flex; flex-direction: column;
 }
 .kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--green-500); }
@@ -98,7 +98,7 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
   gap: 4px 10px; min-width: 0; max-width: 100%;
   padding: 9px 6px; margin: 0 -6px; border-radius: 8px;
   text-decoration: none; color: inherit; font-size: 12.5px;
-  transition: background .15s var(--ease);
+  transition: background var(--dur-fast) var(--ease);
 }
 .detail-row:hover { background: var(--surface-2); }
 .detail-row:hover .detail-row-name { color: var(--heading); }
@@ -107,7 +107,7 @@ a.kpi:focus-visible { outline: 2px solid var(--green-700); outline-offset: 2px; 
   flex: 1 1 auto; min-width: 0; max-width: 100%;
   color: var(--link); font-weight: 700;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  transition: color .15s var(--ease);
+  transition: color var(--dur-fast) var(--ease);
 }
 .detail-meta { flex: 0 1 auto; min-width: 0; max-width: 100%; color: var(--muted); font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-meta.bad-text { color: var(--bad); }

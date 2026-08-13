@@ -22,7 +22,7 @@
 
 /* التابات */
 .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px; margin-bottom: 16px; overflow-x: auto; box-shadow: var(--shadow-xs); }
-.tab { border: 0; background: transparent; color: var(--muted); padding: 11px 18px; border-radius: 9px; font-weight: 700; font-size: 13px; white-space: nowrap; transition: background .15s var(--ease), color .15s var(--ease); }
+.tab { border: 0; background: transparent; color: var(--muted); padding: 11px 18px; border-radius: 9px; font-weight: 700; font-size: 13px; white-space: nowrap; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .tab:hover { background: var(--surface-2); }
 .tab.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; box-shadow: var(--shadow-xs); }
 
@@ -69,7 +69,7 @@ tr.current td { background: var(--ok-bg); }
 .wait { display: inline-block; color: var(--muted); font-size: 12px; font-weight: 700; background: var(--surface-2); border: 1px dashed var(--line-strong); padding: 3px 9px; border-radius: 7px; }
 
 .acts { display: inline-flex; gap: 6px; }
-.act { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background .15s var(--ease), color .15s var(--ease); }
+.act { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .act:hover { background: var(--green-100); color: var(--link); }
 .act svg { width: 15px; height: 15px; }
 .act.danger { color: var(--bad); border-color: var(--bad-line); }

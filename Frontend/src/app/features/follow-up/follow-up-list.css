@@ -27,7 +27,7 @@ select.mini { border: 1.5px solid var(--line-strong); background: var(--surface)
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
 }
 .kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--green-500); }
 .kpi::after {
@@ -106,7 +106,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 /* فلاتر مذكرات العرض */
 .memo-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .filter-tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; box-shadow: var(--shadow-xs); }
-.ftab { border: 0; background: transparent; color: var(--muted); padding: 9px 14px; border-radius: 9px; font-weight: 700; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: background .15s var(--ease), color .15s var(--ease); }
+.ftab { border: 0; background: transparent; color: var(--muted); padding: 9px 14px; border-radius: 9px; font-weight: 700; font-size: 12.5px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .ftab.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; }
 .ftab .fcount { background: rgba(0,0,0,.08); border-radius: 999px; padding: 1px 7px; font-size: 11px; }
 .ftab.on .fcount { background: rgba(255,255,255,.22); }
@@ -115,7 +115,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 
 /* بطاقات المراحل */
 .stages { display: flex; flex-direction: column; gap: 14px; }
-.stage-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: border-color .2s var(--ease); }
+.stage-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; transition: border-color var(--dur-base) var(--ease); }
 .stage-card.open { border-color: var(--green-600); box-shadow: var(--shadow-md); }
 .stage-card.locked { opacity: .65; }
 .stage-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; text-align: start; }
@@ -125,7 +125,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
 .stage-title { font-weight: 800; font-size: 14.5px; color: var(--heading); }
 .stage-head .vers { color: var(--muted); font-size: 12px; font-weight: 700; }
 .stage-head .grow { flex: 1; }
-.arrow { color: var(--muted); transition: transform .18s var(--ease); }
+.arrow { color: var(--muted); transition: transform var(--dur-fast) var(--ease); }
 .arrow.rot { transform: rotate(180deg); }
 .chip.lock-chip { background: var(--surface-2); border: 1px dashed var(--line-strong); color: var(--muted); }
 
@@ -134,7 +134,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
   display: flex; align-items: flex-start; gap: 11px;
   border: 1.5px solid var(--line-strong); border-radius: var(--radius);
   padding: 13px 15px; margin-bottom: 16px; cursor: pointer;
-  background: var(--surface); transition: border-color .15s var(--ease), background .15s var(--ease);
+  background: var(--surface); transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 .advance-payment:hover { border-color: var(--green-600); }
 .advance-payment.done { border-color: var(--ok-line); background: var(--ok-bg); }
@@ -144,7 +144,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
   flex-shrink: 0; width: 23px; height: 23px; margin-top: 1px; border-radius: 6px;
   border: 2px solid var(--line-strong); background: var(--surface);
   display: grid; place-items: center; color: #fff;
-  transition: background .15s var(--ease), border-color .15s var(--ease);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .advance-payment.done .ap-box { background: var(--green-700); border-color: var(--green-700); }
 .advance-payment input:focus-visible + .ap-box { outline: 3px solid var(--gold-soft); outline-offset: 2px; }
@@ -173,7 +173,7 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
   background: var(--surface);
   padding: 13px 15px;
   cursor: pointer;
-  transition: border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease), transform .1s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .file-drop:hover { border-color: var(--green-600); background: var(--surface-2); }
 .file-drop:active { transform: scale(.995); }
@@ -200,13 +200,13 @@ td { padding: 13px 14px; border-bottom: 1px solid var(--line); font-size: 13px; 
   flex-shrink: 0; width: 27px; height: 27px; border-radius: 50%;
   border: 1px solid var(--line-strong); background: var(--surface);
   color: var(--muted); font-size: 15px; line-height: 1;
-  display: grid; place-items: center; transition: background .15s var(--ease), color .15s var(--ease);
+  display: grid; place-items: center; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .fd-clear:hover { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad); }
 
 /* ملفات الإصدار */
 .files { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-.file-lnk { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--link); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 6px 11px; font-family: inherit; transition: background .15s var(--ease); }
+.file-lnk { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--link); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 6px 11px; font-family: inherit; transition: background var(--dur-fast) var(--ease); }
 .file-lnk:hover { background: var(--ok-bg); }
 .fsize { color: var(--muted); font-weight: 600; font-size: 11px; }
 .file-lnk .fsize { color: var(--muted); font-weight: 600; font-size: 11px; }
@@ -215,7 +215,7 @@ td.notes { color: var(--muted); max-width: 240px; }
 /* قائمة اختيار المشروعات (مودال المذكرة) */
 .picker-search { margin-bottom: 8px; }
 .check-list { border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); max-height: 240px; overflow: auto; padding: 6px; }
-.check-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background .15s var(--ease); }
+.check-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background var(--dur-fast) var(--ease); }
 .check-item:hover { background: var(--surface-2); }
 .check-item input { accent-color: var(--green-700); width: 16px; height: 16px; }
 
@@ -232,7 +232,7 @@ td.notes { color: var(--muted); max-width: 240px; }
 .tnum.warn { color: var(--bad); font-weight: 700; }
 
 /* رابط تنزيل ملف إثبات — نفس نمط .file-lnk في financial.css */
-.file-lnk { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 2px 7px; margin-inline-start: 6px; font-family: inherit; cursor: pointer; transition: background .15s var(--ease); }
+.file-lnk { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 2px 7px; margin-inline-start: 6px; font-family: inherit; cursor: pointer; transition: background var(--dur-fast) var(--ease); }
 .file-lnk:hover { background: var(--ok-bg); }
 
 /* تعديل الغرامة inline */

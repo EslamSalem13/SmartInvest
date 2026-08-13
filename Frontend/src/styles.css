@@ -580,7 +580,7 @@ tr { transition: background-color var(--dur-fast) var(--ease); }
   width: 36px; height: 36px; border-radius: 10px;
   border: 1px solid var(--line); background: var(--surface);
   font-size: 18px; color: var(--muted); line-height: 1;
-  transition: background .15s var(--ease), color .15s var(--ease);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .si-x:hover { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
 .si-modal-body { padding: 22px 24px; max-height: 64vh; overflow: auto; }
@@ -611,7 +611,7 @@ tr { transition: background-color var(--dur-fast) var(--ease); }
   padding: 11px 13px; font-family: inherit; font-size: 13.5px;
   min-height: 44px;
   background: var(--input-bg); color: var(--ink);
-  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 .si-fld input:focus, .si-fld select:focus, .si-fld textarea:focus {
   outline: none;

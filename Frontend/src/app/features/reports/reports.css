@@ -243,7 +243,7 @@
   border-radius: var(--radius-lg);
   background: linear-gradient(165deg, var(--surface), var(--surface-2));
   box-shadow: var(--shadow-sm);
-  transition: transform .22s var(--ease), box-shadow .22s var(--ease), border-color .22s var(--ease);
+  transition: transform var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
 }
 
 .report-card::before {
@@ -516,7 +516,7 @@
   border: 1.5px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--input-bg);
-  transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
 .prompt-box:focus-within {
@@ -564,7 +564,7 @@
   text-align: start;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: border-color .15s var(--ease), background .15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 .example-list button:hover { border-color: var(--green-500); background: var(--green-50); }

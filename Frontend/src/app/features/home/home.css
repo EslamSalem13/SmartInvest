@@ -207,7 +207,7 @@
   min-height: 54px;
   background: rgba(7, 42, 30, .35);
   cursor: text;
-  transition: border-color .2s var(--ease), box-shadow .2s var(--ease);
+  transition: border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
 }
 .box:focus-within { border-color: #E7CE8C; box-shadow: 0 0 0 4px rgba(231, 206, 140, .16); }
 .box svg { width: 19px; height: 19px; color: #A9C4B2; flex: none; }
@@ -234,7 +234,7 @@
   border-radius: 13px;
   font-weight: 800; font-size: 16px;
   display: flex; gap: 8px; align-items: center; justify-content: center;
-  transition: transform .2s var(--ease), opacity .2s var(--ease), box-shadow .2s var(--ease);
+  transition: transform var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
   box-shadow: 0 12px 32px rgba(199, 154, 58, .32);
   margin-top: 6px;
 }
