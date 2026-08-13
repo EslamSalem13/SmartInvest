@@ -142,9 +142,9 @@ public class ProcurementController : ControllerBase
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 
-    /// <summary>مدير الإدارة المالية يحدد المدة القصوى لمرحلة (بالأيام) قبل ظهور زر الفشل. غير متاحة لمرحلة الإعلان.</summary>
+    /// <summary>مدير التخطيط أو السوبر أدمن يحددان المدة القصوى لمرحلة عادية. الإعلان ثابت والترسية بلا مدة عامة.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/duration")]
-    [Authorize(Roles = Roles.FinancialManagers)]
+    [Authorize(Roles = Roles.ManagementStaff)]
     public async Task<IActionResult> SetDuration(int subProjectId, string stage, SetStageDurationDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.SetStageDurationAsync(subProjectId, ParseStage(stage), dto.DurationDays, cancellationToken);

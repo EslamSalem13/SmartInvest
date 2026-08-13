@@ -47,14 +47,7 @@ namespace SmartInvest.Infrastructure.Migrations
                 type: "datetime2",
                 nullable: true);
 
-            // تصحيح رجعي: أي صف له مدة قصوى محددة مسبقًا كان يُحسب موعده النهائي من CreatedAt —
-            // نعيد ضبطه لبداية اليوم الحالي بدل تاريخ إنشاء المستند القديم.
-            migrationBuilder.Sql("UPDATE TenderDocuments SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
-            migrationBuilder.Sql("UPDATE TechnicalEvaluations SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
-            migrationBuilder.Sql("UPDATE OpeningEnvelopes SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
-            migrationBuilder.Sql("UPDATE FinancialEvaluations SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
-            migrationBuilder.Sql("UPDATE ContractAwards SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
-            migrationBuilder.Sql("UPDATE Announcements SET DurationSetAt = GETUTCDATE() WHERE DurationDays IS NOT NULL;");
+            // لا نضع وقت تشغيل الـmigration كبداية وهمية للسجلات القديمة. تبدأ المدة فقط من حدث تفعيل حقيقي لاحق.
         }
 
         /// <inheritdoc />

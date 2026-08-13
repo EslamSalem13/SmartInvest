@@ -107,6 +107,10 @@
                 @if (stageDetail()!.stage === 'announcement') {
                   <div class="stage-actions">
                     <div class="si-fld" style="min-width:220px">
+                      <label>المدة القصوى</label>
+                      <span class="chip">{{ stageDetail()!.durationDays }} يومًا — مدة ثابتة</span>
+                    </div>
+                    <div class="si-fld" style="min-width:220px">
                       <label>تاريخ الإعلان <span class="req">*</span></label>
                       <input
                         type="date"
@@ -122,12 +126,25 @@
                       </button>
                     }
                   </div>
-                } @else if (isManager() && stageDetail()!.stage !== 'contract-award') {
+                } @else if (stageDetail()!.stage !== 'contract-award') {
                   <div class="stage-actions">
-                    @if (stageDetail()!.durationDays && !durationEditing()) {
+                    @if (!canManageStageDuration()) {
                       <div class="si-fld" style="min-width:220px">
                         <label>المدة القصوى</label>
-                        <span class="chip">{{ stageDetail()!.durationDays }} يوم — ينتهي {{ dateStr(stageDetail()!.deadline) }}</span>
+                        <span class="chip">
+                          {{ stageDetail()!.durationDays ?? 7 }} أيام
+                          @if (stageDetail()!.deadline) { — ينتهي {{ dateStr(stageDetail()!.deadline) }} }
+                          @else { — لم يبدأ العد بعد }
+                        </span>
+                      </div>
+                    } @else if (stageDetail()!.durationDays && !durationEditing()) {
+                      <div class="si-fld" style="min-width:220px">
+                        <label>المدة القصوى</label>
+                        <span class="chip">
+                          {{ stageDetail()!.durationDays }} يوم
+                          @if (stageDetail()!.deadline) { — ينتهي {{ dateStr(stageDetail()!.deadline) }} }
+                          @else { — لم يبدأ العد بعد }
+                        </span>
                       </div>
                       @if (!stageDetail()!.isCompleted) {
                         <button class="si-btn sm" (click)="reopenDurationEdit()">إعادة تحديد المدة</button>

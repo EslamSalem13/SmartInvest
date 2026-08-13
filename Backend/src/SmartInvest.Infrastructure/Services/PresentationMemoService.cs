@@ -177,6 +177,7 @@ public class PresentationMemoService : IPresentationMemoService
         }
 
         _context.PresentationMemos.Add(memo);
+        await ActivateTenderStagesAsync(subProjectIds, DateTime.UtcNow, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         return await GetByIdAsync(memo.Id, dto.FinancialYearId, cancellationToken);
@@ -224,14 +225,52 @@ public class PresentationMemoService : IPresentationMemoService
         }
 
         var existingIds = memo.MemoSubProjects.Select(x => x.SubProjectId).ToHashSet();
-        foreach (var subProjectId in subProjectIds.Where(x => !existingIds.Contains(x)))
+        var newlyLinkedIds = subProjectIds.Where(x => !existingIds.Contains(x)).ToList();
+        foreach (var subProjectId in newlyLinkedIds)
         {
             memo.MemoSubProjects.Add(new PresentationMemoSubProject { SubProjectId = subProjectId });
         }
 
+        await ActivateTenderStagesAsync(newlyLinkedIds, DateTime.UtcNow, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
         return await GetByIdAsync(id, dto.FinancialYearId, cancellationToken);
+    }
+
+    /// <summary>
+    /// ربط المشروع بمذكرة العرض هو الحدث الذي يجعل أول مرحلة طرح متاحة وفق قواعد الخدمة الحالية.
+    /// لذلك تُخزّن مدة الـ7 أيام ووقت بدايتها هنا مرة واحدة، وليس أثناء أي GET.
+    /// </summary>
+    private async Task ActivateTenderStagesAsync(
+        IReadOnlyCollection<int> subProjectIds,
+        DateTime activatedAt,
+        CancellationToken cancellationToken)
+    {
+        if (subProjectIds.Count == 0)
+        {
+            return;
+        }
+
+        var existing = await _context.TenderDocuments
+            .Where(x => subProjectIds.Contains(x.SubProjectId))
+            .ToDictionaryAsync(x => x.SubProjectId, cancellationToken);
+
+        foreach (var subProjectId in subProjectIds)
+        {
+            if (!existing.TryGetValue(subProjectId, out var document))
+            {
+                _context.TenderDocuments.Add(new TenderDocument
+                {
+                    SubProjectId = subProjectId,
+                    DurationDays = ProcurementService.DefaultStageDurationDays,
+                    DurationSetAt = activatedAt,
+                });
+                continue;
+            }
+
+            document.DurationDays ??= ProcurementService.DefaultStageDurationDays;
+            document.DurationSetAt ??= activatedAt;
+        }
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)

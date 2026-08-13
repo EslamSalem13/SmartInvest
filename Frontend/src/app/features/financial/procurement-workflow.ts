@@ -55,6 +55,7 @@ export class ProcurementWorkflow implements OnInit {
 
   protected readonly isStaff = this.auth.canEditFinancial;
   protected readonly isManager = this.auth.canManageFinancial;
+  protected readonly canManageStageDuration = this.auth.canManageProcurementDuration;
 
   protected readonly completedCount = computed(
     () => this.overview()?.stages.filter((s) => s.isCompleted).length ?? 0,

@@ -20,5 +20,6 @@
     <ProjectReference Include="..\..\src\SmartInvest.Application\SmartInvest.Application.csproj" />
     <ProjectReference Include="..\..\src\SmartInvest.Domain\SmartInvest.Domain.csproj" />
     <ProjectReference Include="..\..\src\SmartInvest.Infrastructure\SmartInvest.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\SmartInvest.API\SmartInvest.API.csproj" />
   </ItemGroup>
 </Project>
