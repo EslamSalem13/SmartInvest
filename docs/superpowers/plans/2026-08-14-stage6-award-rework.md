@@ -17,7 +17,7 @@
 
 ---
 
-### Task 1: Backend data shape — schema, DTOs, mapping
+### Task 1: Backend data shape + service logic
 
 **Files:**
 - Modify: `Backend/src/SmartInvest.Domain/Entities/ProjectAssignment.cs`
@@ -25,10 +25,14 @@
 - Modify: `Backend/src/SmartInvest.Application/DTOs/ProcurementDtos.cs:113-167` (`ContractAwardDetailsDto`, `SetContractAwardDetailsDto`)
 - Modify: `Backend/src/SmartInvest.Application/DTOs/SubProjectDtos.cs:112`
 - Modify: `Backend/src/SmartInvest.Application/Common/Mappings/SubProjectMappingProfile.cs:107-112,222-236`
+- Modify: `Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs`
+- Test: `Backend/tests/SmartInvest.Tests/ContractAwardReworkTests.cs` (new)
 
 **Interfaces:**
-- Consumes: nothing (foundational task).
-- Produces: `ProjectAssignment.ContractDate` (`DateTime?`); `ContractAwardDetailsDto` gains `ContractDate` (`DateTime?`), `Savings` (`decimal?`), loses nothing (keeps `ContractTypeId`, now read-only/derived — no separate name field, the frontend already has the memo's `contractingMethodLabel` for display); `SetContractAwardDetailsDto` loses `ContractTypeId` and `ContractNumber`, gains `ContractDate`; `SubProjectDetailDto` swaps `ContractNumber` → `ContractDate` (its separate, pre-existing `ContractTypeName` field is untouched). Task 2 consumes all of these by name.
+- Consumes: `SubProject.OverrunPercentage` (existing field), `PresentationMemo.{IsCompleted,ContractingMethod}` (existing), `ContractingMethodLabels.ToLabel` (existing, `SmartInvest.Domain.Enums`).
+- Produces: `ProjectAssignment.ContractDate` (`DateTime?`); `ContractAwardDetailsDto` gains `ContractDate` (`DateTime?`), `Savings` (`decimal?`), loses nothing (keeps `ContractTypeId`, now read-only/derived — no separate name field, the frontend already has the memo's `contractingMethodLabel` for display); `SetContractAwardDetailsDto` loses `ContractTypeId` and `ContractNumber`, gains `ContractDate`; `SubProjectDetailDto` swaps `ContractNumber` → `ContractDate` (its separate, pre-existing `ContractTypeName` field is untouched). No new public methods on `ProcurementService` — the five behavior changes live inside already-public methods. Task 2 (frontend) consumes the reshaped `ContractAwardDetailsDto`/`SetContractAwardDetailsDto`.
+
+This task combines what would otherwise be two tasks (data shape, then the service logic that depends on it) into one, so every commit in this task builds standalone — the shape change alone doesn't compile without the logic that consumes it, and splitting them would mean an intentionally broken commit in between.
 
 - [ ] **Step 1: Add `ContractDate` to `ProjectAssignment`**
 
@@ -223,37 +227,11 @@ Replace with:
     }
 ```
 
-- [ ] **Step 6: Build**
-
-Run: `cd Backend && dotnet build`
-Expected: errors in `ProcurementService.cs` (still references the old `SetContractAwardDetailsDto.ContractTypeId`/`ContractNumber` and old `ContractAwardDetailsDto` shape) — this is expected, Task 2 fixes them. Confirm the errors are **only** in `ProcurementService.cs` and nowhere else (proves this task's own files are internally consistent).
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add Backend/src/SmartInvest.Domain/Entities/ProjectAssignment.cs Backend/src/SmartInvest.Infrastructure/Migrations Backend/src/SmartInvest.Application/DTOs/ProcurementDtos.cs Backend/src/SmartInvest.Application/DTOs/SubProjectDtos.cs Backend/src/SmartInvest.Application/Common/Mappings/SubProjectMappingProfile.cs
-git commit -m "feat(procurement): reshape award data — ContractDate, Savings, DB-generated ContractNumber"
-```
-
-Note: this commit intentionally leaves the backend non-building (`ProcurementService.cs` errors) — Task 2 fixes it in the same PR/branch. Both tasks land before the branch is ever built standalone for release; the plan's per-task build check exists to catch task-boundary mistakes, not to require green-at-every-commit for this specific two-task pair. (This is a deliberate, narrow exception — every other task in this and every other plan in this codebase must build standalone.)
-
----
-
-### Task 2: Backend service logic — `ProcurementService.cs`
-
-**Files:**
-- Modify: `Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs`
-- Test: `Backend/tests/SmartInvest.Tests/ContractAwardReworkTests.cs` (new)
-
-**Interfaces:**
-- Consumes: `ProjectAssignment.ContractDate` (Task 1), `ContractAwardDetailsDto.{ContractDate,Savings}` (Task 1), `SetContractAwardDetailsDto.{ContractDate}` (Task 1, `ContractTypeId`/`ContractNumber` no longer exist on it), `SubProject.OverrunPercentage` (existing field), `PresentationMemo.{IsCompleted,ContractingMethod}` (existing), `ContractingMethodLabels.ToLabel` (existing, `SmartInvest.Domain.Enums`).
-- Produces: no new public interface members — all five changes are inside already-public methods (`SetContractAwardDetailsAsync`, `SetCompletionAsync`, `UploadVersionAsync`'s internal gate). Task 4 (frontend) consumes the reshaped `ContractAwardDetailsDto`/`SetContractAwardDetailsDto` this task now correctly populates/accepts.
-
-- [ ] **Step 1: Read the existing test pattern first**
+- [ ] **Step 6: Read the existing test pattern first**
 
 Read `Backend/tests/SmartInvest.Tests/ProcurementDurationAndAuthorizationTests.cs` in full — it's the established pattern for testing `ProcurementService`: an in-memory EF Core `AppDbContext`, a `CreateService(context)` helper (`new ProcurementService(context, Mock.Of<IExecutionStageService>(), new TestCurrentUser())`), and a `SeedProjectAsync(context)` helper. The new test file in this task follows the exact same shape.
 
-- [ ] **Step 2: Write the failing tests**
+- [ ] **Step 7: Write the failing tests**
 
 Create `Backend/tests/SmartInvest.Tests/ContractAwardReworkTests.cs`:
 
@@ -495,12 +473,12 @@ public sealed class ContractAwardReworkTests
 }
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [ ] **Step 8: Run the tests to verify they fail**
 
 Run: `cd Backend && dotnet test --filter ContractAwardReworkTests`
 Expected: compile errors or failures — the production code doesn't implement any of this yet (memo-completion gate still existence-only, no overrun check, no توريدات skip, no contract-type-from-memo, `ContractNumber`/`ContractTypeId` still referenced in `SetContractAwardDetailsDto` the old way from Task 1's already-changed DTO shape — expect build errors here specifically, confirming Task 1 correctly left this file broken).
 
-- [ ] **Step 4: Implement — memo-completion gate**
+- [ ] **Step 9: Implement — memo-completion gate**
 
 In `Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs`, find:
 
@@ -544,7 +522,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 5: Implement — overrun ceiling + توريدات skip in `ValidateContractAwardForCompletionAsync`**
+- [ ] **Step 10: Implement — overrun ceiling + توريدات skip in `ValidateContractAwardForCompletionAsync`**
 
 Find the entire method:
 
@@ -753,7 +731,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 6: Implement — auto-set handover date for توريدات on completion**
+- [ ] **Step 11: Implement — auto-set handover date for توريدات on completion**
 
 Find:
 
@@ -805,7 +783,7 @@ Then add this new private method directly after `SetCompletionAsync` (right afte
     }
 ```
 
-- [ ] **Step 7: Implement — contract type from memo + DB-generated contract number in `UpsertAssignmentAsync`**
+- [ ] **Step 12: Implement — contract type from memo + DB-generated contract number in `UpsertAssignmentAsync`**
 
 Find:
 
@@ -935,7 +913,7 @@ Replace with:
     }
 ```
 
-- [ ] **Step 8: Implement — label, Savings, ContractDate in `GetContractAwardDetailsAsync`**
+- [ ] **Step 13: Implement — label, Savings, ContractDate in `GetContractAwardDetailsAsync`**
 
 Find:
 
@@ -1089,15 +1067,15 @@ Replace with:
     }
 ```
 
-- [ ] **Step 9: Rename the label read site**
+- [ ] **Step 14: Rename the label read site**
 
 The "إجمالي التكلفة" text lives in the frontend template (Task 4), not here — `TotalCost` the DTO property name is unchanged (it's an API contract name, not user-facing text). No backend step needed for item 1 beyond what Step 8 already produced.
 
-- [ ] **Step 10: Confirm `SmartInvest.Domain.Enums` is imported**
+- [ ] **Step 15: Confirm `SmartInvest.Domain.Enums` is imported**
 
 Check the top of `ProcurementService.cs` for `using SmartInvest.Domain.Enums;` — it's already there (the file already uses `SiteHandoverMode` from the same namespace). `ContractingMethodLabels` needs no additional using statement.
 
-- [ ] **Step 11: Build and run the tests**
+- [ ] **Step 16: Build and run the tests**
 
 Run: `cd Backend && dotnet build`
 Expected: 0 errors (this resolves the errors Task 1 intentionally left).
@@ -1108,24 +1086,28 @@ Expected: all 6 tests pass.
 Run: `cd Backend && dotnet test --filter ProcurementDurationAndAuthorizationTests`
 Expected: all pre-existing tests still pass (confirms this task didn't regress the just-merged upstream duration/authorization work).
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 17: Commit**
 
 ```bash
-git add Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs Backend/tests/SmartInvest.Tests/ContractAwardReworkTests.cs
-git commit -m "feat(procurement): enforce memo-completion gate, overrun ceiling, supply auto-handover, memo-derived contract type"
+git add Backend/src/SmartInvest.Domain/Entities/ProjectAssignment.cs Backend/src/SmartInvest.Infrastructure/Migrations Backend/src/SmartInvest.Application/DTOs/ProcurementDtos.cs Backend/src/SmartInvest.Application/DTOs/SubProjectDtos.cs Backend/src/SmartInvest.Application/Common/Mappings/SubProjectMappingProfile.cs Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs Backend/tests/SmartInvest.Tests/ContractAwardReworkTests.cs
+git commit -m "feat(procurement): rework contract award — memo-completion gate, overrun ceiling, supply auto-handover, memo-derived contract type, DB-generated contract number"
 ```
 
 ---
 
-### Task 3: Frontend models + service
+### Task 2: Frontend models + award panel rework
 
 **Files:**
 - Modify: `Frontend/src/app/core/models/financial.models.ts:22-66`
 - Modify: `Frontend/src/app/core/models/project.models.ts:114`
+- Modify: `Frontend/src/app/features/financial/procurement-workflow.ts`
+- Modify: `Frontend/src/app/features/financial/procurement-workflow.html:246-354` (the award panel block)
 
 **Interfaces:**
-- Consumes: the reshaped `ContractAwardDetailsDto`/`SetContractAwardDetailsDto`/`SubProjectDetailDto` (Task 1 + 2, now live on the backend).
-- Produces: `ContractAwardDetails.{contractDate,savings}` (TS), `SetContractAwardDetails.{contractDate}` (TS, `contractTypeId`/`contractNumber` removed), `SubProjectDetail.contractDate`. Task 4 and Task 5 consume these by name.
+- Consumes: the reshaped `ContractAwardDetailsDto`/`SetContractAwardDetailsDto`/`SubProjectDetailDto` (Task 1, now live on the backend), `ProcurementOverview.activePresentationMemo.contractingMethodLabel` (existing, already fetched into `overview()`).
+- Produces: `ContractAwardDetails.{contractDate,savings}` (TS), `SetContractAwardDetails.{contractDate}` (TS, `contractTypeId`/`contractNumber` removed), `SubProjectDetail.contractDate`. Task 3 consumes `SubProjectDetail.contractDate`.
+
+This task combines what would otherwise be two tasks (model shapes, then the component that depends on them) into one, for the same standalone-build reason as Task 1.
 
 - [ ] **Step 1: Update `ContractAwardDetails` and `SetContractAwardDetails`**
 
@@ -1201,33 +1183,7 @@ Replace with:
   contractDate: string | null;
 ```
 
-- [ ] **Step 3: Build**
-
-Run: `cd Frontend && npm run build`
-Expected: errors in `procurement-workflow.ts` and `sub-project-details.ts`/`.html` (they still reference the old field names) — expected, Tasks 4 and 5 fix them. Confirm no errors outside those files.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add Frontend/src/app/core/models/financial.models.ts Frontend/src/app/core/models/project.models.ts
-git commit -m "feat(procurement): reshape frontend award models to match backend"
-```
-
-Same narrow build-break exception as Task 1 — this task and Tasks 4/5 land together before the branch needs to build standalone.
-
----
-
-### Task 4: Frontend award panel rework
-
-**Files:**
-- Modify: `Frontend/src/app/features/financial/procurement-workflow.ts`
-- Modify: `Frontend/src/app/features/financial/procurement-workflow.html:246-354` (the award panel block)
-
-**Interfaces:**
-- Consumes: `ContractAwardDetails`/`SetContractAwardDetails` (Task 3), `ProcurementOverview.activePresentationMemo.contractingMethodLabel` (existing, already fetched into `overview()`).
-- Produces: nothing consumed by later tasks (leaf task for this file).
-
-- [ ] **Step 1: Remove `aContractTypeId`, `aContractNumber`, `contractTypes`, and the `ContractTypesService`/`Lookup` import**
+- [ ] **Step 3: Remove `aContractTypeId`, `aContractNumber`, `contractTypes`, and the `ContractTypesService`/`Lookup` import**
 
 In `Frontend/src/app/features/financial/procurement-workflow.ts`, find:
 
@@ -1287,7 +1243,7 @@ Replace with:
   protected readonly aContractValue = signal<number | null>(null);
 ```
 
-- [ ] **Step 2: Stop fetching contract types**
+- [ ] **Step 4: Stop fetching contract types**
 
 Find:
 
@@ -1320,7 +1276,7 @@ Replace with:
   }
 ```
 
-- [ ] **Step 3: Update form sync (load) and save**
+- [ ] **Step 5: Update form sync (load) and save**
 
 Find:
 
@@ -1356,7 +1312,7 @@ Replace with:
         contractValue: this.aContractValue(),
 ```
 
-- [ ] **Step 4: Rework the award panel template**
+- [ ] **Step 6: Rework the award panel template**
 
 In `Frontend/src/app/features/financial/procurement-workflow.html`, find:
 
@@ -1441,7 +1397,7 @@ Replace with:
                       </div>
 ```
 
-- [ ] **Step 5: Hide handover fields for توريدات**
+- [ ] **Step 7: Hide handover fields for توريدات**
 
 In `Frontend/src/app/features/financial/procurement-workflow.html`, find the entire "مدة التنفيذ وتسليم الأرضية" block:
 
@@ -1585,12 +1541,12 @@ Replace with (the two duration fields stay unconditional — توريدات stil
                     </div>
 ```
 
-- [ ] **Step 6: Build**
+- [ ] **Step 8: Build**
 
 Run: `cd Frontend && npm run build`
 Expected: 0 errors.
 
-- [ ] **Step 7: Manually verify in browser**
+- [ ] **Step 9: Manually verify in browser**
 
 Run: `npm start` (if not already running; reuse an already-running dev server if one exists, per this project's standing convention of not starting duplicate processes).
 
@@ -1598,16 +1554,16 @@ For a مقاولات project: open its procurement workflow, reach stage 6, conf
 
 For a توريدات project: confirm no handover-mode/date/proof fields render at all, only duration months/days; complete the stage; confirm in متابعة المشروعات that a real delivery deadline appears immediately (not "بانتظار تسليم الأرضية").
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add Frontend/src/app/features/financial/procurement-workflow.ts Frontend/src/app/features/financial/procurement-workflow.html
-git commit -m "feat(procurement): rework award panel — memo-derived contract type, contract date, savings, supply-skip handover"
+git add Frontend/src/app/core/models/financial.models.ts Frontend/src/app/core/models/project.models.ts Frontend/src/app/features/financial/procurement-workflow.ts Frontend/src/app/features/financial/procurement-workflow.html
+git commit -m "feat(procurement): rework frontend award panel — memo-derived contract type, contract date, savings, supply-skip handover"
 ```
 
 ---
 
-### Task 5: Frontend sub-project details page
+### Task 3: Frontend sub-project details page
 
 **Files:**
 - Modify: `Frontend/src/app/features/projects/details/sub-project-details.html:119`
@@ -1670,12 +1626,12 @@ git commit -m "feat(projects): show contract date instead of contract number on 
 
 ---
 
-### Task 6: Final end-to-end verification
+### Task 4: Final end-to-end verification
 
 **Files:** none (verification only).
 
 **Interfaces:**
-- Consumes: the complete result of Tasks 1-5.
+- Consumes: the complete result of Tasks 1-3.
 - Produces: confirmation the feature is ready to merge.
 
 - [ ] **Step 1: Full build + test check**
