@@ -648,6 +648,18 @@ tr { transition: background-color var(--dur-fast) var(--ease); }
     animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: .001ms !important;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-page);
+  animation-timing-function: var(--ease);
 }
 
 @media (max-width: 620px) {
