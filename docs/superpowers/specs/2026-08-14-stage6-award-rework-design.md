@@ -34,11 +34,17 @@ if ContractValue > allowedCeiling → block, message states both the entered val
 
 This reuses `SubProject.OverrunPercentage` — the exact same field and ceiling formula already enforced for execution-stage spending in `ExecutionStageService.GetAllowedCeilingAsync`. Same concept, same source field, now also gating the contract value itself at award time rather than only gating post-award spend.
 
-### 4. تاريخ العقد replaces رقم العقد — in the award UI only, not the schema
+### 4. تاريخ العقد replaces رقم العقد everywhere in the UI — رقم العقد becomes a DB-generated, backend-only value
 
 **Schema:** add `ContractDate` (`DateTime?`) to `ProjectAssignment`. **Do not remove `ContractNumber`** — it's a live column consumed by `ReportsService.ExecutionReports.cs:37` and the separate Project Assignments ledger feature (`ProjectAssignmentService.cs`, `ProjectAssignmentDtos.cs`), neither of which this cycle touches.
 
-**UI:** in the award panel only (`procurement-workflow.html:311-314`), replace the "رقم العقد" input with a "تاريخ العقد" date input. The award form stops reading/writing `ContractNumber` — that field becomes exclusively the Project Assignments ledger's concern going forward, unless a future cycle decides otherwise. `SetContractAwardDetailsDto`/`ContractAwardDetailsDto` gain `ContractDate`; `SetContractAwardDetailsDto.ContractNumber` is removed (nothing legitimate will ever populate it through this endpoint again, since the field is gone from the form) — but `ProjectAssignment.ContractNumber` itself is untouched, so existing data and the report survive unchanged.
+**`ContractNumber` stops being user-entered — it becomes DB auto-generated.** `ProjectAssignment.AssignmentId` is already a real DB identity/auto-increment column; reuse it rather than adding a second sequence. In `UpsertAssignmentAsync`, when creating a **new** `ProjectAssignment` (the `assignment == null` branch), save once to let EF Core populate the generated `AssignmentId`, then set `assignment.ContractNumber = assignment.AssignmentId.ToString()` and save again. Existing assignments keep whatever `ContractNumber` they already have (never overwritten on update — it's an identity, not an editable field, once assigned). `SetContractAwardDetailsDto.ContractNumber` and `UpsertAssignmentAsync`'s use of `dto.ContractNumber` are removed entirely — nothing external supplies this value anymore.
+
+**Not displayed anywhere in the frontend** (confirmed two live spots, both change):
+- Award panel (`procurement-workflow.html:311-314`): the "رقم العقد" input is replaced by a "تاريخ العقد" date input, backed by the new `aContractDate` signal (replacing `aContractNumber` in `procurement-workflow.ts`). `SetContractAwardDetailsDto`/`ContractAwardDetailsDto` gain `ContractDate`, drop `ContractNumber`.
+- Sub-project details page, "بيانات التعاقد" card (`sub-project-details.html:119`, `project()!.contractNumber`): row changes from رقم العقد to تاريخ العقد. Backend: `SubProjectMappingProfile.cs`'s `LatestAssignmentInfo`/`GetLatestAssignment` mapping (currently maps `ContractNumber` at lines 111-112, 226, 235) swaps to map `ContractDate` instead; `SubProjectDetailDto.ContractNumber` (`SubProjectDtos.cs:112`) is replaced by `ContractDate`; `Frontend/src/app/core/models/project.models.ts:114`'s `contractNumber` field becomes `contractDate`.
+
+`ProjectAssignment.ContractNumber` itself, and the Project Assignments ledger feature that separately manages it, are untouched — existing data and `ReportsService.ExecutionReports.cs` survive unchanged; the column just stops being something any current UI surfaces or lets a user type into.
 
 ### 5. Contract type — fixed from the memo, not independently chosen (user's explicit decision)
 
