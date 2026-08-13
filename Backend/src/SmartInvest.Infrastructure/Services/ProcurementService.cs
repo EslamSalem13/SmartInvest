@@ -637,9 +637,12 @@ public class ProcurementService : IProcurementService
     private static TDto BuildStageDto<TDto>(ProcurementStage stage, IStageOps ops, StageDocState? state)
         where TDto : ProcurementStageDto, new()
     {
-        // الموعد النهائي العام = بداية المرحلة + المدة التي حددها مدير التخطيط.
+        // الموعد النهائي = وقت تحديد المدة (لا وقت إنشاء المستند) + المدة التي حددها مدير التخطيط —
+        // لو المستند موجود من قبل (مثلاً أُنشئ برفع إصدار سابق) وحُدِّدت المدة لاحقًا، العدّ يبدأ من التحديد نفسه.
         // مرحلة الإعلان تتجاوز هذا لاحقًا بقاعدة الـ15 يومًا الثابتة (انظر GetOverviewAsync/GetStageAsync).
-        var deadline = state?.DurationDays is int days ? state.CreatedAt.AddDays(days) : (DateTime?)null;
+        var deadline = state?.DurationDays is int days
+            ? (state.DurationSetAt ?? state.CreatedAt).AddDays(days)
+            : (DateTime?)null;
         var canFail = deadline != null && DateTime.UtcNow > deadline && state?.IsCompleted != true;
 
         return new TDto
@@ -867,6 +870,7 @@ public class ProcurementService : IProcurementService
         DateTime? LastUpdatedAt,
         DateTime CreatedAt,
         int? DurationDays,
+        DateTime? DurationSetAt,
         bool IsSkipped,
         string? SkipReason,
         DateTime? FailedAt,
@@ -966,6 +970,7 @@ public class ProcurementService : IProcurementService
                     d.UpdatedAt ?? d.CreatedAt,
                     d.CreatedAt,
                     d.DurationDays,
+                    d.DurationSetAt,
                     d.IsSkipped,
                     d.SkipReason,
                     d.FailedAt,
@@ -1133,6 +1138,7 @@ public class ProcurementService : IProcurementService
             }
 
             doc.DurationDays = durationDays;
+            doc.DurationSetAt = durationDays == null ? null : DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
         }
 

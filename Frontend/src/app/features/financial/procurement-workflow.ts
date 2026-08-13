@@ -241,9 +241,11 @@ export class ProcurementWorkflow implements OnInit {
     return formatEgpAsThousands(value);
   }
 
-  // ===== المدة القصوى (كل المراحل عدا الإعلان) =====
+  // ===== المدة القصوى (كل المراحل عدا الإعلان والترسية — للترسية مدة تنفيذ خاصة بها) =====
   protected readonly durationInput = signal<number | null>(null);
   protected readonly durationSaving = signal(false);
+  /** بعد تحديد المدة تُقفل للقراءة فقط؛ تُفتح ثانيةً فقط بزر "إعادة تحديد المدة" */
+  protected readonly durationEditing = signal(false);
 
   protected saveDuration(): void {
     const detail = this.stageDetail();
@@ -254,6 +256,7 @@ export class ProcurementWorkflow implements OnInit {
     this.financial.setStageDuration(this.subProjectId, detail.stage, this.durationInput()).subscribe({
       next: () => {
         this.durationSaving.set(false);
+        this.durationEditing.set(false);
         this.toast.success('تم حفظ المدة القصوى');
         this.reload();
       },
@@ -262,6 +265,15 @@ export class ProcurementWorkflow implements OnInit {
         this.toast.error(err?.error?.message ?? 'تعذر حفظ المدة القصوى');
       },
     });
+  }
+
+  protected reopenDurationEdit(): void {
+    this.durationEditing.set(true);
+  }
+
+  protected cancelDurationEdit(): void {
+    this.durationInput.set(this.stageDetail()?.durationDays ?? null);
+    this.durationEditing.set(false);
   }
 
   // ===== تاريخ الإعلان (خاص بمرحلة الإعلان) =====
@@ -419,6 +431,7 @@ export class ProcurementWorkflow implements OnInit {
         this.stageDetail.set(detail);
         this.syncAwardForm(detail.contractAward);
         this.durationInput.set(detail.durationDays);
+        this.durationEditing.set(false);
         this.announcementDateInput.set(detail.announcementDate?.slice(0, 10) ?? '');
         this.stageLoading.set(false);
       },

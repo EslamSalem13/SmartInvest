@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartInvest.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SmartInvest.Infrastructure.Data;
 namespace SmartInvest.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812232514_AddDurationSetAt")]
+    partial class AddDurationSetAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -658,19 +661,12 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<decimal>("SelfFundingSpent")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("SubProjectFinancialYearId")
-                        .HasColumnType("int");
-
                     b.Property<int>("SubProjectId")
                         .HasColumnType("int");
 
                     b.HasKey("ExecutionStageId");
 
                     b.HasIndex("SubProjectId");
-
-                    b.HasIndex("SubProjectFinancialYearId", "IsFinalDelivery")
-                        .IsUnique()
-                        .HasFilter("[IsFinalDelivery] = 1 AND [SubProjectFinancialYearId] IS NOT NULL");
 
                     b.ToTable("ExecutionStages");
                 });
@@ -1300,9 +1296,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Property<int>("CurrentVersionNumber")
                         .HasColumnType("int");
 
-                    b.Property<int?>("FinancialYearId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
@@ -1318,8 +1311,6 @@ namespace SmartInvest.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FinancialYearId");
 
                     b.ToTable("PresentationMemos");
                 });
@@ -1649,9 +1640,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Property<string>("EnvironmentalImpact")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ExecutionCompletedAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<int?>("ExecutiveAgencyId")
                         .HasColumnType("int");
@@ -2522,11 +2510,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.ExecutionStage", b =>
                 {
-                    b.HasOne("SmartInvest.Domain.Entities.SubProjectFinancialYear", "SubProjectFinancialYear")
-                        .WithMany("ExecutionStages")
-                        .HasForeignKey("SubProjectFinancialYearId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("SmartInvest.Domain.Entities.SubProject", "SubProject")
                         .WithMany()
                         .HasForeignKey("SubProjectId")
@@ -2642,8 +2625,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("SelfFundingProofFile");
 
                     b.Navigation("SubProject");
-
-                    b.Navigation("SubProjectFinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.FinancialEvaluation", b =>
@@ -2945,16 +2926,6 @@ namespace SmartInvest.Infrastructure.Migrations
                     b.Navigation("Plan");
 
                     b.Navigation("SubProject");
-                });
-
-            modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemo", b =>
-                {
-                    b.HasOne("SmartInvest.Domain.Entities.FinancialYear", "FinancialYear")
-                        .WithMany("PresentationMemos")
-                        .HasForeignKey("FinancialYearId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("FinancialYear");
                 });
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.PresentationMemoSubProject", b =>
@@ -3499,8 +3470,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
                     b.Navigation("Plans");
 
-                    b.Navigation("PresentationMemos");
-
                     b.Navigation("SubProjectFinancialYears");
                 });
 
@@ -3592,8 +3561,6 @@ namespace SmartInvest.Infrastructure.Migrations
 
             modelBuilder.Entity("SmartInvest.Domain.Entities.SubProjectFinancialYear", b =>
                 {
-                    b.Navigation("ExecutionStages");
-
                     b.Navigation("ProjectFollowUps");
                 });
 

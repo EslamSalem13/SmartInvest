@@ -122,24 +122,37 @@
                       </button>
                     }
                   </div>
-                } @else if (stageDetail()!.stage !== 'contract-award' && isManager()) {
+                } @else if (isManager() && stageDetail()!.stage !== 'contract-award') {
                   <div class="stage-actions">
-                    <div class="si-fld" style="min-width:160px">
-                      <label>المدة القصوى — أيام</label>
-                      <input
-                        type="number"
-                        min="1"
-                        [ngModel]="durationInput()"
-                        (ngModelChange)="durationInput.set($event)"
-                        [disabled]="stageDetail()!.isCompleted"
-                        placeholder="بلا موعد نهائي"
-                      />
-                      <span class="hint">تجاوزها بلا إكمال يفتح زر «فشل المرحلة»</span>
-                    </div>
-                    @if (!stageDetail()!.isCompleted) {
-                      <button class="si-btn sm" [disabled]="durationSaving()" (click)="saveDuration()">
-                        @if (durationSaving()) { جاري الحفظ… } @else { حفظ المدة }
-                      </button>
+                    @if (stageDetail()!.durationDays && !durationEditing()) {
+                      <div class="si-fld" style="min-width:220px">
+                        <label>المدة القصوى</label>
+                        <span class="chip">{{ stageDetail()!.durationDays }} يوم — ينتهي {{ dateStr(stageDetail()!.deadline) }}</span>
+                      </div>
+                      @if (!stageDetail()!.isCompleted) {
+                        <button class="si-btn sm" (click)="reopenDurationEdit()">إعادة تحديد المدة</button>
+                      }
+                    } @else {
+                      <div class="si-fld" style="min-width:160px">
+                        <label>المدة القصوى — أيام</label>
+                        <input
+                          type="number"
+                          min="1"
+                          [ngModel]="durationInput()"
+                          (ngModelChange)="durationInput.set($event)"
+                          [disabled]="stageDetail()!.isCompleted"
+                          placeholder="بلا موعد نهائي"
+                        />
+                        <span class="hint">تجاوزها بلا إكمال يفتح زر «فشل المرحلة»</span>
+                      </div>
+                      @if (!stageDetail()!.isCompleted) {
+                        <button class="si-btn sm" [disabled]="durationSaving()" (click)="saveDuration()">
+                          @if (durationSaving()) { جاري الحفظ… } @else { حفظ المدة }
+                        </button>
+                        @if (stageDetail()!.durationDays) {
+                          <button class="si-btn sm" (click)="cancelDurationEdit()">إلغاء</button>
+                        }
+                      }
                     }
                   </div>
                 }

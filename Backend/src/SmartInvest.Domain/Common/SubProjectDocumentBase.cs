@@ -16,6 +16,9 @@ public abstract class SubProjectDocumentBase : DocumentBase
     /// <summary>المدة القصوى بالأيام قبل أن يظهر زر الفشل — يحددها مدير التخطيط، وتُتجاهَل لمرحلة الإعلان.</summary>
     public int? DurationDays { get; set; }
 
+    /// <summary>وقت آخر تحديد/إعادة تحديد للمدة القصوى — الموعد النهائي يُحسب منه لا من CreatedAt، حتى لا يُحسب من تاريخ إنشاء المستند الفعلي لو حُدِّدت المدة لاحقًا.</summary>
+    public DateTime? DurationSetAt { get; set; }
+
     // ===== "هذه المرحلة غير لازمة للطرح" =====
 
     public bool IsSkipped { get; set; }
