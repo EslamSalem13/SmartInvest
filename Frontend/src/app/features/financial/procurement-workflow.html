@@ -107,6 +107,10 @@
                 @if (stageDetail()!.stage === 'announcement') {
                   <div class="stage-actions">
                     <div class="si-fld" style="min-width:220px">
+                      <label>المدة القصوى</label>
+                      <span class="chip">{{ stageDetail()!.durationDays }} يومًا — مدة ثابتة</span>
+                    </div>
+                    <div class="si-fld" style="min-width:220px">
                       <label>تاريخ الإعلان <span class="req">*</span></label>
                       <input
                         type="date"
@@ -122,12 +126,25 @@
                       </button>
                     }
                   </div>
-                } @else if (isManager() && stageDetail()!.stage !== 'contract-award') {
+                } @else if (stageDetail()!.stage !== 'contract-award') {
                   <div class="stage-actions">
-                    @if (stageDetail()!.durationDays && !durationEditing()) {
+                    @if (!canManageStageDuration()) {
                       <div class="si-fld" style="min-width:220px">
                         <label>المدة القصوى</label>
-                        <span class="chip">{{ stageDetail()!.durationDays }} يوم — ينتهي {{ dateStr(stageDetail()!.deadline) }}</span>
+                        <span class="chip">
+                          {{ stageDetail()!.durationDays ?? 7 }} أيام
+                          @if (stageDetail()!.deadline) { — ينتهي {{ dateStr(stageDetail()!.deadline) }} }
+                          @else { — لم يبدأ العد بعد }
+                        </span>
+                      </div>
+                    } @else if (stageDetail()!.durationDays && !durationEditing()) {
+                      <div class="si-fld" style="min-width:220px">
+                        <label>المدة القصوى</label>
+                        <span class="chip">
+                          {{ stageDetail()!.durationDays }} يوم
+                          @if (stageDetail()!.deadline) { — ينتهي {{ dateStr(stageDetail()!.deadline) }} }
+                          @else { — لم يبدأ العد بعد }
+                        </span>
                       </div>
                       @if (!stageDetail()!.isCompleted) {
                         <button class="si-btn sm" (click)="reopenDurationEdit()">إعادة تحديد المدة</button>
@@ -165,12 +182,12 @@
                         <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
                         رفع إصدار جديد
                       </button>
-                      @if (stageDetail()!.canFail) {
+                      @if (isManager() && stageDetail()!.canFail) {
                         <button class="si-btn danger sm" (click)="openFailModal()">فشل المرحلة</button>
                       }
-                      @if (stageDetail()!.currentVersionNumber > 0) {
+                      @if (isManager() && stageDetail()!.currentVersionNumber > 0) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المرحلة</button>
-                      } @else {
+                      } @else if (isManager()) {
                         <span class="si-note-inline">ارفع إصدارًا يحتوي على المستندات المطلوبة أولًا — زر "إكمال المرحلة" يظهر بعدها</span>
                       }
                       @if (isManager()) {

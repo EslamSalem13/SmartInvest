@@ -135,7 +135,7 @@
                   @for (s of stages(); track s.id) {
                     <tr [class.final-row]="s.isFinalDelivery">
                       <td data-label="المرحلة">
-                        {{ s.name }}
+                        {{ s.isFinalDelivery ? 'التسليم الأولي' : s.name }}
                         @if (s.isFinalDelivery) { <span class="chip lock-chip">تلقائية</span> }
                       </td>
                       <td class="tnum" data-label="الموعد" [class.warn]="s.exceedsContractualDeadline">

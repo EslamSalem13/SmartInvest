@@ -77,7 +77,7 @@ export class FinancialService {
     return this.http.put<void>(`${this.base}/subprojects/${subProjectId}/procurement/${stage}/reopen`, {});
   }
 
-  /** مدير التخطيط يحدد المدة القصوى (بالأيام) — null يلغي الموعد النهائي. غير متاحة لمرحلة الإعلان. */
+  /** مدير التخطيط أو السوبر أدمن يحددان المدة القصوى؛ null يعيد 7 أيام. الإعلان والترسية مستثنيان. */
   setStageDuration(subProjectId: number, stage: string, durationDays: number | null): Observable<void> {
     return this.http.put<void>(
       `${this.base}/subprojects/${subProjectId}/procurement/${stage}/duration`,

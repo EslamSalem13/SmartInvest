@@ -85,7 +85,7 @@ export interface ProcurementStage {
   advancePaymentDone: boolean | null;
   contractAward?: ContractAwardDetails | null;
 
-  /** المدة القصوى بالأيام التي حددها مدير التخطيط — null يعني بلا موعد نهائي. لا تُستخدم لمرحلة الإعلان. */
+  /** مدة المرحلة بالأيام. العادية افتراضيًا 7، والإعلان ثابت 15، والترسية بلا مدة عامة. */
   durationDays: number | null;
   /** الموعد النهائي — محسوب من الخادم دائمًا (لمرحلة الإعلان: تاريخ الإعلان + 15 يومًا ثابتة) */
   deadline: string | null;

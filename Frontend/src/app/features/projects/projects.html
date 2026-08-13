@@ -42,9 +42,12 @@
     <div class="kpi ok"><span class="lab">المعتمدة</span><b class="val tnum">{{ kpiApproved() }}</b></div>
     <div class="kpi warn"><span class="lab">المقترحة</span><b class="val tnum">{{ kpiPending() }}</b></div>
     <!-- <div class="kpi bad"><span class="lab">متعثرة</span><b class="val tnum">{{ kpiStalled() }}</b></div> -->
-    <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum" [title]="money(kpiBank()) + ' ج.م'">{{ thousandsLabel(kpiBank()) }}</b></div>
-    <div class="kpi gold"><span class="lab">إجمالي تمويل ذاتي</span><b class="val tnum" [title]="money(kpiSelf()) + ' ج.م'">{{ thousandsLabel(kpiSelf()) }}</b></div>
-    <div class="kpi gold"><span class="lab">الإجمالي</span><b class="val tnum" [title]="money(kpiTotalFunding()) + ' ج.م'">{{ thousandsLabel(kpiTotalFunding()) }}</b></div>
+    <div class="kpi gold"><span class="lab">إجمالي تمويل بنكي</span><b class="val tnum" [title]="money(kpiBank()) + ' ج.م'"><span>{{ thousandsValue(kpiBank()) }}</span><small class="money-unit">ألف ج.م</small></b></div>
+    <div class="kpi gold">
+      <span class="lab">إجمالي تمويل ذاتي</span>
+      <b class="val tnum" [title]="money(kpiSelf()) + ' ج.م'"><span>{{ thousandsValue(kpiSelf()) }}</span><small class="money-unit">ألف ج.م</small></b>
+    </div>
+    <div class="kpi gold"><span class="lab">الإجمالي</span><b class="val tnum" [title]="money(kpiTotalFunding()) + ' ج.م'"><span>{{ thousandsValue(kpiTotalFunding()) }}</span><small class="money-unit">ألف ج.م</small></b></div>
     <button
       type="button"
       class="kpi gold kpi-btn"
@@ -53,7 +56,9 @@
       aria-label="عرض سجل الإتاحات البنكية"
     >
       <span class="lab">المتاح</span>
-      <b class="val tnum" [title]="selectedYearId() == null ? '' : money(kpiAvailable()) + ' ج.م'">{{ selectedYearId() == null ? '—' : thousandsLabel(kpiAvailable()) }}</b>
+      <b class="val tnum" [title]="selectedYearId() == null ? '' : money(kpiAvailable()) + ' ج.م'">
+        @if (selectedYearId() == null) { — } @else { <span>{{ thousandsValue(kpiAvailable()) }}</span><small class="money-unit">ألف ج.م</small> }
+      </b>
     </button>
   </div>
 

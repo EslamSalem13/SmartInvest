@@ -18,7 +18,7 @@ public class ExecutionStageService : IExecutionStageService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
 
-    public const string FinalDeliveryStageName = "التسليم النهائي";
+    public const string FinalDeliveryStageName = "التسليم الأولي";
 
     public ExecutionStageService(
         AppDbContext context,

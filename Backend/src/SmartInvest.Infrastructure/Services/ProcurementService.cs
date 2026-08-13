@@ -19,12 +19,17 @@ public class ProcurementService : IProcurementService
 {
     private readonly AppDbContext _context;
     private readonly IExecutionStageService _executionStageService;
+    private readonly ICurrentUserService _currentUser;
     private readonly Dictionary<ProcurementStage, IStageOps> _stages;
 
-    public ProcurementService(AppDbContext context, IExecutionStageService executionStageService)
+    public ProcurementService(
+        AppDbContext context,
+        IExecutionStageService executionStageService,
+        ICurrentUserService currentUser)
     {
         _context = context;
         _executionStageService = executionStageService;
+        _currentUser = currentUser;
         _stages = BuildStages(context);
     }
 
@@ -239,6 +244,13 @@ public class ProcurementService : IProcurementService
             },
             StringComparer.OrdinalIgnoreCase);
 
+        // أول نشاط كتابي موثوق للمرحلة الأولى (أو لسجل قديم بلا مستند) يفعّل المؤقت مرة واحدة.
+        // لا يتم ذلك في GET، لذلك لا يغيّر Refresh موعد النهاية.
+        if (await ops.FindDocAsync(subProjectId, cancellationToken) == null)
+        {
+            await ActivateStageAsync(subProjectId, stage, DateTime.UtcNow, cancellationToken);
+        }
+
         return await ops.UploadAsync(subProjectId, files, dto.Notes, cancellationToken);
     }
 
@@ -263,11 +275,17 @@ public class ProcurementService : IProcurementService
         if (isCompleted)
         {
             await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
+            var wasAlreadyCompleted = (await _stages[stage].FindDocAsync(subProjectId, cancellationToken))?.IsCompleted == true;
             await _stages[stage].SetCompletionAsync(subProjectId, true, cancellationToken);
 
             if (stage == ProcurementStage.ContractAward)
             {
                 await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
+            }
+            else if (!wasAlreadyCompleted)
+            {
+                var nextStage = (ProcurementStage)((int)stage + 1);
+                await ActivateStageAsync(subProjectId, nextStage, DateTime.UtcNow, cancellationToken);
             }
 
             return;
@@ -385,7 +403,56 @@ public class ProcurementService : IProcurementService
         }
 
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
-        await _stages[stage].SetDurationAsync(subProjectId, durationDays, cancellationToken);
+        await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
+        var previous = await _stages[stage].FindDocAsync(subProjectId, cancellationToken);
+        if (previous?.IsCompleted == true)
+        {
+            throw new BusinessRuleException("هذه المرحلة مكتملة — يجب إعادة فتحها قبل تعديل المدة القصوى");
+        }
+
+        var effectiveDuration = durationDays ?? DefaultStageDurationDays;
+        await _stages[stage].SetDurationAsync(subProjectId, effectiveDuration, cancellationToken);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            EntityName = "ProcurementStageDuration",
+            EntityId = subProjectId,
+            FieldName = ProcurementStageKeys.ToKey(stage),
+            OldValue = previous?.DurationDays?.ToString(),
+            NewValue = effectiveDuration.ToString(),
+            ChangedByUserId = _currentUser.UserId
+                ?? throw new UnauthorizedAccessException("تعذر تحديد المستخدم الذي عدّل مدة مرحلة الطرح"),
+            ChangedAt = DateTime.UtcNow,
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ActivateStageAsync(
+        int subProjectId,
+        ProcurementStage stage,
+        DateTime activatedAt,
+        CancellationToken cancellationToken)
+    {
+        if (stage == ProcurementStage.ContractAward)
+        {
+            return;
+        }
+
+        if (stage == ProcurementStage.Announcement)
+        {
+            await _stages[stage].ActivateAsync(
+                subProjectId,
+                AnnouncementMinimumDays,
+                durationSetAt: null,
+                cancellationToken);
+            return;
+        }
+
+        await _stages[stage].ActivateAsync(
+            subProjectId,
+            DefaultStageDurationDays,
+            activatedAt,
+            cancellationToken);
     }
 
     public async Task SetAnnouncementDateAsync(int subProjectId, DateTime announcementDate, CancellationToken cancellationToken = default)
@@ -414,6 +481,15 @@ public class ProcurementService : IProcurementService
         await EnsureSubProjectExistsAsync(subProjectId, cancellationToken);
         await EnsurePreviousStageCompletedAsync(stage, subProjectId, cancellationToken);
         await _stages[stage].SkipAsync(subProjectId, reason, cancellationToken);
+
+        if (stage != ProcurementStage.ContractAward)
+        {
+            await ActivateStageAsync(
+                subProjectId,
+                (ProcurementStage)((int)stage + 1),
+                DateTime.UtcNow,
+                cancellationToken);
+        }
     }
 
     public async Task FailStageAsync(int subProjectId, ProcurementStage stage, string reason, CancellationToken cancellationToken = default)
@@ -640,8 +716,8 @@ public class ProcurementService : IProcurementService
         // الموعد النهائي = وقت تحديد المدة (لا وقت إنشاء المستند) + المدة التي حددها مدير التخطيط —
         // لو المستند موجود من قبل (مثلاً أُنشئ برفع إصدار سابق) وحُدِّدت المدة لاحقًا، العدّ يبدأ من التحديد نفسه.
         // مرحلة الإعلان تتجاوز هذا لاحقًا بقاعدة الـ15 يومًا الثابتة (انظر GetOverviewAsync/GetStageAsync).
-        var deadline = state?.DurationDays is int days
-            ? (state.DurationSetAt ?? state.CreatedAt).AddDays(days)
+        var deadline = state is { DurationDays: int days, DurationSetAt: DateTime durationSetAt }
+            ? durationSetAt.AddDays(days)
             : (DateTime?)null;
         var canFail = deadline != null && DateTime.UtcNow > deadline && state?.IsCompleted != true;
 
@@ -734,6 +810,9 @@ public class ProcurementService : IProcurementService
     /// </summary>
     internal const int AnnouncementMinimumDays = 15;
 
+    /// <summary>المدة الافتراضية للمرحلة العادية، وتبدأ فقط عند فتح المرحلة فعليًا.</summary>
+    internal const int DefaultStageDurationDays = 7;
+
     /// <summary>لا يمكن إكمال الإعلان قبل تحديد تاريخه، ولا قبل مرور 15 يومًا كاملة منه.</summary>
     private static string? ValidateAnnouncementForCompletion(Announcement doc)
     {
@@ -764,6 +843,7 @@ public class ProcurementService : IProcurementService
             .FirstOrDefaultAsync(cancellationToken);
 
         dto.AnnouncementDate = announcementDate;
+        dto.DurationDays = AnnouncementMinimumDays;
         dto.Deadline = announcementDate?.AddDays(AnnouncementMinimumDays);
         dto.CanFail = dto.Deadline != null && DateTime.UtcNow > dto.Deadline && !dto.IsCompleted;
     }
@@ -891,8 +971,11 @@ public class ProcurementService : IProcurementService
         /// <summary>لو المرحلة مكتملة يرجعها "غير مكتملة" بصمت (بدون التحقق من الشروط) — تُستخدم عند إعادة فتح مرحلة سابقة فتُلغي المراحل التالية تبعًا لها. لا تفعل شيئًا لو المرحلة لم تبدأ أصلاً.</summary>
         Task ResetIfCompletedAsync(int subProjectId, CancellationToken ct);
 
-        /// <summary>مدير التخطيط يحدد المدة القصوى — null يلغي الموعد النهائي ويخفي زر الفشل.</summary>
+        /// <summary>يخزّن المدة القصوى اليدوية؛ طبقة الخدمة تحوّل null إلى القيمة الافتراضية قبل الاستدعاء.</summary>
         Task SetDurationAsync(int subProjectId, int? durationDays, CancellationToken ct);
+
+        /// <summary>يخزّن مدة المرحلة ولحظة تفعيلها مرة واحدة عند فتحها، لا عند القراءة.</summary>
+        Task ActivateAsync(int subProjectId, int durationDays, DateTime? durationSetAt, CancellationToken ct);
 
         /// <summary>"هذه المرحلة غير لازمة للطرح" — تُعامَل كمكتملة فتفتح ما بعدها، مع تمييزها بصريًا.</summary>
         Task SkipAsync(int subProjectId, string reason, CancellationToken ct);
@@ -1139,6 +1222,26 @@ public class ProcurementService : IProcurementService
 
             doc.DurationDays = durationDays;
             doc.DurationSetAt = durationDays == null ? null : DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task ActivateAsync(int subProjectId, int durationDays, DateTime? durationSetAt, CancellationToken ct)
+        {
+            var doc = await _db.Set<TDoc>()
+                .FirstOrDefaultAsync(d => d.SubProjectId == subProjectId, ct);
+
+            if (doc == null)
+            {
+                doc = new TDoc { SubProjectId = subProjectId };
+                _db.Set<TDoc>().Add(doc);
+            }
+
+            doc.DurationDays ??= durationDays;
+            if (durationSetAt.HasValue && doc.DurationSetAt == null)
+            {
+                doc.DurationSetAt = durationSetAt.Value;
+            }
+
             await _db.SaveChangesAsync(ct);
         }
 

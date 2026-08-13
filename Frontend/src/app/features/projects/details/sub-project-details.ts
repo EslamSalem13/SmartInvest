@@ -190,8 +190,12 @@ export class SubProjectDetails implements OnDestroy {
     this.projectsService.updateSubProject(this.subId, dto).subscribe({
       next: () => {
         this.savingLocation.set(false);
+        this.project.update((current) =>
+          current
+            ? { ...current, latitude: this.pickedLat(), longitude: this.pickedLng() }
+            : current,
+        );
         this.locationSaved.set(true);
-        this.load();
       },
       error: (err) => {
         this.savingLocation.set(false);

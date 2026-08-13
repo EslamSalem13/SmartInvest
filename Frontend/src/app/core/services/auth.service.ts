@@ -52,6 +52,9 @@ export class AuthService {
     return role === Roles.FinancialEmployee || role === Roles.FinancialManager || role === Roles.SuperAdmin;
   });
   readonly canManageFinancial = computed(() => this.isFinancialManager() || this.isSuperAdmin());
+  readonly canManageProcurementDuration = computed(
+    () => this.isPlanningManager() || this.isSuperAdmin(),
+  );
   readonly canManageContractors = computed(() => this.isFinancialManager() || this.isSuperAdmin());
   readonly canManageUsers = computed(() =>
     this.isPlanningManager() || this.isFinancialManager() || this.isSuperAdmin(),

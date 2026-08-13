@@ -574,6 +574,10 @@ export class Projects {
     return formatEgpAsThousands(value);
   }
 
+  protected thousandsValue(value: number): string {
+    return (egpToThousands(value) ?? 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+  }
+
   protected dateOnly(value: string): string {
     return value ? value.slice(0, 10) : '';
   }
