@@ -84,7 +84,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>إكمال المرحلة رسميًا.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/complete")]
-    [Authorize(Roles = Roles.FinancialOperationsStaff)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Complete(int subProjectId, string stage, CancellationToken cancellationToken)
     {
         await _procurementService.SetCompletionAsync(subProjectId, ParseStage(stage), true, cancellationToken);
@@ -171,7 +171,7 @@ public class ProcurementController : ControllerBase
 
     /// <summary>فشل مرحلة — يتطلب سببًا، ويُبطل اكتمالها وما بعدها دون حذف أي إصدار.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/fail")]
-    [Authorize(Roles = Roles.FinancialOperationsStaff)]
+    [Authorize(Roles = Roles.FinancialManagers)]
     public async Task<IActionResult> Fail(int subProjectId, string stage, FailStageDto dto, CancellationToken cancellationToken)
     {
         await _procurementService.FailStageAsync(subProjectId, ParseStage(stage), dto.Reason, cancellationToken);

@@ -30,6 +30,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
+
   transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
 }
 .kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--green-500); }
@@ -55,6 +56,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
 .kpi .lab { position: relative; z-index: 1; color: var(--muted); font-size: var(--text-sm); font-weight: 700; }
 .kpi .val { position: relative; z-index: 1; display: block; font-size: clamp(15px, 1.6vw + 10px, var(--text-xl)); font-weight: 800; margin-top: 6px; font-family: var(--font-heading); color: var(--heading); overflow-wrap: anywhere; }
 .kpi .val small { font-size: 11px; color: var(--muted); font-weight: 700; }
+.kpi .val .money-unit { display: block; margin-top: 2px; white-space: nowrap; }
 
 /* بطاقة "المتاح" — عنصر button يحمل class="kpi gold kpi-btn" فيرث كل تصميم .kpi تلقائيًا؛
    .kpi-btn هنا لا تلمس background/border/padding/radius/shadow نهائيًا حتى لا تكسر تصميم .kpi،

@@ -21,9 +21,12 @@ public sealed class ProcurementDurationAndAuthorizationTests
     [Theory]
     [InlineData(nameof(ProcurementController.Complete))]
     [InlineData(nameof(ProcurementController.Fail))]
-    public async Task Planning_employee_is_forbidden_from_completing_or_failing_stage(string action)
+    public async Task Planning_and_financial_employees_are_forbidden_from_completing_or_failing_stage(string action)
     {
         Assert.False(await IsAuthorizedAsync(action, Roles.PlanningEmployee));
+        Assert.False(await IsAuthorizedAsync(action, Roles.FinancialEmployee));
+        Assert.True(await IsAuthorizedAsync(action, Roles.FinancialManager));
+        Assert.True(await IsAuthorizedAsync(action, Roles.SuperAdmin));
     }
 
     [Theory]

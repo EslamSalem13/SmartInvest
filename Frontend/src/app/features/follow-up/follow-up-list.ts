@@ -154,12 +154,12 @@ export class FollowUpList implements OnInit {
   protected readonly handoverSaving = signal(false);
   protected handoverFile: File | null = null;
 
-  /** مرحلة التسليم النهائي بلا موعد = الأرضية لم تُسلَّم بعد */
+  /** مرحلة التسليم الأولي بلا موعد = الأرضية لم تُسلَّم بعد */
   protected readonly awaitingHandover = computed(() =>
     this.stages().some((s) => s.isFinalDelivery && s.deadline == null),
   );
 
-  /** مرحلة التسليم النهائي بموعد محسوب = تم تسجيل تسليم سابقًا، فالإجراء المتاح الآن تصحيحه */
+  /** مرحلة التسليم الأولي بموعد محسوب = تم تسجيل تسليم سابقًا، فالإجراء المتاح الآن تصحيحه */
   protected readonly canCorrectHandover = computed(() =>
     this.stages().some((s) => s.isFinalDelivery && s.deadline != null),
   );

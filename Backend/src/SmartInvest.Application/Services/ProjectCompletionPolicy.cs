@@ -28,7 +28,7 @@ public static class ProjectCompletionPolicy
         if (!hasExecutionStages)
             blockers.Add("لا توجد مراحل تنفيذ فعلية.");
         if (facts.IsContractAwardCompleted && !hasFinalDeliveryStage)
-            blockers.Add("مرحلة التسليم النهائي التلقائية غير موجودة.");
+            blockers.Add("مرحلة التسليم الأولي التلقائية غير موجودة.");
         if (!allStagesCompleted)
             blockers.Add("توجد مراحل تنفيذ غير مكتملة.");
         if (physicalTotal != 100m)

@@ -182,12 +182,12 @@
                         <svg viewBox="0 0 24 24" width="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" /></svg>
                         رفع إصدار جديد
                       </button>
-                      @if (stageDetail()!.canFail) {
+                      @if (isManager() && stageDetail()!.canFail) {
                         <button class="si-btn danger sm" (click)="openFailModal()">فشل المرحلة</button>
                       }
-                      @if (stageDetail()!.currentVersionNumber > 0) {
+                      @if (isManager() && stageDetail()!.currentVersionNumber > 0) {
                         <button class="si-btn sm" [disabled]="busy()" (click)="complete()">إكمال المرحلة</button>
-                      } @else {
+                      } @else if (isManager()) {
                         <span class="si-note-inline">ارفع إصدارًا يحتوي على المستندات المطلوبة أولًا — زر "إكمال المرحلة" يظهر بعدها</span>
                       }
                       @if (isManager()) {
