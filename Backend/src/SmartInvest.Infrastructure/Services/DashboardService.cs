@@ -47,6 +47,7 @@ public class DashboardService : IDashboardService
                 PriorityName = s.Priority.Priority,
                 StatusName = s.Status.StatusName,
                 IsApproved = s.IsApproved,
+                ExecutionCompletedAt = s.ExecutionCompletedAt,
                 BankFunding = s.BankFunding,
                 SelfFunding = s.SelfFunding,
             })
@@ -55,7 +56,9 @@ public class DashboardService : IDashboardService
         var subProjectIds = subProjects.Select(s => s.SubProjectId).ToList();
 
         var stages = await _context.ExecutionStages.AsNoTracking()
-            .Where(x => subProjectIds.Contains(x.SubProjectId))
+            .Where(x => subProjectIds.Contains(x.SubProjectId)
+                && x.SubProjectFinancialYear != null
+                && x.SubProjectFinancialYear.FinancialYearId == year.FinancialYearId)
             .Select(x => new ExecutionStageProjection
             {
                 ExecutionStageId = x.ExecutionStageId,
@@ -89,9 +92,24 @@ public class DashboardService : IDashboardService
 
             return list
                 .Where(x => !x.IsFinalDelivery)
-                .OrderByDescending(x => x.CreatedAt)
-                .ThenByDescending(x => x.ExecutionStageId)
-                .FirstOrDefault()?.PhysicalProgressPercent ?? 0;
+                .Sum(x => x.PhysicalProgressPercent);
+        }
+
+        bool IsCompletedInSelectedYear(SubProjectProjection subProject)
+        {
+            if (!subProject.IsApproved
+                || subProject.StatusName != "منتهي"
+                || subProject.ExecutionCompletedAt == null
+                || !stagesBySubProject.TryGetValue(subProject.SubProjectId, out var projectStages))
+            {
+                return false;
+            }
+
+            var actualStages = projectStages.Where(x => !x.IsFinalDelivery).ToList();
+            return actualStages.Count > 0
+                && projectStages.Any(x => x.IsFinalDelivery)
+                && projectStages.All(x => x.IsCompleted)
+                && actualStages.Sum(x => x.PhysicalProgressPercent) == 100m;
         }
 
         DashboardProjectBriefDto ToProjectBrief(SubProjectProjection s)
@@ -112,14 +130,27 @@ public class DashboardService : IDashboardService
         var stalledCount = subProjects.Count(s => s.IsApproved && s.StatusName == "متعثر");
         var approvedCount = subProjects.Count(s => s.IsApproved && s.StatusName != "متعثر");
         var proposedCount = subProjects.Count(s => !s.IsApproved);
-        var completedCount = subProjects.Count(s => s.IsApproved && s.StatusName == "منتهي");
-        var inProgressCount = subProjects.Count(s => s.IsApproved && s.StatusName == "قيد التنفيذ");
+        var completedProjectIds = subProjects
+            .Where(IsCompletedInSelectedYear)
+            .Select(s => s.SubProjectId)
+            .ToHashSet();
+        var completedCount = completedProjectIds.Count;
+        var inProgressProjectIds = subProjects
+            .Where(s => s.IsApproved
+                && s.StatusName != "متعثر"
+                && !completedProjectIds.Contains(s.SubProjectId)
+                && (s.StatusName == "قيد التنفيذ"
+                    || (stagesBySubProject.TryGetValue(s.SubProjectId, out var projectStages)
+                        && projectStages.Any(x => !x.IsFinalDelivery))))
+            .Select(s => s.SubProjectId)
+            .ToHashSet();
+        var inProgressCount = inProgressProjectIds.Count;
         var approvalRate = totalSubProjects == 0
             ? 0
             : Math.Round((decimal)subProjects.Count(s => s.IsApproved) / totalSubProjects * 100, 2);
         var averagePhysicalProgress = approvedList.Count == 0
             ? 0
-            : Math.Round(approvedList.Average(s => GetPhysicalProgress(s.SubProjectId)), 2);
+            : Math.Round(approvedList.Average(s => Math.Min(100m, GetPhysicalProgress(s.SubProjectId))), 2);
 
         var projectMetrics = new DashboardProjectMetricsDto
         {
@@ -160,7 +191,10 @@ public class DashboardService : IDashboardService
 
         var statusDistribution = new List<DashboardNamedValueDto>
         {
-            new() { Name = "معتمد", Value = subProjects.Count(s => s.IsApproved && s.StatusName != "متعثر" && s.StatusName != "قيد التنفيذ" && s.StatusName != "منتهي") },
+            new() { Name = "معتمد", Value = subProjects.Count(s => s.IsApproved
+                && s.StatusName != "متعثر"
+                && !completedProjectIds.Contains(s.SubProjectId)
+                && !inProgressProjectIds.Contains(s.SubProjectId)) },
             new() { Name = "مقترح", Value = proposedCount },
             new() { Name = "متعثر", Value = stalledCount },
             new() { Name = "جاري التنفيذ", Value = inProgressCount },
@@ -192,12 +226,12 @@ public class DashboardService : IDashboardService
             .OrderByDescending(x => x.TotalFunding)
             .ToList();
 
-        var progressBucketNames = new[] { "0%", "1–25%", "26–50%", "51–75%", "76–99%", "100%" };
-        var progressBucketCounts = new int[6];
+        var progressBucketNames = new[] { "0%", "1–25%", "26–50%", "51–75%", "76–99%", "100%", "أكثر من 100%" };
+        var progressBucketCounts = new int[7];
         foreach (var s in approvedList)
         {
             var p = GetPhysicalProgress(s.SubProjectId);
-            var bucketIndex = p <= 0 ? 0 : p <= 25 ? 1 : p <= 50 ? 2 : p <= 75 ? 3 : p < 100 ? 4 : 5;
+            var bucketIndex = p <= 0 ? 0 : p <= 25 ? 1 : p <= 50 ? 2 : p <= 75 ? 3 : p < 100 ? 4 : p == 100 ? 5 : 6;
             progressBucketCounts[bucketIndex]++;
         }
         var progressDistribution = progressBucketNames
@@ -307,6 +341,7 @@ public class DashboardService : IDashboardService
         public string PriorityName { get; set; } = string.Empty;
         public string StatusName { get; set; } = string.Empty;
         public bool IsApproved { get; set; }
+        public DateTime? ExecutionCompletedAt { get; set; }
         public decimal BankFunding { get; set; }
         public decimal SelfFunding { get; set; }
     }

@@ -17,7 +17,7 @@
   @if (loading() && !overview()) {
     <div class="skeletons">
       <div class="kpis">
-        @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="skeleton kpi-skel"></div> }
+        @for (i of [1,2,3,4,5,6,7,8,9]; track i) { <div class="skeleton kpi-skel"></div> }
       </div>
       <div class="charts-grid">
         @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="skeleton chart-skel"></div> }
@@ -65,6 +65,15 @@
         </div>
         <b class="val" [title]="data.projectMetrics.stalledCount">{{ data.projectMetrics.stalledCount }}</b>
         <span class="sub">تحتاج متابعة عاجلة</span>
+      </a>
+
+      <a class="kpi ok" [routerLink]="['/app/follow-up']" [queryParams]="followUpQueryParams()" aria-label="عرض المشروعات المكتملة في السنة المختارة">
+        <div class="kpi-top">
+          <span class="lab">المشروعات المكتملة</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9" /><path d="m8 12 2.7 2.7L16.5 9" /></svg></span>
+        </div>
+        <b class="val" [title]="data.projectMetrics.completedCount">{{ data.projectMetrics.completedCount }}</b>
+        <span class="sub">مكتملة ضمن دورة السنة المختارة</span>
       </a>
 
       <a class="kpi gold" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()" aria-label="عرض إجمالي التمويل في صفحة المشروعات">
@@ -166,11 +175,11 @@
       </div>
 
       <div class="chart-card">
-        <h3>توزيع نسب التنفيذ</h3>
+        <h3>توزيع مجموع نسب التنفيذ العيني</h3>
         @if (hasProgressData()) {
           <div #progressChart class="chart-box"></div>
         } @else {
-          <div class="chart-empty">لا توجد مشروعات قيد التنفيذ بعد</div>
+          <div class="chart-empty">لا توجد مراحل تنفيذ في السنة المختارة</div>
         }
       </div>
     </div>

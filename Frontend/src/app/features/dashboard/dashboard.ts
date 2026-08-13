@@ -493,7 +493,16 @@ export class Dashboard implements OnDestroy {
           type: 'bar',
           barMaxWidth: 40,
           itemStyle: { color: palette[5], borderRadius: [8, 8, 0, 0] },
-          data: items.map((i) => i.value),
+          data: items.map((i) => ({
+            value: i.value,
+            itemStyle: {
+              color: i.name === 'أكثر من 100%'
+                ? palette[3]
+                : i.name === '100%'
+                  ? palette[5]
+                  : palette[2],
+            },
+          })),
         },
       ],
     };
