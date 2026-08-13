@@ -109,7 +109,7 @@ public class SubProjectDetailDto
 
     public string? ContractorName { get; set; }
     public string? ContractTypeName { get; set; }
-    public string? ContractNumber { get; set; }
+    public DateTime? ContractDate { get; set; }
     public decimal? ContractValue { get; set; }
     public IReadOnlyList<SubProjectFinancialYearDto> FinancialYears { get; set; }
         = new List<SubProjectFinancialYearDto>();

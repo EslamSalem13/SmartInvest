@@ -108,8 +108,8 @@ public class SubProjectMappingProfile : Profile
                 dest => dest.ContractTypeName,
                 opt => opt.MapFrom(src => GetLatestAssignment(src).ContractTypeName))
             .ForMember(
-                dest => dest.ContractNumber,
-                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractNumber))
+                dest => dest.ContractDate,
+                opt => opt.MapFrom(src => GetLatestAssignment(src).ContractDate))
             .ForMember(
                 dest => dest.ContractValue,
                 opt => opt.MapFrom(src => GetLatestAssignment(src).ContractValue))
@@ -223,7 +223,7 @@ public class SubProjectMappingProfile : Profile
         {
             ContractorName = assignment?.Contractor?.ContractorName,
             ContractTypeName = assignment?.ContractType?.ContractName,
-            ContractNumber = assignment?.ContractNumber,
+            ContractDate = assignment?.ContractDate,
             ContractValue = assignment?.ContractValue,
         };
     }
@@ -232,7 +232,7 @@ public class SubProjectMappingProfile : Profile
     {
         public string? ContractorName { get; set; }
         public string? ContractTypeName { get; set; }
-        public string? ContractNumber { get; set; }
+        public DateTime? ContractDate { get; set; }
         public decimal? ContractValue { get; set; }
     }
 }

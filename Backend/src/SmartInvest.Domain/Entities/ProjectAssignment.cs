@@ -15,7 +15,16 @@ namespace SmartInvest.Domain.Entities
         public virtual ContractType ContractType { get; set; }
 
         public DateTime AssignmentDate { get; set; }
+
+        /// <summary>
+        /// رقم تعريفي مُولَّد من قاعدة البيانات (نص AssignmentId نفسه) — لا يُدخله أحد يدويًا
+        /// ولا يظهر في أي واجهة مستخدم. راجع ProcurementService.UpsertAssignmentAsync.
+        /// </summary>
         public string? ContractNumber { get; set; }
+
+        /// <summary>تاريخ العقد — يُدخله الموظف يدويًا في مرحلة الترسية.</summary>
+        public DateTime? ContractDate { get; set; }
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal? ContractValue { get; set; }
         public DateTime ExpectedStartDate { get; set; }

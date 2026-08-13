@@ -141,9 +141,20 @@ public class ContractAwardDetailsDto
 
     public int? ContractorId { get; set; }
     public string? ContractorName { get; set; }
+
+    /// <summary>
+    /// مُشتق من طريقة تعاقد مذكرة العرض الفعّالة — لا يُختار مستقلًا، راجع UpsertAssignmentAsync.
+    /// الاسم يُقرأ من overview().activePresentationMemo.contractingMethodLabel في الواجهة (موجود
+    /// بالفعل)، لا حاجة لحقل اسم منفصل هنا — الـId وحده كافٍ كسجلّ لما تم إسناده فعليًا.
+    /// </summary>
     public int? ContractTypeId { get; set; }
-    public string? ContractNumber { get; set; }
+
+    /// <summary>تاريخ العقد — يحل محل رقم العقد في كل واجهات المستخدم.</summary>
+    public DateTime? ContractDate { get; set; }
     public decimal? ContractValue { get; set; }
+
+    /// <summary>الإجمالي المخطط ناقص قيمة العقد — تُعرض فقط عندما تكون القيمة موجبة (قيمة العقد أقل من المخطط).</summary>
+    public decimal? Savings { get; set; }
 }
 
 /// <summary>حفظ بيانات مرحلة الترسية. كل الحقول اختيارية — تُحفظ تدريجيًا ويُتحقق منها عند الإكمال.</summary>
@@ -161,8 +172,7 @@ public class SetContractAwardDetailsDto
     public decimal? PenaltyAmount { get; set; }
 
     public int? ContractorId { get; set; }
-    public int? ContractTypeId { get; set; }
-    public string? ContractNumber { get; set; }
+    public DateTime? ContractDate { get; set; }
     public decimal? ContractValue { get; set; }
 }
 

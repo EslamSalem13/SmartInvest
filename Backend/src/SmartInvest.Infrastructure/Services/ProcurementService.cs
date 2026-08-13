@@ -280,6 +280,7 @@ public class ProcurementService : IProcurementService
 
             if (stage == ProcurementStage.ContractAward)
             {
+                await AutoSetSupplyHandoverDateAsync(subProjectId, cancellationToken);
                 await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
             }
             else if (!wasAlreadyCompleted)
@@ -298,6 +299,33 @@ public class ProcurementService : IProcurementService
         foreach (var laterStage in _stages.Keys.Where(s => (int)s > (int)stage).OrderBy(s => (int)s))
         {
             await _stages[laterStage].ResetIfCompletedAsync(subProjectId, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// توريدات لا تسليم أرضية لها — العدّاد يبدأ فور اكتمال الترسية. نعيد استخدام SiteHandoverDate
+    /// نفسه كنقطة بداية بدل اختراع آلية موازية، حتى يستمر SyncFinalDeliveryStageAsync يعمل بلا تغيير
+    /// لكِلا نوعي المشروع.
+    /// </summary>
+    private async Task AutoSetSupplyHandoverDateAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var projectNature = await _context.SubProjects.AsNoTracking()
+            .Where(s => s.SubProjectId == subProjectId)
+            .Select(s => s.ProjectNature)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (IsContractingProject(projectNature))
+        {
+            return;
+        }
+
+        var doc = await _context.ContractAwards
+            .FirstOrDefaultAsync(x => x.SubProjectId == subProjectId, cancellationToken);
+
+        if (doc != null && doc.SiteHandoverDate == null)
+        {
+            doc.SiteHandoverDate = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
         }
     }
 
@@ -535,18 +563,13 @@ public class ProcurementService : IProcurementService
             throw new NotFoundException($"المقاول رقم {contractorId} غير موجود");
         }
 
-        var contractTypeId = dto.ContractTypeId
-            ?? throw new BusinessRuleException("يجب اختيار نوع العقد مع المقاول");
-
-        if (!await _context.Set<ContractType>().AsNoTracking().AnyAsync(t => t.ContractTypeId == contractTypeId, cancellationToken))
-        {
-            throw new NotFoundException($"نوع العقد رقم {contractTypeId} غير موجود");
-        }
+        var contractTypeId = await ResolveContractTypeIdFromMemoAsync(doc.SubProjectId, cancellationToken);
 
         var assignment = doc.ProjectAssignmentId is int existingId
             ? await _context.Set<ProjectAssignment>().FirstOrDefaultAsync(a => a.AssignmentId == existingId, cancellationToken)
             : null;
 
+        var isNew = assignment == null;
         if (assignment == null)
         {
             assignment = new ProjectAssignment
@@ -561,11 +584,50 @@ public class ProcurementService : IProcurementService
 
         assignment.ContractorId = contractorId;
         assignment.ContractTypeId = contractTypeId;
-        assignment.ContractNumber = dto.ContractNumber;
+        assignment.ContractDate = dto.ContractDate;
         assignment.ContractValue = dto.ContractValue;
+
+        // رقم العقد رقم تعريفي مُولَّد من AssignmentId — لا يُدخله أحد يدويًا ولا يظهر في أي واجهة.
+        // يُضبط مرة واحدة فقط عند أول إنشاء، لا يُعاد توليده عند كل تعديل لاحق.
+        if (isNew)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            assignment.ContractNumber = assignment.AssignmentId.ToString();
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
         doc.ProjectAssignmentId = assignment.AssignmentId;
+    }
+
+    /// <summary>
+    /// نوع العقد يُشتق من طريقة التعاقد في مذكرة العرض الفعّالة للمشروع، لا يُختار مستقلًا —
+    /// إنشاء-أو-إيجاد صف ContractType مطابق بالاسم، بنفس نمط إنشاء القوائم المرجعية الناقصة
+    /// المستخدَم في مسار استيراد Excel (بدل الرجوع لقيمة "غير محدد").
+    /// </summary>
+    private async Task<int> ResolveContractTypeIdFromMemoAsync(int subProjectId, CancellationToken cancellationToken)
+    {
+        var contractingMethod = await _context.PresentationMemoSubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .OrderByDescending(x => x.PresentationMemo.CreatedAt)
+            .ThenByDescending(x => x.PresentationMemo.Id)
+            .Select(x => x.PresentationMemo.ContractingMethod)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var label = ContractingMethodLabels.ToLabel(contractingMethod)
+            ?? throw new BusinessRuleException("لا يمكن تحديد نوع العقد قبل استكمال طريقة التعاقد في مذكرة العرض");
+
+        var existing = await _context.Set<ContractType>()
+            .FirstOrDefaultAsync(t => t.ContractName == label, cancellationToken);
+
+        if (existing != null)
+        {
+            return existing.ContractTypeId;
+        }
+
+        var created = new ContractType { ContractName = label };
+        _context.Set<ContractType>().Add(created);
+        await _context.SaveChangesAsync(cancellationToken);
+        return created.ContractTypeId;
     }
 
     // ------------------------------------------------------------------
@@ -591,17 +653,21 @@ public class ProcurementService : IProcurementService
     }
 
     /// <summary>
-    /// لا تبدأ أي مرحلة طرح لمشروع بلا مذكرة عرض مرفقة.
-    /// يكفي أن تكون مرفقة — لا يُشترط اكتمالها، حتى لا يتعطّل تجهيز الطرح بانتظار لجنة الشؤون القانونية.
+    /// لا تبدأ أي مرحلة طرح لمشروع قبل اكتمال مذكرة العرض المرتبطة به — يجب أن تكون معتمَدة
+    /// بقرار لجنة الشؤون القانونية، لا يكفي إرفاقها فقط.
     /// </summary>
     private async Task EnsureHasPresentationMemoAsync(int subProjectId, CancellationToken cancellationToken)
     {
-        var hasMemo = await _context.PresentationMemoSubProjects.AsNoTracking()
-            .AnyAsync(x => x.SubProjectId == subProjectId, cancellationToken);
+        var isActiveMemoCompleted = await _context.PresentationMemoSubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .OrderByDescending(x => x.PresentationMemo.CreatedAt)
+            .ThenByDescending(x => x.PresentationMemo.Id)
+            .Select(x => (bool?)x.PresentationMemo.IsCompleted)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (!hasMemo)
+        if (isActiveMemoCompleted != true)
         {
-            throw new BusinessRuleException("لا يمكن بدء مراحل الطرح قبل إرفاق مذكرة عرض للمشروع");
+            throw new BusinessRuleException("لا يمكن بدء مراحل الطرح قبل اكتمال مذكرة العرض المرتبطة بالمشروع");
         }
     }
 
@@ -661,16 +727,17 @@ public class ProcurementService : IProcurementService
                 ContractorId = (int?)x.ProjectAssignment!.ContractorId,
                 ContractorName = x.ProjectAssignment!.Contractor!.ContractorName,
                 ContractTypeId = (int?)x.ProjectAssignment!.ContractTypeId,
-                x.ProjectAssignment!.ContractNumber,
+                x.ProjectAssignment!.ContractDate,
                 x.ProjectAssignment!.ContractValue,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
+        var totalCost = project.BankFunding + project.SelfFunding;
         var details = new ContractAwardDetailsDto
         {
             ProjectNature = project.ProjectNature,
             RequiresAdvancePayment = IsContractingProject(project.ProjectNature),
-            TotalCost = project.BankFunding + project.SelfFunding,
+            TotalCost = totalCost,
             BankFunding = project.BankFunding,
             SelfFunding = project.SelfFunding,
         };
@@ -696,8 +763,9 @@ public class ProcurementService : IProcurementService
         details.ContractorId = doc.ContractorId;
         details.ContractorName = doc.ContractorName;
         details.ContractTypeId = doc.ContractTypeId;
-        details.ContractNumber = doc.ContractNumber;
+        details.ContractDate = doc.ContractDate;
         details.ContractValue = doc.ContractValue;
+        details.Savings = doc.ContractValue is decimal cv && cv < totalCost ? totalCost - cv : null;
 
         return details;
     }
@@ -858,7 +926,7 @@ public class ProcurementService : IProcurementService
     {
         var project = await db.SubProjects.AsNoTracking()
             .Where(s => s.SubProjectId == doc.SubProjectId)
-            .Select(s => new { s.ProjectNature, s.BankFunding, s.SelfFunding })
+            .Select(s => new { s.ProjectNature, s.BankFunding, s.SelfFunding, s.OverrunPercentage })
             .FirstOrDefaultAsync(ct);
 
         if (project == null)
@@ -876,25 +944,49 @@ public class ProcurementService : IProcurementService
             return "يجب تحديد المدة القصوى لتنفيذ المشروع";
         }
 
-        if (doc.SiteHandoverMode == null)
-        {
-            return "يجب تحديد ما إذا كانت أرضية المشروع مُسلَّمة للمقاول أم لا";
-        }
+        var isContracting = IsContractingProject(project.ProjectNature);
 
-        if (doc.SiteHandoverMode == SiteHandoverMode.AtAward)
+        // توريدات لا تسليم أرضية لها إطلاقًا — المورّد يورّد أولًا ثم يُصرف له، لا أرض تُسلَّم.
+        if (isContracting)
         {
-            if (doc.SiteHandoverDate == null)
+            if (doc.SiteHandoverMode == null)
             {
-                return "يجب تسجيل تاريخ تسليم الأرضية قبل إكمال الترسية";
+                return "يجب تحديد ما إذا كانت أرضية المشروع مُسلَّمة للمقاول أم لا";
             }
 
-            if (doc.SiteHandoverProofFile == null)
+            if (doc.SiteHandoverMode == SiteHandoverMode.AtAward)
             {
-                return "يجب رفع إثبات تسليم الأرضية قبل إكمال الترسية";
+                if (doc.SiteHandoverDate == null)
+                {
+                    return "يجب تسجيل تاريخ تسليم الأرضية قبل إكمال الترسية";
+                }
+
+                if (doc.SiteHandoverProofFile == null)
+                {
+                    return "يجب رفع إثبات تسليم الأرضية قبل إكمال الترسية";
+                }
             }
         }
 
-        if (!IsContractingProject(project.ProjectNature))
+        var totalCost = project.BankFunding + project.SelfFunding;
+
+        var contractValue = await db.Set<ProjectAssignment>().AsNoTracking()
+            .Where(a => a.AssignmentId == doc.ProjectAssignmentId)
+            .Select(a => a.ContractValue)
+            .FirstOrDefaultAsync(ct);
+
+        if (contractValue is null or <= 0)
+        {
+            return "يجب تحديد قيمة العقد قبل إكمال الترسية";
+        }
+
+        var allowedCeiling = totalCost * (1 + (project.OverrunPercentage ?? 0) / 100m);
+        if (contractValue.Value > allowedCeiling)
+        {
+            return $"قيمة العقد ({contractValue.Value:N2} ج.م) تتجاوز الإجمالي المخطط بعد نسبة التجاوز ({allowedCeiling:N2} ج.م)";
+        }
+
+        if (!isContracting)
         {
             return null;
         }
@@ -911,7 +1003,6 @@ public class ProcurementService : IProcurementService
             return "نسبة الدفعة المقدمة يجب أن تكون بين 1% و100%";
         }
 
-        var totalCost = project.BankFunding + project.SelfFunding;
         var expected = Math.Round(totalCost * percentage / 100m, 2);
         var self = doc.AdvancePaymentSelfAmount ?? 0m;
         var bank = doc.AdvancePaymentBankAmount ?? 0m;
