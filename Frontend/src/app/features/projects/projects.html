@@ -275,6 +275,7 @@
         <div class="si-modal-body">
           <div class="avail-summary">
             <div class="avail-stat"><span class="lab">إجمالي التمويل البنكي</span><b class="tnum">{{ thousandsLabel(availabilityData()?.totalBankFunding ?? 0) }}</b></div>
+            <div class="avail-stat"><span class="lab">إجمالي المستلم</span><b class="tnum">{{ thousandsLabel(availabilityData()?.totalReceived ?? 0) }}</b></div>
             <div class="avail-stat"><span class="lab">إجمالي المتاح</span><b class="tnum">{{ thousandsLabel(availabilityData()?.totalAvailable ?? 0) }}</b></div>
             <div class="avail-stat"><span class="lab">المتبقي الممكن إتاحته</span><b class="tnum">{{ thousandsLabel(availabilityData()?.remainingAvailable ?? 0) }}</b></div>
           </div>

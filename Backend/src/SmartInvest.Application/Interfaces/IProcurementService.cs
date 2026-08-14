@@ -32,6 +32,9 @@ public interface IProcurementService
 
     Task<FileDownloadDto> DownloadSiteHandoverProofAsync(int subProjectId, CancellationToken cancellationToken = default);
 
+    /// <summary>يحدّث إثبات صرف الدفعة المقدمة على الإصدار الحالي مباشرة — بلا حاجة لإعادة رفع أمر الإسناد والعقد.</summary>
+    Task SetAdvancePaymentProofAsync(int subProjectId, FileUploadDto proofFile, CancellationToken cancellationToken = default);
+
     /// <summary>مدير التخطيط يحدد المدة القصوى لمرحلة قبل ظهور زر الفشل — غير متاحة لمرحلة الإعلان (قاعدتها ثابتة).</summary>
     Task SetStageDurationAsync(int subProjectId, ProcurementStage stage, int? durationDays, CancellationToken cancellationToken = default);
 

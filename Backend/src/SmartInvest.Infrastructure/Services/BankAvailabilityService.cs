@@ -63,13 +63,17 @@ public class BankAvailabilityService : IBankAvailabilityService
             })
             .ToListAsync(cancellationToken);
 
-        var totalAvailable = items.Sum(x => x.Amount);
+        var receipts = items.Sum(x => x.Amount);
+        var advancesSpent = await BankSpendCalculator.GetAdvancePaymentsSpentAsync(_context, financialYearId, cancellationToken);
+        var executionSpent = await BankSpendCalculator.GetExecutionBankSpendAsync(_context, financialYearId, cancellationToken);
+        var totalAvailable = receipts - advancesSpent - executionSpent;
 
         return new BankAvailabilityListDto
         {
             TotalAvailable = totalAvailable,
             TotalBankFunding = totalBankFunding,
-            RemainingAvailable = totalBankFunding - totalAvailable,
+            RemainingAvailable = totalBankFunding - receipts,
+            TotalReceived = receipts,
             Items = items,
         };
     }

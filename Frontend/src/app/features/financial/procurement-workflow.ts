@@ -6,7 +6,7 @@ import { FinancialService } from '../../core/services/financial.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ContractorsService } from '../../core/services/contractors.service';
 import { Contractor } from '../../core/models/project.models';
-import { formatEgpAsThousands } from '../../core/utils/budget.util';
+import { egpToThousands, formatEgpAsThousands, thousandsToEgp } from '../../core/utils/budget.util';
 import {
   ContractAwardDetails,
   ProcurementOverview,
@@ -68,10 +68,13 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly aContractorId = signal<number | null>(null);
   protected readonly aContractDate = signal<string>('');
   protected readonly aContractValue = signal<number | null>(null);
+  protected readonly aContractValueRaw = computed(() => thousandsToEgp(this.aContractValue()));
   protected readonly aAdvanceDone = signal(false);
   protected readonly aAdvancePercentage = signal<number | null>(null);
   protected readonly aAdvanceSelf = signal<number | null>(null);
+  protected readonly aAdvanceSelfRaw = computed(() => thousandsToEgp(this.aAdvanceSelf()));
   protected readonly aAdvanceBank = signal<number | null>(null);
+  protected readonly aAdvanceBankRaw = computed(() => thousandsToEgp(this.aAdvanceBank()));
   protected readonly aDurationMonths = signal<number | null>(null);
   protected readonly aDurationDays = signal<number | null>(null);
   protected readonly aHandoverMode = signal<number | null>(null);
@@ -83,19 +86,31 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly aHandoverSaving = signal(false);
   protected aHandoverFile: File | null = null;
 
-  /** قيمة الدفعة المقدمة بالجنيه — تظهر تلقائيًا بمجرد كتابة النسبة */
+  protected aAdvanceProofFile: File | null = null;
+  protected readonly aAdvanceProofUploading = signal(false);
+  protected readonly aAdvanceProofError = signal<string | null>(null);
+
+  /** قيمة الدفعة المقدمة بالجنيه — تُحسب من قيمة العقد لا الإجمالي المخطط، تظهر تلقائيًا بمجرد كتابة النسبة أو قيمة العقد */
   protected readonly advanceAmount = computed(() => {
     const pct = this.aAdvancePercentage();
-    const total = this.award()?.totalCost ?? 0;
-    if (pct == null || pct <= 0) {
+    const base = this.aContractValueRaw();
+    if (pct == null || pct <= 0 || base <= 0) {
       return 0;
     }
-    return Math.round(total * pct) / 100;
+    return Math.round(base * pct) / 100;
   });
 
   /** ما تبقّى ليتوازن التقسيم بين الذاتي والبنكي */
   protected readonly advanceRemaining = computed(
-    () => Math.round((this.advanceAmount() - (this.aAdvanceSelf() ?? 0) - (this.aAdvanceBank() ?? 0)) * 100) / 100,
+    () => Math.round((this.advanceAmount() - this.aAdvanceSelfRaw() - this.aAdvanceBankRaw()) * 100) / 100,
+  );
+
+  /** تجاوز حد التمويل المخطط للمشروع — تحذير فوري في الواجهة؛ الفحص الملزم الفعلي يعيش في الخادم (BusinessRuleException) */
+  protected readonly aAdvanceSelfExceeds = computed(
+    () => this.aAdvanceSelfRaw() > (this.award()?.selfFunding ?? 0),
+  );
+  protected readonly aAdvanceBankExceeds = computed(
+    () => this.aAdvanceBankRaw() > (this.award()?.bankFunding ?? 0),
   );
 
   protected readonly awardEditable = computed(
@@ -121,6 +136,16 @@ export class ProcurementWorkflow implements OnInit {
         error: () => this.selectedContractorProfile.set(null),
       });
     });
+
+    /** المصدر الوحيد لمسح ملف/خطأ إثبات الدفعة المقدمة المُجهَّز — يتفاعل مع aAdvanceDone أيًا كان مصدر
+     * تغييرها (تأشير يدوي عبر onAdvanceDoneChange أو مزامنة من الخادم عبر syncAwardForm بعد reload())،
+     * حتى لا يبقى ملف قديم محتفَظًا به خلف مربّع اختيار يبدو فارغًا. */
+    effect(() => {
+      if (!this.aAdvanceDone()) {
+        this.aAdvanceProofFile = null;
+        this.aAdvanceProofError.set(null);
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -145,11 +170,11 @@ export class ProcurementWorkflow implements OnInit {
     }
     this.aContractorId.set(details.contractorId);
     this.aContractDate.set(details.contractDate?.slice(0, 10) ?? '');
-    this.aContractValue.set(details.contractValue);
+    this.aContractValue.set(egpToThousands(details.contractValue));
     this.aAdvanceDone.set(details.advancePaymentDone);
     this.aAdvancePercentage.set(details.advancePaymentPercentage);
-    this.aAdvanceSelf.set(details.advancePaymentSelfAmount);
-    this.aAdvanceBank.set(details.advancePaymentBankAmount);
+    this.aAdvanceSelf.set(egpToThousands(details.advancePaymentSelfAmount));
+    this.aAdvanceBank.set(egpToThousands(details.advancePaymentBankAmount));
     this.aDurationMonths.set(details.executionDurationMonths);
     this.aDurationDays.set(details.executionDurationDays);
     this.aHandoverMode.set(details.siteHandoverMode);
@@ -167,25 +192,76 @@ export class ProcurementWorkflow implements OnInit {
       .setContractAwardDetails(this.subProjectId, {
         advancePaymentDone: this.aAdvanceDone(),
         advancePaymentPercentage: this.aAdvancePercentage(),
-        advancePaymentSelfAmount: this.aAdvanceSelf(),
-        advancePaymentBankAmount: this.aAdvanceBank(),
+        advancePaymentSelfAmount: this.aAdvanceSelfRaw(),
+        advancePaymentBankAmount: this.aAdvanceBankRaw(),
         executionDurationMonths: this.aDurationMonths(),
         executionDurationDays: this.aDurationDays(),
         siteHandoverMode: this.aHandoverMode(),
         penaltyAmount: this.aPenaltyAmount(),
         contractorId: this.aContractorId(),
         contractDate: this.aContractDate() || null,
-        contractValue: this.aContractValue(),
+        // فارغ يُرسَل null لا صفر — صفر يجعل الخادم يحسب «وفرة» مزيّفة تساوي كامل الميزانية المخططة (totalCost - 0)
+        contractValue: this.aContractValue() == null ? null : this.aContractValueRaw(),
       })
       .subscribe({
-        next: () => {
-          this.awardSaving.set(false);
-          this.toast.success('تم حفظ بيانات الترسية');
-          this.reload();
-        },
+        next: () => this.saveAwardThenHandoverIfStaged(),
         error: (err) => {
           this.awardSaving.set(false);
           this.awardError.set(err?.error?.message ?? 'تعذر حفظ بيانات الترسية');
+        },
+      });
+  }
+
+  /** بعد نجاح حفظ بيانات الترسية: لو المستخدم اختار "مُسلَّمة للمقاول" وجهّز تاريخًا وملفًا، يُسجَّل التسليم في نفس الحفظة — لا حاجة لخطوة حفظ منفصلة. */
+  private saveAwardThenHandoverIfStaged(): void {
+    if (this.aHandoverMode() !== 1 || !this.aHandoverDate() || !this.aHandoverFile) {
+      this.awardSaving.set(false);
+      this.toast.success('تم حفظ بيانات الترسية');
+      this.reload();
+      return;
+    }
+
+    this.financial.setSiteHandover(this.subProjectId, this.aHandoverDate(), this.aHandoverFile).subscribe({
+      next: () => {
+        this.awardSaving.set(false);
+        this.aHandoverFile = null;
+        this.toast.success('تم حفظ بيانات الترسية وتسجيل تسليم الأرضية');
+        this.reload();
+      },
+      error: (err) => {
+        this.awardSaving.set(false);
+        this.toast.error(err?.error?.message ?? 'تم حفظ بيانات الترسية، لكن تعذر تسجيل تسليم الأرضية');
+        this.reload();
+      },
+    });
+  }
+
+  protected onAdvanceProofFileChange(event: Event): void {
+    this.aAdvanceProofFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected onAdvanceDoneChange(checked: boolean): void {
+    this.aAdvanceDone.set(checked);
+  }
+
+  protected uploadAdvanceProof(): void {
+    if (this.aAdvanceProofUploading() || !this.aAdvanceProofFile) {
+      return;
+    }
+    this.aAdvanceProofUploading.set(true);
+    this.aAdvanceProofError.set(null);
+    this.financial
+      .setAdvancePaymentProof(this.subProjectId, this.aAdvanceProofFile)
+      .subscribe({
+        next: () => {
+          this.aAdvanceProofUploading.set(false);
+          this.aAdvanceProofFile = null;
+          this.toast.success('تم رفع إثبات صرف الدفعة المقدمة');
+          this.reload();
+        },
+        error: (err) => {
+          this.aAdvanceProofUploading.set(false);
+          this.aAdvanceProofError.set(err?.error?.message ?? 'تعذر رفع الملف');
         },
       });
   }

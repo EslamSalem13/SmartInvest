@@ -316,6 +316,7 @@
                       <div class="si-fld">
                         <label>قيمة العقد</label>
                         <input type="number" [ngModel]="aContractValue()" (ngModelChange)="aContractValue.set($event)" [disabled]="!awardEditable()" />
+                        <span class="hint">بالألف جنيه</span>
                       </div>
                     </div>
 
@@ -330,10 +331,18 @@
                         <div class="si-fld">
                           <label>من التمويل الذاتي</label>
                           <input type="number" [ngModel]="aAdvanceSelf()" (ngModelChange)="aAdvanceSelf.set($event)" [disabled]="!awardEditable()" />
+                          <span class="hint">بالألف جنيه</span>
+                          @if (aAdvanceSelfExceeds()) {
+                            <span class="si-err">يتجاوز التمويل الذاتي المخطط ({{ thousandsLabel(aw.selfFunding) }})</span>
+                          }
                         </div>
                         <div class="si-fld">
                           <label>من التمويل البنكي</label>
                           <input type="number" [ngModel]="aAdvanceBank()" (ngModelChange)="aAdvanceBank.set($event)" [disabled]="!awardEditable()" />
+                          <span class="hint">بالألف جنيه</span>
+                          @if (aAdvanceBankExceeds()) {
+                            <span class="si-err">يتجاوز التمويل البنكي المخطط ({{ thousandsLabel(aw.bankFunding) }})</span>
+                          }
                         </div>
                         <div class="si-fld">
                           <label>المتبقي للتوزيع</label>
@@ -342,10 +351,21 @@
                         </div>
                         <div class="si-fld full">
                           <label class="inline-check">
-                            <input type="checkbox" [checked]="aAdvanceDone()" (change)="aAdvanceDone.set($any($event.target).checked)" [disabled]="!awardEditable()" />
+                            <input type="checkbox" [checked]="aAdvanceDone()" (change)="onAdvanceDoneChange($any($event.target).checked)" [disabled]="!awardEditable()" />
                             <span>تم صرف الدفعة المقدمة فعليًا</span>
                           </label>
-                          <span class="hint">ارفع «إثبات صرف الدفعة المقدمة» ضمن ملفات الإصدار — شرط لازم لإكمال المرحلة</span>
+                          @if (aAdvanceDone()) {
+                            <div class="si-fld full">
+                              <label>إثبات صرف الدفعة المقدمة <span class="req">*</span></label>
+                              <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onAdvanceProofFileChange($event)" />
+                              <button type="button" class="si-btn sm" [disabled]="aAdvanceProofUploading()" (click)="uploadAdvanceProof()">
+                                @if (aAdvanceProofUploading()) { جاري الرفع… } @else { رفع الإثبات }
+                              </button>
+                              @if (aAdvanceProofError()) {
+                                <div class="si-err">{{ aAdvanceProofError() }}</div>
+                              }
+                            </div>
+                          }
                         </div>
                       </div>
                     } @else {
@@ -397,23 +417,23 @@
                         @if (aHandoverMode() === 1 && awardEditable()) {
                           <div class="si-fld full">
                             <label>تسجيل تسليم الأرضية <span class="req">*</span></label>
-                            @if (aw.siteHandoverMode !== 1) {
-                              <div class="si-err">احفظ بيانات الترسية أولًا (زر "حفظ بيانات الترسية" أسفل الصفحة) قبل تسجيل تسليم الأرضية</div>
-                            } @else {
-                              <div class="si-grid">
-                                <div class="si-fld">
-                                  <label>تاريخ التسليم</label>
-                                  <input type="date" [ngModel]="aHandoverDate()" (ngModelChange)="aHandoverDate.set($event)" />
-                                </div>
-                                <div class="si-fld">
-                                  <label>إثبات التسليم (PDF أو صورة)</label>
-                                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
-                                </div>
+                            <div class="si-grid">
+                              <div class="si-fld">
+                                <label>تاريخ التسليم</label>
+                                <input type="date" [ngModel]="aHandoverDate()" (ngModelChange)="aHandoverDate.set($event)" />
                               </div>
+                              <div class="si-fld">
+                                <label>إثبات التسليم (PDF أو صورة)</label>
+                                <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
+                              </div>
+                            </div>
+                            @if (aw.siteHandoverMode === 1) {
                               <button class="si-btn sm" [disabled]="aHandoverSaving()" (click)="saveHandover()">
-                                @if (aHandoverSaving()) { جاري الحفظ… } @else { حفظ تسليم الأرضية }
+                                @if (aHandoverSaving()) { جاري الحفظ… } @else { تحديث تسليم الأرضية }
                               </button>
-                              <span class="hint">مطلوب قبل إكمال الترسية عندما تكون الأرضية مُسلَّمة للمقاول</span>
+                              <span class="hint">لتصحيح التاريخ أو الملف بعد الحفظ الأول</span>
+                            } @else {
+                              <span class="hint">سيُسجَّل تسليم الأرضية تلقائيًا مع حفظ بيانات الترسية أدناه</span>
                             }
                           </div>
                         }

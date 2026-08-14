@@ -116,6 +116,30 @@ public sealed class ContractAwardReworkTests
         Assert.Equal(10_000m, details.Savings);
     }
 
+    /// <summary>قيمة عقد مُدخَلة صراحةً كصفر لا تُنتج "وفرة" مزيَّفة تساوي كامل الميزانية المخططة — بخلاف
+    /// قيمة عقد فارغة (تُحفَظ null بالفعل)، صفر قيمة صريحة يمر من التحقق في SetContractAwardDetailsAsync
+    /// دون رفض لأن حد إكمال الترسية (قيمة العقد > 0) لا يُفعَّل إلا عند SetCompletionAsync.</summary>
+    [Fact]
+    public async Task Zero_contract_value_does_not_compute_fabricated_savings()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 100_000m, selfFunding: 0m, projectNature: "توريدات");
+        var (memo, contractor, contractType) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            ContractValue = 0m,
+            ExecutionDurationMonths = 1,
+        });
+
+        var details = (await service.GetOverviewAsync(project.SubProjectId))
+            .Stages.Single(s => s.Stage == "contract-award").ContractAward!;
+        Assert.Null(details.Savings);
+    }
+
     [Fact]
     public async Task Supply_project_completes_without_handover_fields_and_auto_sets_handover_date()
     {
@@ -188,6 +212,255 @@ public sealed class ContractAwardReworkTests
 
         // رقم العقد مُولَّد من AssignmentId، لا من أي إدخال
         Assert.Equal(assignment.AssignmentId.ToString(), assignment.ContractNumber);
+    }
+
+    [Fact]
+    public async Task Advance_self_amount_above_planned_self_funding_is_blocked()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 10_000.01m,
+            AdvancePaymentBankAmount = 0m,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SetContractAwardDetailsAsync(project.SubProjectId, dto));
+
+        Assert.Contains("التمويل الذاتي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_self_amount_equal_to_planned_self_funding_is_allowed()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 10_000m,
+            AdvancePaymentBankAmount = 0m,
+        };
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, dto);
+
+        var saved = await context.ContractAwards.AsNoTracking().FirstAsync(x => x.SubProjectId == project.SubProjectId);
+        Assert.Equal(10_000m, saved.AdvancePaymentSelfAmount);
+    }
+
+    [Fact]
+    public async Task Advance_bank_amount_above_planned_bank_funding_is_blocked()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 90_000.01m,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SetContractAwardDetailsAsync(project.SubProjectId, dto));
+
+        Assert.Contains("التمويل البنكي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_payment_proof_slot_is_hidden_from_contract_award_file_slots()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m, projectNature: "مقاولات");
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var overview = await service.GetOverviewAsync(project.SubProjectId);
+        var awardStage = overview.Stages.Single(s => s.Stage == "contract-award");
+
+        Assert.DoesNotContain(awardStage.FileSlots, s => s.Key == "advance-payment-proof");
+        Assert.Contains(awardStage.FileSlots, s => s.Key == "award-order");
+    }
+
+    /// <summary>لا يثبّت هذا الاختبار شرط المرحلة في فلترة BuildStageDto على وجه التحديد — لو استُبدلت
+    /// الفلترة بشرط أبسط (key != advance-payment-proof) بلا فحص المرحلة أصلًا، يبقى هذا الاختبار ناجحًا،
+    /// لأن ما يثبّته فعليًا أضيق: أن مجموعة خانات ملفات مرحلة أخرى (technical-evaluation) لا تتأثر بفلترة
+    /// مرحلة الترسية.</summary>
+    [Fact]
+    public async Task Other_stage_file_slots_are_unaffected_by_contract_award_filter()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m);
+        var service = CreateService(context);
+
+        var overview = await service.GetOverviewAsync(project.SubProjectId);
+        var technicalStage = overview.Stages.Single(s => s.Stage == "technical-evaluation");
+
+        Assert.Equal(3, technicalStage.FileSlots.Count);
+        Assert.Contains(technicalStage.FileSlots, s => s.Key == "first-committee-report");
+        Assert.Contains(technicalStage.FileSlots, s => s.Key == "second-committee-report");
+        Assert.Contains(technicalStage.FileSlots, s => s.Key == "final-technical-evaluation-report");
+    }
+
+    /// <summary>يغطي C1: المسار الوحيد الآن لرفع إثبات صرف الدفعة المقدمة — تحديث الإصدار الحالي مباشرة
+    /// عبر SetAdvancePaymentProofAsync، بلا إعادة رفع أمر الإسناد والعقد (كان uploadStageVersion يفشل دائمًا
+    /// لأن UploadVersionAsync يُلزم كل خانة إلزامية بكل رفعة).</summary>
+    [Fact]
+    public async Task Uploading_advance_payment_proof_via_dedicated_endpoint_satisfies_completion_check()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 90_000m, selfFunding: 10_000m, projectNature: "مقاولات");
+        var (memo, contractor, _) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            ContractValue = 60_000m,
+            ExecutionDurationMonths = 1,
+            SiteHandoverMode = (int)SiteHandoverMode.Pending,
+            AdvancePaymentDone = true,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 1_000m,
+            AdvancePaymentBankAmount = 5_000m, // 10% من قيمة العقد 60,000 = 6,000
+        });
+
+        // لم يُرفَع أي شيء بعد على advance-payment-proof — لولا هذا الاستدعاء تفشل SetCompletionAsync أدناه
+        await service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf"));
+
+        await service.SetCompletionAsync(project.SubProjectId, ProcurementStage.ContractAward, true);
+
+        var completed = (await service.GetOverviewAsync(project.SubProjectId))
+            .Stages.Single(s => s.Stage == "contract-award").IsCompleted;
+        Assert.True(completed);
+    }
+
+    [Fact]
+    public async Task SetAdvancePaymentProofAsync_rejects_empty_file()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m, projectNature: "مقاولات");
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SetAdvancePaymentProofAsync(project.SubProjectId, new FileUploadDto
+            {
+                FileName = "empty.pdf",
+                FileExtension = ".pdf",
+                FileSize = 0,
+                Content = [],
+            }));
+        Assert.Contains("مطلوب", ex.Message);
+    }
+
+    [Fact]
+    public async Task SetAdvancePaymentProofAsync_rejects_when_no_version_exists_yet()
+    {
+        await using var context = CreateContext();
+        // مشروع بمرحلة ترسية مفتوحة لكن بلا أي إصدار مرفوع بعد (لا أمر إسناد ولا عقد)
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m, projectNature: "مقاولات");
+        var memo = new PresentationMemo
+        {
+            Title = "مذكرة اختبار",
+            ContractingMethod = ContractingMethod.PublicTender,
+            IsCompleted = true,
+        };
+        context.Set<PresentationMemo>().Add(memo);
+        await context.SaveChangesAsync();
+        context.Set<PresentationMemoSubProject>().Add(new PresentationMemoSubProject
+        {
+            PresentationMemoId = memo.Id,
+            SubProjectId = project.SubProjectId,
+        });
+        context.Set<FinancialEvaluation>().Add(new FinancialEvaluation
+        {
+            SubProjectId = project.SubProjectId,
+            IsCompleted = true,
+        });
+        await context.SaveChangesAsync();
+
+        var service = CreateService(context);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf")));
+        Assert.Contains("أمر الإسناد والعقد", ex.Message);
+    }
+
+    /// <summary>يغطي C2: الدفعة المقدمة عند الإكمال تُقاس على قيمة العقد لا totalCost (Bank+Self المخطط) —
+    /// نفس الأساس الذي تعرضه الواجهة أثناء الإدخال (advanceAmount() في procurement-workflow.ts).</summary>
+    [Fact]
+    public async Task Advance_payment_matching_contract_value_base_allows_completion()
+    {
+        await using var context = CreateContext();
+        // totalCost المخطط = 100,000 لكن قيمة العقد الفعلية 60,000 — لو الخادم لا يزال يحسب على totalCost
+        // (10% × 100,000 = 10,000) سيرفض هذا الاختبار المبلغ الصحيح (10% × 60,000 = 6,000)
+        var project = await SeedProjectAsync(context, bankFunding: 90_000m, selfFunding: 10_000m, projectNature: "مقاولات");
+        var (memo, contractor, _) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            ContractValue = 60_000m,
+            ExecutionDurationMonths = 1,
+            SiteHandoverMode = (int)SiteHandoverMode.Pending,
+            AdvancePaymentDone = true,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 1_000m,
+            AdvancePaymentBankAmount = 5_000m,
+        });
+        await service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf"));
+
+        await service.SetCompletionAsync(project.SubProjectId, ProcurementStage.ContractAward, true);
+
+        var completed = (await service.GetOverviewAsync(project.SubProjectId))
+            .Stages.Single(s => s.Stage == "contract-award").IsCompleted;
+        Assert.True(completed);
+    }
+
+    [Fact]
+    public async Task Advance_payment_matching_old_total_cost_base_instead_of_contract_value_is_rejected()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 90_000m, selfFunding: 10_000m, projectNature: "مقاولات");
+        var (memo, contractor, _) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        // قيمة العقد 60,000 والنسبة 10% → الصحيح 6,000. هنا نصرف 10,000 عمدًا (10% من totalCost القديم 100,000)
+        // فيجب الرفض، والرسالة يجب أن تقتبس 6,000.00 (قيمة العقد) لا 10,000.00 (totalCost القديم).
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            ContractValue = 60_000m,
+            ExecutionDurationMonths = 1,
+            SiteHandoverMode = (int)SiteHandoverMode.Pending,
+            AdvancePaymentDone = true,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 4_000m,
+            AdvancePaymentBankAmount = 6_000m,
+        });
+        await service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf"));
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SetCompletionAsync(project.SubProjectId, ProcurementStage.ContractAward, true));
+        Assert.Contains("6,000.00", ex.Message);
     }
 
     private static async Task<(PresentationMemo memo, Contractor contractor, ContractType? contractType)> SeedAwardPrereqsAsync(

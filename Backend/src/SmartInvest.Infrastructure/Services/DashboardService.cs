@@ -167,8 +167,14 @@ public class DashboardService : IDashboardService
         var bankFunding = subProjects.Sum(s => s.BankFunding);
         var selfFunding = subProjects.Sum(s => s.SelfFunding);
         var totalFunding = bankFunding + selfFunding;
-        var totalBankAvailabilities = availabilities.Sum(a => a.Amount);
-        var remainingAvailable = bankFunding - totalBankAvailabilities;
+        // صافٍ من الصرف (دفعات مقدمة + صرف تنفيذ) بنفس حساب BankAvailabilityService.GetForFinancialYearAsync —
+        // حتى لا يختلف رقم "إجمالي المتاح" بين لوحة التحكم وشاشة المشروعات لنفس السنة المالية (BankSpendCalculator المشترك).
+        var advancesSpent = await BankSpendCalculator.GetAdvancePaymentsSpentAsync(_context, year.FinancialYearId, cancellationToken);
+        var executionSpent = await BankSpendCalculator.GetExecutionBankSpendAsync(_context, year.FinancialYearId, cancellationToken);
+        var receipts = availabilities.Sum(a => a.Amount);
+        var totalBankAvailabilities = receipts - advancesSpent - executionSpent;
+        // المتبقي للبنك سؤال عن الإيداعات (receipts) لا عن الصرف — يطابق RemainingAvailable في BankAvailabilityService عمدًا.
+        var remainingAvailable = bankFunding - receipts;
         var availabilityRate = bankFunding <= 0 ? 0 : Math.Round(totalBankAvailabilities / bankFunding * 100, 2);
         var bankSpent = stages.Sum(x => x.BankFundingSpent);
         var selfSpent = stages.Sum(x => x.SelfFundingSpent);

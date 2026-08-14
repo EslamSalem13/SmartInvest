@@ -28,6 +28,8 @@ New validation, both layers:
 
 `advanceAmount()` (`procurement-workflow.ts:87-94`) currently computes `aAdvancePercentage() × award()?.totalCost`. Switch the base to the live `aContractValue()` input (post-thousands-conversion, raw EGP) instead of the saved `totalCost` — matches how the field already reacts live to `aAdvancePercentage()` as the user types, before any save. If `aContractValue()` is empty/null, `advanceAmount()` returns 0 (same empty-input handling as today).
 
+This rebase must also happen at completion time, not just in the live UI hint. `ValidateContractAwardForCompletionAsync` (`ProcurementService.cs`, around line 1023) independently recomputes the expected advance amount as `totalCost × percentage / 100` and blocks completion if `AdvancePaymentSelfAmount + AdvancePaymentBankAmount` doesn't match it. Left as `totalCost`, this disagrees with the UI the moment `ContractValue != totalCost` (the normal case — it's the whole reason this panel has a «وفرة» field), so a user who balances the split against `aContractValue()` on screen and saves cleanly gets blocked at completion by a number that never appeared anywhere in the UI. `expected` must use the same `ProjectAssignment.ContractValue` already fetched a few lines above (and already guaranteed `> 0` there) instead of `totalCost`.
+
 ### 5. المتاح becomes net of spend (advance payments + execution spend)
 
 Today `BankAvailabilityListDto.TotalAvailable` (`BankAvailabilityService.cs:66,70`, displayed as "إجمالي المتاح" in `projects.html:278`) is a pure receipts sum — every إتاحة entry adds to it, nothing ever subtracts. This is the exact "net of spend" behavior decided earlier in this project's requirements audit but never implemented (it was scoped as its own follow-up cycle, never started) — the user is now asking for it directly, scoped as: advance payments paid **and** execution-stage spend, both across every sub-project linked to the financial year.
@@ -38,13 +40,22 @@ Today `BankAvailabilityListDto.TotalAvailable` (`BankAvailabilityService.cs:66,7
 receipts = items.Sum(x => x.Amount)                                    // unchanged raw sum
 advancesSpent = Σ ContractAward.AdvancePaymentBankAmount
                   where AdvancePaymentDone == true
-                  and SubProject.FinancialYears.Any(fy => fy.FinancialYearId == financialYearId)
+                  and OwningYear(award) == financialYearId
 executionSpent = Σ ExecutionStage.BankFundingSpent
                   where SubProjectFinancialYear.FinancialYearId == financialYearId
 TotalAvailable = receipts - advancesSpent - executionSpent
 ```
 
-Both sums are scoped via the same "sub-projects linked to this financial year" join `GetTotalBankFundingAsync` (`BankAvailabilityService.cs:345-350`) already uses for `TotalBankFunding`, so all three headline figures on the الإتاحات البنكية modal stay mutually consistent (same year-scoping logic, one join pattern, no drift between them).
+`executionSpent` is scoped via the same "sub-projects linked to this financial year" join `GetTotalBankFundingAsync` (`BankAvailabilityService.cs:345-350`) already uses for `TotalBankFunding`, so that figure stays mutually consistent with `TotalBankFunding` on the الإتاحات البنكية modal (same year-scoping logic, one join pattern, no drift).
+
+`advancesSpent` is *not* scoped by that same "any linked year" join, per an explicit owner decision made after this doc's initial draft (an open business question at the time, flagged in `BankSpendCalculator`'s XML doc as "مسألة عمل غير محسومة بعد"). A `ContractAward` has exactly one `AdvancePaymentBankAmount` with no year attribution of its own, while `SubProject.FinancialYears` is a collection — a carried-over multi-year sub-project legitimately has rows for several years. Scoping the advance sum by "any linked year" (as `executionSpent` and `TotalBankFunding` do) would subtract the same one-time bank payment from every linked year's `TotalAvailable`, overstating spend by counting money that left the account once as if it left it once per year.
+
+The owner's resolution: `OwningYear(award)` is the single financial year the advance is attributed to, and it is charged there only, never against the sub-project's other linked years:
+1. Determine the award's date: `ProjectAssignment.ContractDate ?? ProjectAssignment.AssignmentDate`, reached via `ContractAward.ProjectAssignmentId`/`ProjectAssignment` (nullable — an award may exist with no assignment yet).
+2. Among the sub-project's linked financial years (`SubProject.FinancialYears` → `SubProjectFinancialYear.FinancialYear`), pick the one whose `[StartDate, EndDate]` range contains the award date.
+3. **Fallback**, required whenever step 1 has no assignment/date or step 2 finds no containing year: attribute the advance to the **earliest** linked financial year (by `StartDate`). This guarantees the advance is counted exactly once — never zero times (which would understate spend, an error just as bad as double-counting), never twice.
+
+Implemented in `BankSpendCalculator.GetAdvancePaymentsSpentAsync`: candidate awards (`AdvancePaymentDone == true`) are projected to `{ AdvancePaymentBankAmount, award date, linked years' {Id, StartDate, EndDate} }` and materialized in one query, then the owning-year selection and sum happen in memory — avoiding a single LINQ-to-Entities expression that mixes "pick the containing range, else the earliest" in ways that risk client-evaluation surprises across the InMemory/SQL Server providers.
 
 `RemainingAvailable` (`= TotalBankFunding − TotalAvailable`, "المتبقي الممكن إتاحته") is *not* touched — it keeps meaning "how much more bank funding still needs to be deposited to reach the plan," a different question than "how much of what's already been deposited is still unspent." Only `TotalAvailable`'s definition changes.
 

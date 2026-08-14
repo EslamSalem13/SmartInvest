@@ -142,6 +142,25 @@ public class ProcurementController : ControllerBase
         return File(file.Content, FileRequestHelpers.GetContentType(file.FileExtension), file.FileName);
     }
 
+    /// <summary>تحديث إثبات صرف الدفعة المقدمة على الإصدار الحالي مباشرة — بلا حاجة لإعادة رفع أمر الإسناد والعقد
+    /// (بعكس رفع إصدار جديد عبر /versions الذي يُلزم كل الملفات المطلوبة بكل رفعة).</summary>
+    [HttpPut("api/subprojects/{subProjectId:int}/procurement/contract-award/advance-payment-proof")]
+    [Authorize(Roles = Roles.FinancialOperationsStaff)]
+    public async Task<IActionResult> SetAdvancePaymentProof(
+        int subProjectId,
+        IFormFile? proof,
+        CancellationToken cancellationToken)
+    {
+        if (proof == null || proof.Length == 0)
+        {
+            throw new BusinessRuleException("إثبات صرف الدفعة المقدمة مطلوب");
+        }
+
+        var file = await FileRequestHelpers.ToUploadDtoAsync(proof, cancellationToken);
+        await _procurementService.SetAdvancePaymentProofAsync(subProjectId, file, cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>مدير التخطيط أو السوبر أدمن يحددان المدة القصوى لمرحلة عادية. الإعلان ثابت والترسية بلا مدة عامة.</summary>
     [HttpPut("api/subprojects/{subProjectId:int}/procurement/{stage}/duration")]
     [Authorize(Roles = Roles.ManagementStaff)]
