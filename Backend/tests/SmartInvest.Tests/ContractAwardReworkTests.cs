@@ -190,6 +190,87 @@ public sealed class ContractAwardReworkTests
         Assert.Equal(assignment.AssignmentId.ToString(), assignment.ContractNumber);
     }
 
+    [Fact]
+    public async Task Advance_self_amount_above_planned_self_funding_is_blocked()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 10_000.01m,
+            AdvancePaymentBankAmount = 0m,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SetContractAwardDetailsAsync(project.SubProjectId, dto));
+
+        Assert.Contains("التمويل الذاتي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_self_amount_equal_to_planned_self_funding_is_allowed()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 10_000m,
+            AdvancePaymentBankAmount = 0m,
+        };
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, dto);
+
+        var saved = await context.ContractAwards.AsNoTracking().FirstAsync(x => x.SubProjectId == project.SubProjectId);
+        Assert.Equal(10_000m, saved.AdvancePaymentSelfAmount);
+    }
+
+    [Fact]
+    public async Task Advance_bank_amount_above_planned_bank_funding_is_blocked()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 90_000.01m,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SetContractAwardDetailsAsync(project.SubProjectId, dto));
+
+        Assert.Contains("التمويل البنكي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_payment_proof_slot_is_hidden_from_contract_award_file_slots()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m, projectNature: "مقاولات");
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var overview = await service.GetOverviewAsync(project.SubProjectId);
+        var awardStage = overview.Stages.Single(s => s.Stage == "contract-award");
+
+        Assert.DoesNotContain(awardStage.FileSlots, s => s.Key == "advance-payment-proof");
+        Assert.Contains(awardStage.FileSlots, s => s.Key == "award-order");
+    }
+
     private static async Task<(PresentationMemo memo, Contractor contractor, ContractType? contractType)> SeedAwardPrereqsAsync(
         AppDbContext context, int subProjectId)
     {

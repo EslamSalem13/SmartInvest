@@ -340,6 +340,22 @@ public class ProcurementService : IProcurementService
     {
         var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
 
+        var funding = await _context.SubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new { x.SelfFunding, x.BankFunding })
+            .FirstAsync(cancellationToken);
+
+        if (dto.AdvancePaymentSelfAmount > funding.SelfFunding)
+        {
+            throw new BusinessRuleException(
+                $"الجزء المصروف من التمويل الذاتي ({dto.AdvancePaymentSelfAmount:N2} ج.م) يتجاوز التمويل الذاتي المخطط للمشروع ({funding.SelfFunding:N2} ج.م)");
+        }
+        if (dto.AdvancePaymentBankAmount > funding.BankFunding)
+        {
+            throw new BusinessRuleException(
+                $"الجزء المصروف من التمويل البنكي ({dto.AdvancePaymentBankAmount:N2} ج.م) يتجاوز التمويل البنكي المخطط للمشروع ({funding.BankFunding:N2} ج.م)");
+        }
+
         doc.AdvancePaymentDone = dto.AdvancePaymentDone;
         doc.AdvancePaymentPercentage = dto.AdvancePaymentPercentage;
         doc.AdvancePaymentSelfAmount = dto.AdvancePaymentSelfAmount;
@@ -799,6 +815,7 @@ public class ProcurementService : IProcurementService
             IsCompleted = state?.IsCompleted ?? false,
             LastUpdatedAt = state?.LastUpdatedAt,
             FileSlots = ops.Slots
+                .Where(s => !(stage == ProcurementStage.ContractAward && s.Key == "advance-payment-proof"))
                 .Select(s => new ProcurementFileSlotDto { Key = s.Key, Label = s.Label, Required = s.Required })
                 .ToList(),
             DurationDays = state?.DurationDays,
