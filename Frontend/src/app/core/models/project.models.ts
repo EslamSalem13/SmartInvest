@@ -111,7 +111,7 @@ export interface SubProjectDetail {
   executiveAgencyName: string | null;
   contractorName: string | null;
   contractTypeName: string | null;
-  contractNumber: string | null;
+  contractDate: string | null;
   contractValue: number | null;
   financialYears: SubProjectFinancialYear[];
 }

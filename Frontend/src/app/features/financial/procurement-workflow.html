@@ -249,7 +249,7 @@
                     <!-- ميزانية المشروع معروضة من البداية -->
                     <div class="award-budget">
                       <div class="ab-item">
-                        <span>إجمالي التكلفة</span><b class="tnum">{{ thousandsLabel(aw.totalCost) }}</b>
+                        <span>إجمالي المخطط</span><b class="tnum">{{ thousandsLabel(aw.totalCost) }}</b>
                       </div>
                       <div class="ab-item">
                         <span>تمويل ذاتي</span><b class="tnum">{{ thousandsLabel(aw.selfFunding) }}</b>
@@ -260,6 +260,11 @@
                       <div class="ab-item">
                         <span>نوع المشروع</span><b>{{ aw.projectNature || '—' }}</b>
                       </div>
+                      @if (aw.savings != null) {
+                        <div class="ab-item">
+                          <span>وفرة</span><b class="tnum ok">{{ thousandsLabel(aw.savings) }}</b>
+                        </div>
+                      }
                     </div>
 
                     <div class="si-step"><span class="n">1</span><h4>إسناد المشروع لمقاول</h4></div>
@@ -300,17 +305,13 @@
                         </div>
                       }
                       <div class="si-fld">
-                        <label>نوع العقد <span class="req">*</span></label>
-                        <select [ngModel]="aContractTypeId()" (ngModelChange)="aContractTypeId.set($event)" [disabled]="!awardEditable()">
-                          <option [ngValue]="null">— اختر —</option>
-                          @for (t of contractTypes(); track t.id) {
-                            <option [ngValue]="t.id">{{ t.name }}</option>
-                          }
-                        </select>
+                        <label>نوع العقد</label>
+                        <input [value]="overview()!.activePresentationMemo?.contractingMethodLabel || '—'" disabled />
+                        <span class="hint">مُشتق من طريقة التعاقد في مذكرة العرض</span>
                       </div>
                       <div class="si-fld">
-                        <label>رقم العقد</label>
-                        <input [ngModel]="aContractNumber()" (ngModelChange)="aContractNumber.set($event)" [disabled]="!awardEditable()" />
+                        <label>تاريخ العقد</label>
+                        <input type="date" [ngModel]="aContractDate()" (ngModelChange)="aContractDate.set($event)" [disabled]="!awardEditable()" />
                       </div>
                       <div class="si-fld">
                         <label>قيمة العقد</label>
@@ -363,56 +364,62 @@
                         <label>المدة القصوى — أيام</label>
                         <input type="number" min="0" [ngModel]="aDurationDays()" (ngModelChange)="aDurationDays.set($event)" [disabled]="!awardEditable()" />
                       </div>
-                      <div class="si-fld full">
-                        <label>أرضية المشروع <span class="req">*</span></label>
-                        <select [ngModel]="aHandoverMode()" (ngModelChange)="aHandoverMode.set($event)" [disabled]="!awardEditable()">
-                          <option [ngValue]="null">— اختر —</option>
-                          <option [ngValue]="1">مُسلَّمة للمقاول — تبدأ المدة فور الترسية</option>
-                          <option [ngValue]="2">لم تُسلَّم بعد — تبدأ المدة عند تسجيل التسليم لاحقًا</option>
-                        </select>
-                        <span class="hint">المدة لا تبدأ من الترسية، بل من تسليم الأرضية للمقاول</span>
-                      </div>
-                      @if (aw.siteHandoverDate) {
-                        <div class="si-fld">
-                          <label>تاريخ تسليم الأرضية</label>
-                          <input [value]="dateStr(aw.siteHandoverDate)" disabled />
-                        </div>
-                      }
-                      @if (aw.contractualDeliveryDate) {
-                        <div class="si-fld">
-                          <label>تاريخ التسليم المستحق</label>
-                          <input [value]="dateStr(aw.contractualDeliveryDate)" disabled />
-                        </div>
-                      }
-                      @if (aw.siteHandoverProofFileName) {
+                      @if (aw.projectNature === 'مقاولات') {
                         <div class="si-fld full">
-                          <label>إثبات تسليم الأرضية</label>
-                          <button type="button" class="file-lnk" (click)="downloadHandoverProof(aw.siteHandoverProofFileName!)">
-                            📎 {{ aw.siteHandoverProofFileName }}
-                          </button>
+                          <label>أرضية المشروع <span class="req">*</span></label>
+                          <select [ngModel]="aHandoverMode()" (ngModelChange)="aHandoverMode.set($event)" [disabled]="!awardEditable()">
+                            <option [ngValue]="null">— اختر —</option>
+                            <option [ngValue]="1">مُسلَّمة للمقاول — تبدأ المدة فور الترسية</option>
+                            <option [ngValue]="2">لم تُسلَّم بعد — تبدأ المدة عند تسجيل التسليم لاحقًا</option>
+                          </select>
+                          <span class="hint">المدة لا تبدأ من الترسية، بل من تسليم الأرضية للمقاول</span>
                         </div>
-                      }
-                      @if (aHandoverMode() === 1 && awardEditable()) {
-                        <div class="si-fld full">
-                          <label>تسجيل تسليم الأرضية <span class="req">*</span></label>
-                          @if (aw.siteHandoverMode !== 1) {
-                            <div class="si-err">احفظ بيانات الترسية أولًا (زر "حفظ بيانات الترسية" أسفل الصفحة) قبل تسجيل تسليم الأرضية</div>
-                          } @else {
-                            <div class="si-grid">
-                              <div class="si-fld">
-                                <label>تاريخ التسليم</label>
-                                <input type="date" [ngModel]="aHandoverDate()" (ngModelChange)="aHandoverDate.set($event)" />
-                              </div>
-                              <div class="si-fld">
-                                <label>إثبات التسليم (PDF أو صورة)</label>
-                                <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
-                              </div>
-                            </div>
-                            <button class="si-btn sm" [disabled]="aHandoverSaving()" (click)="saveHandover()">
-                              @if (aHandoverSaving()) { جاري الحفظ… } @else { حفظ تسليم الأرضية }
+                        @if (aw.siteHandoverDate) {
+                          <div class="si-fld">
+                            <label>تاريخ تسليم الأرضية</label>
+                            <input [value]="dateStr(aw.siteHandoverDate)" disabled />
+                          </div>
+                        }
+                        @if (aw.contractualDeliveryDate) {
+                          <div class="si-fld">
+                            <label>تاريخ التسليم المستحق</label>
+                            <input [value]="dateStr(aw.contractualDeliveryDate)" disabled />
+                          </div>
+                        }
+                        @if (aw.siteHandoverProofFileName) {
+                          <div class="si-fld full">
+                            <label>إثبات تسليم الأرضية</label>
+                            <button type="button" class="file-lnk" (click)="downloadHandoverProof(aw.siteHandoverProofFileName!)">
+                              📎 {{ aw.siteHandoverProofFileName }}
                             </button>
-                            <span class="hint">مطلوب قبل إكمال الترسية عندما تكون الأرضية مُسلَّمة للمقاول</span>
-                          }
+                          </div>
+                        }
+                        @if (aHandoverMode() === 1 && awardEditable()) {
+                          <div class="si-fld full">
+                            <label>تسجيل تسليم الأرضية <span class="req">*</span></label>
+                            @if (aw.siteHandoverMode !== 1) {
+                              <div class="si-err">احفظ بيانات الترسية أولًا (زر "حفظ بيانات الترسية" أسفل الصفحة) قبل تسجيل تسليم الأرضية</div>
+                            } @else {
+                              <div class="si-grid">
+                                <div class="si-fld">
+                                  <label>تاريخ التسليم</label>
+                                  <input type="date" [ngModel]="aHandoverDate()" (ngModelChange)="aHandoverDate.set($event)" />
+                                </div>
+                                <div class="si-fld">
+                                  <label>إثبات التسليم (PDF أو صورة)</label>
+                                  <input type="file" accept=".pdf,.png,.jpg,.jpeg" (change)="onHandoverFileChange($event)" />
+                                </div>
+                              </div>
+                              <button class="si-btn sm" [disabled]="aHandoverSaving()" (click)="saveHandover()">
+                                @if (aHandoverSaving()) { جاري الحفظ… } @else { حفظ تسليم الأرضية }
+                              </button>
+                              <span class="hint">مطلوب قبل إكمال الترسية عندما تكون الأرضية مُسلَّمة للمقاول</span>
+                            }
+                          </div>
+                        }
+                      } @else {
+                        <div class="si-note full">
+                          مشروع «توريدات» — لا تسليم أرضية له. يبدأ العدّ فور إكمال هذه المرحلة تلقائيًا.
                         </div>
                       }
                     </div>

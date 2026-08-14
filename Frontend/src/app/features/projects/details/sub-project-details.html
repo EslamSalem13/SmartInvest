@@ -116,7 +116,7 @@
           <div class="info-grid">
             <div class="row"><span>المقاول</span><b>{{ project()!.contractorName }}</b></div>
             <div class="row"><span>نوع العقد</span><b>{{ project()!.contractTypeName || '—' }}</b></div>
-            <div class="row"><span>رقم العقد</span><b>{{ project()!.contractNumber || '—' }}</b></div>
+            <div class="row"><span>تاريخ العقد</span><b>{{ project()!.contractDate ? project()!.contractDate!.slice(0, 10) : '—' }}</b></div>
             <div class="row"><span>قيمة العقد</span><b>{{ project()!.contractValue != null ? thousandsLabel(project()!.contractValue) : '—' }}</b></div>
           </div>
         </div>

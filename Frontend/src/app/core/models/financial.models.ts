@@ -45,9 +45,12 @@ export interface ContractAwardDetails {
 
   contractorId: number | null;
   contractorName: string | null;
+  /** مُشتق من طريقة تعاقد مذكرة العرض الفعّالة — للعرض فقط، لا يُختار من الواجهة. */
   contractTypeId: number | null;
-  contractNumber: string | null;
+  contractDate: string | null;
   contractValue: number | null;
+  /** الإجمالي المخطط ناقص قيمة العقد — موجودة فقط عندما تكون موجبة. */
+  savings: number | null;
 }
 
 export interface SetContractAwardDetails {
@@ -60,8 +63,7 @@ export interface SetContractAwardDetails {
   siteHandoverMode: number | null;
   penaltyAmount: number | null;
   contractorId: number | null;
-  contractTypeId: number | null;
-  contractNumber: string | null;
+  contractDate: string | null;
   contractValue: number | null;
 }
 

@@ -5,8 +5,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FinancialService } from '../../core/services/financial.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ContractorsService } from '../../core/services/contractors.service';
-import { ContractTypesService } from '../../core/services/contract-types.service';
-import { Contractor, Lookup } from '../../core/models/project.models';
+import { Contractor } from '../../core/models/project.models';
 import { formatEgpAsThousands } from '../../core/utils/budget.util';
 import {
   ContractAwardDetails,
@@ -27,7 +26,6 @@ export class ProcurementWorkflow implements OnInit {
   private readonly router = inject(Router);
   private readonly financial = inject(FinancialService);
   private readonly contractorsService = inject(ContractorsService);
-  private readonly contractTypesService = inject(ContractTypesService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
@@ -63,14 +61,12 @@ export class ProcurementWorkflow implements OnInit {
 
   // ===== مرحلة الترسية =====
   protected readonly contractors = signal<Contractor[]>([]);
-  protected readonly contractTypes = signal<Lookup[]>([]);
 
   protected readonly award = computed(() => this.stageDetail()?.contractAward ?? null);
 
   /** نموذج الترسية — إشارة لكل حقل، على نمط باقي النماذج في المشروع */
   protected readonly aContractorId = signal<number | null>(null);
-  protected readonly aContractTypeId = signal<number | null>(null);
-  protected readonly aContractNumber = signal('');
+  protected readonly aContractDate = signal<string>('');
   protected readonly aContractValue = signal<number | null>(null);
   protected readonly aAdvanceDone = signal(false);
   protected readonly aAdvancePercentage = signal<number | null>(null);
@@ -139,9 +135,6 @@ export class ProcurementWorkflow implements OnInit {
     this.contractorsService.getAll().subscribe({
       next: (items) => this.contractors.set(items.filter((c) => c.isActive)),
     });
-    this.contractTypesService.getAll().subscribe({
-      next: (items) => this.contractTypes.set(items),
-    });
   }
 
   /** يملأ النموذج من الخادم — يُستدعى كلما أُعيد تحميل تفاصيل المرحلة */
@@ -151,8 +144,7 @@ export class ProcurementWorkflow implements OnInit {
       return;
     }
     this.aContractorId.set(details.contractorId);
-    this.aContractTypeId.set(details.contractTypeId);
-    this.aContractNumber.set(details.contractNumber ?? '');
+    this.aContractDate.set(details.contractDate?.slice(0, 10) ?? '');
     this.aContractValue.set(details.contractValue);
     this.aAdvanceDone.set(details.advancePaymentDone);
     this.aAdvancePercentage.set(details.advancePaymentPercentage);
@@ -182,8 +174,7 @@ export class ProcurementWorkflow implements OnInit {
         siteHandoverMode: this.aHandoverMode(),
         penaltyAmount: this.aPenaltyAmount(),
         contractorId: this.aContractorId(),
-        contractTypeId: this.aContractTypeId(),
-        contractNumber: this.aContractNumber().trim() || null,
+        contractDate: this.aContractDate() || null,
         contractValue: this.aContractValue(),
       })
       .subscribe({
