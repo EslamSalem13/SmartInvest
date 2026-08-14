@@ -63,13 +63,16 @@ public class BankAvailabilityService : IBankAvailabilityService
             })
             .ToListAsync(cancellationToken);
 
-        var totalAvailable = items.Sum(x => x.Amount);
+        var receipts = items.Sum(x => x.Amount);
+        var advancesSpent = await GetAdvancePaymentsSpentAsync(financialYearId, cancellationToken);
+        var executionSpent = await GetExecutionBankSpendAsync(financialYearId, cancellationToken);
+        var totalAvailable = receipts - advancesSpent - executionSpent;
 
         return new BankAvailabilityListDto
         {
             TotalAvailable = totalAvailable,
             TotalBankFunding = totalBankFunding,
-            RemainingAvailable = totalBankFunding - totalAvailable,
+            RemainingAvailable = totalBankFunding - receipts,
             Items = items,
         };
     }
@@ -347,5 +350,24 @@ public class BankAvailabilityService : IBankAvailabilityService
         return await _context.SubProjects.AsNoTracking()
             .Where(s => s.FinancialYears.Any(fy => fy.FinancialYearId == financialYearId))
             .SumAsync(s => s.BankFunding, cancellationToken);
+    }
+
+    /// <summary>مجموع الدفعات المقدمة البنكية المصروفة فعليًا (AdvancePaymentDone) عبر كل المشروعات
+    /// الفرعية المرتبطة بهذه السنة المالية — يُخصم من المتاح لأنه صرف حقيقي من الرصيد المستلم.</summary>
+    private async Task<decimal> GetAdvancePaymentsSpentAsync(int financialYearId, CancellationToken cancellationToken)
+    {
+        return await _context.ContractAwards.AsNoTracking()
+            .Where(a => a.AdvancePaymentDone
+                && a.SubProject.FinancialYears.Any(fy => fy.FinancialYearId == financialYearId))
+            .SumAsync(a => a.AdvancePaymentBankAmount ?? 0m, cancellationToken);
+    }
+
+    /// <summary>مجموع الصرف الفعلي من التمويل البنكي عبر مراحل التنفيذ لكل المشروعات الفرعية
+    /// المرتبطة بهذه السنة المالية تحديدًا (وليس أي سنة أخرى للمشروع نفسه).</summary>
+    private async Task<decimal> GetExecutionBankSpendAsync(int financialYearId, CancellationToken cancellationToken)
+    {
+        return await _context.ExecutionStages.AsNoTracking()
+            .Where(e => e.SubProjectFinancialYear != null && e.SubProjectFinancialYear.FinancialYearId == financialYearId)
+            .SumAsync(e => e.BankFundingSpent, cancellationToken);
     }
 }
