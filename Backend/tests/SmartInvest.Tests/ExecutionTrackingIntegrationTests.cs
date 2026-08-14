@@ -135,6 +135,32 @@ public class ExecutionTrackingIntegrationTests
         Assert.False(result.Succeeded);
     }
 
+    [Fact]
+    public async Task Execution_spend_ceiling_is_based_on_planned_budget_not_contract_value()
+    {
+        await using var context = CreateContext();
+        // المخطط = 80,000 + 20,000 = 100,000، نسبة التجاوز 10% → السقف الصحيح بعد الإصلاح = 110,000.
+        // قيمة العقد = 105,000 (قريبة من سقف الترسية 110,000) → السقف الخاطئ القديم (قبل الإصلاح) كان
+        // 105,000 × 1.10 = 115,500، أي أكبر من السقف الصحيح.
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 10m, contractValue: 105_000m);
+        var service = CreateService(context);
+
+        // محاولة صرف 112,000: تتجاوز السقف الصحيح (110,000) لكنها أقل من السقف الخاطئ القديم (115,500) —
+        // يجب أن تُرفض بعد الإصلاح، بينما كانت ستُقبل خطأً قبله.
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة تختبر سقف الصرف",
+            Deadline = DateTime.UtcNow.Date.AddDays(5),
+            BankFundingSpent = 112_000m,
+            BankFundingProofFile = File("bank-proof.pdf"),
+            PhysicalProgressPercent = 0m,
+        }));
+
+        Assert.Contains("يتجاوز الحد المسموح", ex.Message);
+    }
+
     private static AppDbContext CreateContext() => new(
         new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
@@ -213,6 +239,59 @@ public class ExecutionTrackingIntegrationTests
         await context.SaveChangesAsync();
         return (project.SubProjectId, stage.ExecutionStageId, year.FinancialYearId);
     }
+
+    /// <summary>يبذر مشروعًا فرعيًا مُرسى عليه بقيمة عقد ونسبة تجاوز محددتين، بلا مرحلة تنفيذ مبدئية —
+    /// يُستخدم لاختبار سقف الصرف المسموح به (GetAllowedCeilingAsync) مباشرة عبر CreateAsync.</summary>
+    private static async Task<(int ProjectId, int YearId)> SeedExecutionWithOverrunAsync(
+        AppDbContext context, decimal bankFunding, decimal selfFunding, decimal overrunPercentage, decimal contractValue)
+    {
+        var status = new ProjectStatus { StatusName = "قيد التنفيذ" };
+        var project = new SubProject
+        {
+            SubProjectName = "مشروع اختبار سقف التجاوز",
+            ProjectNature = "مقاولات",
+            IsApproved = true,
+            Status = status,
+            BankFunding = bankFunding,
+            SelfFunding = selfFunding,
+            OverrunPercentage = overrunPercentage,
+            MainProject = new MainProject { MainProjectName = "مشروع رئيسي" },
+        };
+        var year = new FinancialYear
+        {
+            Name = "2026/2027",
+            StartDate = DateTime.UtcNow.Date,
+            EndDate = DateTime.UtcNow.Date.AddYears(1),
+        };
+        context.AddRange(status, project, year);
+        await context.SaveChangesAsync();
+        var cycle = new SubProjectFinancialYear { SubProjectId = project.SubProjectId, FinancialYearId = year.FinancialYearId };
+        var assignment = new ProjectAssignment
+        {
+            SubProjectId = project.SubProjectId,
+            ContractValue = contractValue,
+            AssignmentDate = DateTime.UtcNow.Date,
+        };
+        context.AddRange(cycle, assignment);
+        await context.SaveChangesAsync();
+        context.ContractAwards.Add(new ContractAward
+        {
+            SubProjectId = project.SubProjectId,
+            IsCompleted = true,
+            ProjectAssignmentId = assignment.AssignmentId,
+            ProjectAssignment = assignment,
+        });
+        await context.SaveChangesAsync();
+        return (project.SubProjectId, year.FinancialYearId);
+    }
+
+    private static FileUploadDto File(string name) => new()
+    {
+        FileName = name,
+        FileExtension = ".pdf",
+        FileSize = 1,
+        Content = [1],
+    };
 
     private sealed class TestCurrentUser : ICurrentUserService
     {

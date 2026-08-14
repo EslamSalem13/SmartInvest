@@ -65,6 +65,15 @@ public class ProjectCompletionPolicyTests
         Assert.False(result.CanCompleteProject);
     }
 
+    [Fact]
+    public void Ceiling_is_based_on_planned_budget_not_contract_value()
+    {
+        var result = Evaluate(contractValue: 900m, totalCost: 1000m, stageSelf: 1150m, overrun: 20m,
+            stages: [Actual(100), Final()]);
+        Assert.True(result.CanCompleteProject);
+        Assert.Equal(1200m, result.MaximumAllowed);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("0")]
@@ -91,11 +100,13 @@ public class ProjectCompletionPolicyTests
         decimal overrun = 0m,
         bool advanceDone = false,
         decimal advanceSelf = 0m,
-        IReadOnlyCollection<ExecutionStageCompletionFact>? stages = null) =>
+        IReadOnlyCollection<ExecutionStageCompletionFact>? stages = null,
+        decimal totalCost = 1000m) =>
         ProjectCompletionPolicy.Evaluate(new ProjectCompletionFacts(
             false, true, contractValue, overrun, stageSelf, stageBank,
             advanceDone, advanceSelf, 0m,
-            stages ?? [Actual(100), Final()]));
+            stages ?? [Actual(100), Final()],
+            totalCost));
 
     private static ExecutionStageCompletionFact Actual(decimal progress, bool completed = true) => new(false, completed, progress);
     private static ExecutionStageCompletionFact Final(bool completed = true) => new(true, completed, 0m);

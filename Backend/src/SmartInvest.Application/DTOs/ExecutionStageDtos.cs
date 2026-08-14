@@ -115,4 +115,5 @@ public sealed record ProjectCompletionFacts(
     bool AdvancePaymentDone,
     decimal AdvancePaymentSelfAmount,
     decimal AdvancePaymentBankAmount,
-    IReadOnlyCollection<ExecutionStageCompletionFact> Stages);
+    IReadOnlyCollection<ExecutionStageCompletionFact> Stages,
+    decimal TotalCost);

@@ -32,7 +32,7 @@ if ContractValue is null → require it (a contract with no value can't be valid
 if ContractValue > allowedCeiling → block, message states both the entered value and the ceiling
 ```
 
-This reuses `SubProject.OverrunPercentage` — the exact same field and ceiling formula already enforced for execution-stage spending in `ExecutionStageService.GetAllowedCeilingAsync`. Same concept, same source field, now also gating the contract value itself at award time rather than only gating post-award spend.
+This reuses `SubProject.OverrunPercentage`. Before this fix, `ExecutionStageService.GetAllowedCeilingAsync` enforced a similarly-shaped but *different* ceiling — it based the execution-stage spend limit on `ContractValue × (1 + OverrunPercentage/100)` rather than on planned budget, so a contract already awarded near its own `TotalCost × (1 + OverrunPercentage/100)` ceiling let execution spend compound a second `× (1 + OverrunPercentage/100)` on top of that — turning a configured 10% overrun into ~21%. As part of this cycle, `GetAllowedCeilingAsync` was rebased onto `SubProject.TotalCost`, so it now genuinely uses the exact same field and ceiling formula as this award-time check. The two checks share one real envelope: this one gates the contract value itself at award time, the other gates post-award spend against that same planned-budget-plus-overrun ceiling — not a subset of a separately-compounding limit.
 
 ### 4. تاريخ العقد replaces رقم العقد everywhere in the UI — رقم العقد becomes a DB-generated, backend-only value
 

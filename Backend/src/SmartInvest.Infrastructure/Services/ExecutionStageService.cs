@@ -365,7 +365,8 @@ public class ExecutionStageService : IExecutionStageService
                 award?.AdvancePaymentSelfAmount ?? 0,
                 award?.AdvancePaymentBankAmount ?? 0,
                 stages.Select(x => new ExecutionStageCompletionFact(
-                    x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList()));
+                    x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList(),
+                s.TotalCost));
 
             return new FollowUpListItemDto
             {
@@ -553,7 +554,9 @@ public class ExecutionStageService : IExecutionStageService
             .FirstOrDefaultAsync(cancellationToken);
         if (contractValue is null or <= 0)
             throw new BusinessRuleException("لا توجد قيمة عقد صحيحة مسجلة للمشروع");
-        return contractValue.Value * (1 + (subProject.OverrunPercentage ?? 0) / 100m);
+        // السقف مبني على الإجمالي المخطط، لا قيمة العقد — نسبة التجاوز غلاف واحد مشترك بين حد قيمة العقد
+        // وحد الصرف، لا يُطبَّق مرتين.
+        return subProject.TotalCost * (1 + (subProject.OverrunPercentage ?? 0) / 100m);
     }
 
     private async Task<decimal> GetAdvancePaymentTotalAsync(int subProjectId, CancellationToken cancellationToken) =>
@@ -611,6 +614,8 @@ public class ExecutionStageService : IExecutionStageService
             {
                 x.ExecutionCompletedAt,
                 x.OverrunPercentage,
+                x.BankFunding,
+                x.SelfFunding,
                 StatusName = x.Status.StatusName,
             })
             .FirstOrDefaultAsync(cancellationToken)
@@ -651,7 +656,8 @@ public class ExecutionStageService : IExecutionStageService
             award?.AdvanceSelf ?? 0,
             award?.AdvanceBank ?? 0,
             stages.Select(x => new ExecutionStageCompletionFact(
-                x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList()));
+                x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList(),
+            project.BankFunding + project.SelfFunding));
     }
 
     private static StoredFile ToStoredFile(FileUploadDto dto) => new()

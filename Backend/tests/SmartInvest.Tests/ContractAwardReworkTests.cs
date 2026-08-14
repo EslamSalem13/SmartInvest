@@ -141,6 +141,32 @@ public sealed class ContractAwardReworkTests
     }
 
     [Fact]
+    public async Task Contracting_project_still_requires_site_handover_mode()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(context, bankFunding: 50_000m, selfFunding: 0m, projectNature: "مقاولات");
+        var (memo, contractor, _) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            ContractValue = 40_000m,
+            ExecutionDurationMonths = 1,
+            AdvancePaymentDone = true,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 5_000m,
+            // deliberately no SiteHandoverMode — مقاولات must still be blocked without it
+        });
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SetCompletionAsync(project.SubProjectId, ProcurementStage.ContractAward, true));
+        Assert.Equal("يجب تحديد ما إذا كانت أرضية المشروع مُسلَّمة للمقاول أم لا", ex.Message);
+    }
+
+    [Fact]
     public async Task Contract_type_is_derived_from_memo_contracting_method_not_chosen_independently()
     {
         await using var context = CreateContext();
