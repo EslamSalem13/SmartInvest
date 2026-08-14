@@ -12,11 +12,11 @@
 select.mini {
   border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm);
   padding: 10px 20px; font-family: inherit; font-weight: 700; font-size: 13px; color: var(--ink);
-  min-height: 44px; transition: border-color .15s var(--ease);
+  min-height: 44px; transition: border-color var(--dur-fast) var(--ease);
 }
 select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0 0 0 4px var(--green-100); }
 .seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px; box-shadow: var(--shadow-xs); }
-.seg button { border: 0; background: transparent; color: var(--muted); padding: 9px 15px; border-radius: 7px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: background .15s var(--ease), color .15s var(--ease); }
+.seg button { border: 0; background: transparent; color: var(--muted); padding: 9px 15px; border-radius: 7px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .seg button.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; box-shadow: var(--shadow-xs); }
 .seg.small button { padding: 8px 13px; }
 
@@ -30,8 +30,7 @@ select.mini:focus { outline: none; border-color: var(--green-600); box-shadow: 0
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
-
-  transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .25s var(--ease);
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
 }
 .kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--green-500); }
 .kpi::after {
@@ -99,7 +98,7 @@ button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); b
   margin-top: 8px; display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 22px 14px; border: 1.5px dashed var(--line-strong); border-radius: var(--radius-lg);
   background: var(--surface); color: var(--muted); text-align: center;
-  transition: border-color .15s var(--ease), background .15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 .avail-dropzone svg { color: var(--green-600); }
 .avail-dropzone p { font-size: 13px; font-weight: 700; color: var(--ink); margin: 0; }
@@ -118,14 +117,14 @@ button.kpi-btn:disabled:hover { transform: none; box-shadow: var(--shadow-sm); b
 .avail-dates { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 .avail-notes { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
 .avail-docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.avail-doc-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--link); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12px; font-weight: 700; transition: background .15s var(--ease); }
+.avail-doc-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--link); border-radius: var(--radius-pill); padding: 6px 12px; font-size: 12px; font-weight: 700; transition: background var(--dur-fast) var(--ease); }
 .avail-doc-btn:hover { background: var(--green-100); }
 .avail-delete-msg { font-size: 13.5px; color: var(--ink); line-height: 1.8; }
 .avail-delete-msg b { color: var(--heading); }
 
 /* الفلاتر */
 .filterbar { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm); flex-wrap: wrap; }
-.search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 9px; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm); padding: 11px 13px; min-height: 44px; color: var(--muted); transition: border-color .15s var(--ease); }
+.search { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 9px; background: var(--surface-2); border: 1.5px solid var(--line); border-radius: var(--radius-sm); padding: 11px 13px; min-height: 44px; color: var(--muted); transition: border-color var(--dur-fast) var(--ease); }
 .search:focus-within { border-color: var(--green-600); background: var(--surface); }
 .search input { border: 0; background: transparent; flex: 1; font-family: inherit; font-size: 13.5px; color: var(--ink); outline: none; }
 .advanced { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); animation: si-pop .16s var(--ease); }
@@ -159,9 +158,9 @@ th:nth-child(5), td:nth-child(5) { width: 14%; }
 th:nth-child(6), td:nth-child(6) { width: 12%; }
 
 /* الصفوف القابلة للطي */
-tr.main-row { cursor: pointer; transition: background .15s var(--ease); }
+tr.main-row { cursor: pointer; transition: background var(--dur-fast) var(--ease); }
 tr.main-row:focus-visible { outline: 2px solid var(--green-600); outline-offset: -2px; }
-.chevron { transition: transform 0.2s var(--ease); vertical-align: middle; margin-inline-end: 6px; }
+.chevron { transition: transform var(--dur-base) var(--ease); vertical-align: middle; margin-inline-end: 6px; }
 .chevron.open { transform: rotate(90deg); }
 .chevron.sm { margin-inline-end: 4px; color: var(--link); }
 .empty-subs { color: var(--muted); text-align: center; }
@@ -172,7 +171,7 @@ tr.main-row:hover td { background: var(--green-100); }
 tr.main-row .code { color: var(--link); font-weight: 800; }
 tr.main-row .mname { color: var(--link); font-weight: 800; }
 
-tr.sub-row { transition: background .15s var(--ease); }
+tr.sub-row { transition: background var(--dur-fast) var(--ease); }
 tr.sub-row:hover td { background: var(--surface-2); }
 tr.sub-row .sname { font-weight: 600; }
 
@@ -181,7 +180,7 @@ tr.sub-row .sname { font-weight: 600; }
 
 .acts { display: inline-flex; gap: 6px; }
 .acts a.act { text-decoration: none; }
-.act { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); }
+.act { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; color: var(--muted); transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
 .act:hover { background: var(--green-100); color: var(--link); border-color: var(--green-100); transform: translateY(-1px); }
 .act svg { width: 15px; height: 15px; }
 .act.approve { color: var(--ok); border-color: var(--ok-line); }
@@ -193,7 +192,7 @@ tr.sub-row .sname { font-weight: 600; }
 .tblfoot { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); }
 .tblfoot .muted { color: var(--muted); font-size: 12.5px; flex: 1; }
 .pager { display: flex; gap: 5px; flex-wrap: wrap; }
-.pager button { min-width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); font-weight: 700; color: var(--ink); transition: background .15s var(--ease), color .15s var(--ease); }
+.pager button { min-width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); font-weight: 700; color: var(--ink); transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .pager button:hover:not(:disabled) { background: var(--surface-2); }
 .pager button.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; border-color: var(--green-800); }
 .pager button:disabled { opacity: .5; cursor: default; }

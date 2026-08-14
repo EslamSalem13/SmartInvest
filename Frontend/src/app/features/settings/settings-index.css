@@ -15,7 +15,7 @@
   box-shadow: var(--shadow-xs);
   text-decoration: none;
   color: var(--ink);
-  transition: border-color .15s var(--ease), box-shadow .15s var(--ease), transform .15s var(--ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
 .card:hover {

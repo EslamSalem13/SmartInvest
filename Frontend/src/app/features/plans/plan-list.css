@@ -8,7 +8,7 @@
 .grow { flex: 1; }
 select.mini { border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: var(--radius-sm); padding: 10px 14px; min-height: 44px; font-family: inherit; font-weight: 700; font-size: 13px; color: var(--ink); }
 .seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px; box-shadow: var(--shadow-xs); }
-.seg button { border: 0; background: transparent; color: var(--muted); padding: 9px 15px; border-radius: 7px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: background .15s var(--ease), color .15s var(--ease); }
+.seg button { border: 0; background: transparent; color: var(--muted); padding: 9px 15px; border-radius: 7px; font-weight: 700; font-size: 12.5px; white-space: nowrap; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease); }
 .seg button.on { background: linear-gradient(155deg, var(--green-600), var(--green-800)); color: #fff; }
 
 .state { display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); padding: 48px; color: var(--muted); box-shadow: var(--shadow-sm); flex-wrap: wrap; }
@@ -40,7 +40,7 @@ select.mini { border: 1.5px solid var(--line-strong); background: var(--surface)
   box-shadow: var(--shadow-sm);
   text-decoration: none;
   color: inherit;
-  transition: box-shadow 0.2s var(--ease), transform 0.2s var(--ease), border-color .2s var(--ease);
+  transition: box-shadow var(--dur-base) var(--ease), transform var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease);
 }
 
 .plan-card:hover {
