@@ -136,6 +136,16 @@ export class FinancialService {
     );
   }
 
+  /** تحديث إثبات صرف الدفعة المقدمة على الإصدار الحالي مباشرة — بلا حاجة لإعادة رفع أمر الإسناد والعقد */
+  setAdvancePaymentProof(subProjectId: number, proof: File): Observable<void> {
+    const form = new FormData();
+    form.append('proof', proof, proof.name);
+    return this.http.put<void>(
+      `${this.base}/subprojects/${subProjectId}/procurement/contract-award/advance-payment-proof`,
+      form,
+    );
+  }
+
   /** تنزيل إثبات تسليم الأرضية كـ Blob (رابط مباشر يفشل بـ 401 لأنه لا يمر على auth.interceptor) */
   downloadSiteHandoverProof(subProjectId: number): Observable<Blob> {
     return this.http.get(

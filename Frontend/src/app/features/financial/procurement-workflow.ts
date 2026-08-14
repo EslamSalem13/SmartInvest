@@ -86,6 +86,10 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly aHandoverSaving = signal(false);
   protected aHandoverFile: File | null = null;
 
+  protected aAdvanceProofFile: File | null = null;
+  protected readonly aAdvanceProofUploading = signal(false);
+  protected readonly aAdvanceProofError = signal<string | null>(null);
+
   /** قيمة الدفعة المقدمة بالجنيه — تُحسب من قيمة العقد لا الإجمالي المخطط، تظهر تلقائيًا بمجرد كتابة النسبة أو قيمة العقد */
   protected readonly advanceAmount = computed(() => {
     const pct = this.aAdvancePercentage();
@@ -131,6 +135,16 @@ export class ProcurementWorkflow implements OnInit {
         next: (full) => this.selectedContractorProfile.set(full),
         error: () => this.selectedContractorProfile.set(null),
       });
+    });
+
+    /** المصدر الوحيد لمسح ملف/خطأ إثبات الدفعة المقدمة المُجهَّز — يتفاعل مع aAdvanceDone أيًا كان مصدر
+     * تغييرها (تأشير يدوي عبر onAdvanceDoneChange أو مزامنة من الخادم عبر syncAwardForm بعد reload())،
+     * حتى لا يبقى ملف قديم محتفَظًا به خلف مربّع اختيار يبدو فارغًا. */
+    effect(() => {
+      if (!this.aAdvanceDone()) {
+        this.aAdvanceProofFile = null;
+        this.aAdvanceProofError.set(null);
+      }
     });
   }
 
@@ -186,7 +200,8 @@ export class ProcurementWorkflow implements OnInit {
         penaltyAmount: this.aPenaltyAmount(),
         contractorId: this.aContractorId(),
         contractDate: this.aContractDate() || null,
-        contractValue: this.aContractValueRaw(),
+        // فارغ يُرسَل null لا صفر — صفر يجعل الخادم يحسب «وفرة» مزيّفة تساوي كامل الميزانية المخططة (totalCost - 0)
+        contractValue: this.aContractValue() == null ? null : this.aContractValueRaw(),
       })
       .subscribe({
         next: () => this.saveAwardThenHandoverIfStaged(),
@@ -221,12 +236,12 @@ export class ProcurementWorkflow implements OnInit {
     });
   }
 
-  protected aAdvanceProofFile: File | null = null;
-  protected readonly aAdvanceProofUploading = signal(false);
-  protected readonly aAdvanceProofError = signal<string | null>(null);
-
   protected onAdvanceProofFileChange(event: Event): void {
     this.aAdvanceProofFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+
+  protected onAdvanceDoneChange(checked: boolean): void {
+    this.aAdvanceDone.set(checked);
   }
 
   protected uploadAdvanceProof(): void {
@@ -236,7 +251,7 @@ export class ProcurementWorkflow implements OnInit {
     this.aAdvanceProofUploading.set(true);
     this.aAdvanceProofError.set(null);
     this.financial
-      .uploadStageVersion(this.subProjectId, 'contract-award', { 'advance-payment-proof': this.aAdvanceProofFile }, '')
+      .setAdvancePaymentProof(this.subProjectId, this.aAdvanceProofFile)
       .subscribe({
         next: () => {
           this.aAdvanceProofUploading.set(false);

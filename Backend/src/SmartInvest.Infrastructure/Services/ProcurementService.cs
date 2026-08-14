@@ -415,6 +415,40 @@ public class ProcurementService : IProcurementService
         await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
     }
 
+    /// <summary>
+    /// يحدّث إثبات صرف الدفعة المقدمة على الإصدار الحالي مباشرة — لا يمر بـ UploadVersionAsync
+    /// (الذي يُلزم كل خانة إلزامية بكل رفعة، أي أمر الإسناد والعقد أيضًا). يماثل SetSiteHandoverAsync
+    /// في أنه يُعدِّل مستندًا موجودًا بدل تعدين إصدار جديد.
+    /// </summary>
+    public async Task SetAdvancePaymentProofAsync(int subProjectId, FileUploadDto proofFile, CancellationToken cancellationToken = default)
+    {
+        if (proofFile == null || proofFile.Content.Length == 0)
+        {
+            throw new BusinessRuleException("إثبات صرف الدفعة المقدمة مطلوب");
+        }
+
+        var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
+
+        if (doc.CurrentVersionNumber == 0)
+        {
+            throw new BusinessRuleException("يجب رفع ملفات المرحلة (أمر الإسناد والعقد) أولاً قبل رفع إثبات صرف الدفعة المقدمة");
+        }
+
+        var version = await _context.ContractAwardVersions
+            .FirstOrDefaultAsync(v => v.ContractAwardId == doc.Id && v.VersionNumber == doc.CurrentVersionNumber, cancellationToken)
+            ?? throw new BusinessRuleException("يجب رفع ملفات المرحلة (أمر الإسناد والعقد) أولاً قبل رفع إثبات صرف الدفعة المقدمة");
+
+        version.AdvancePaymentProof = new StoredFile
+        {
+            FileName = proofFile.FileName,
+            FileExtension = proofFile.FileExtension,
+            FileSize = proofFile.FileSize,
+            Content = proofFile.Content,
+        };
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<FileDownloadDto> DownloadSiteHandoverProofAsync(int subProjectId, CancellationToken cancellationToken = default)
     {
         var doc = await _context.ContractAwards.AsNoTracking()
@@ -781,7 +815,7 @@ public class ProcurementService : IProcurementService
         details.ContractTypeId = doc.ContractTypeId;
         details.ContractDate = doc.ContractDate;
         details.ContractValue = doc.ContractValue;
-        details.Savings = doc.ContractValue is decimal cv && cv < totalCost ? totalCost - cv : null;
+        details.Savings = doc.ContractValue is decimal cv && cv > 0 && cv < totalCost ? totalCost - cv : null;
 
         return details;
     }
@@ -1020,7 +1054,9 @@ public class ProcurementService : IProcurementService
             return "نسبة الدفعة المقدمة يجب أن تكون بين 1% و100%";
         }
 
-        var expected = Math.Round(totalCost * percentage / 100m, 2);
+        // القاعدة = قيمة العقد نفسها لا الإجمالي المخطط (totalCost) — تطابقًا مع الواجهة التي تحسب
+        // advanceAmount() من قيمة العقد المُدخلة، وإلا يوازن المستخدم الشاشة على صفر ثم يُرفض عند الإكمال برقم لا يظهر له أبدًا.
+        var expected = Math.Round(contractValue.Value * percentage / 100m, 2);
         var self = doc.AdvancePaymentSelfAmount ?? 0m;
         var bank = doc.AdvancePaymentBankAmount ?? 0m;
 

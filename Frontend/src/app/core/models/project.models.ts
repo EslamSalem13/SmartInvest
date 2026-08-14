@@ -238,6 +238,7 @@ export interface BankAvailabilityList {
   totalAvailable: number;
   totalBankFunding: number;
   remainingAvailable: number;
+  totalReceived: number;
   items: BankAvailability[];
 }
 

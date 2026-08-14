@@ -22,6 +22,9 @@ public class BankAvailabilityListDto
     public decimal TotalAvailable { get; set; }
     public decimal TotalBankFunding { get; set; }
     public decimal RemainingAvailable { get; set; }
+    /// <summary>إجمالي المستلم الخام (مجموع إتاحات هذه السنة قبل خصم أي صرف) — يُعرض لتبرير صفوف الإتاحات
+    /// المدرجة أسفله بعد أن أصبح TotalAvailable صافيًا من الصرف ولم يعد يساويها.</summary>
+    public decimal TotalReceived { get; set; }
     public IReadOnlyList<BankAvailabilityDto> Items { get; set; } = new List<BankAvailabilityDto>();
 }
 
