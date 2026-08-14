@@ -116,23 +116,20 @@ In `Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs`, `Set
     {
         var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
 
-        if (dto.AdvancePaymentSelfAmount is > 0m or < 0m || dto.AdvancePaymentBankAmount is > 0m or < 0m)
-        {
-            var funding = await _context.SubProjects.AsNoTracking()
-                .Where(x => x.SubProjectId == subProjectId)
-                .Select(x => new { x.SelfFunding, x.BankFunding })
-                .FirstAsync(cancellationToken);
+        var funding = await _context.SubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new { x.SelfFunding, x.BankFunding })
+            .FirstAsync(cancellationToken);
 
-            if (dto.AdvancePaymentSelfAmount > funding.SelfFunding)
-            {
-                throw new BusinessRuleException(
-                    $"الجزء المصروف من التمويل الذاتي ({dto.AdvancePaymentSelfAmount:N2} ج.م) يتجاوز التمويل الذاتي المخطط للمشروع ({funding.SelfFunding:N2} ج.م)");
-            }
-            if (dto.AdvancePaymentBankAmount > funding.BankFunding)
-            {
-                throw new BusinessRuleException(
-                    $"الجزء المصروف من التمويل البنكي ({dto.AdvancePaymentBankAmount:N2} ج.م) يتجاوز التمويل البنكي المخطط للمشروع ({funding.BankFunding:N2} ج.م)");
-            }
+        if (dto.AdvancePaymentSelfAmount > funding.SelfFunding)
+        {
+            throw new BusinessRuleException(
+                $"الجزء المصروف من التمويل الذاتي ({dto.AdvancePaymentSelfAmount:N2} ج.م) يتجاوز التمويل الذاتي المخطط للمشروع ({funding.SelfFunding:N2} ج.م)");
+        }
+        if (dto.AdvancePaymentBankAmount > funding.BankFunding)
+        {
+            throw new BusinessRuleException(
+                $"الجزء المصروف من التمويل البنكي ({dto.AdvancePaymentBankAmount:N2} ج.م) يتجاوز التمويل البنكي المخطط للمشروع ({funding.BankFunding:N2} ج.م)");
         }
 
         doc.AdvancePaymentDone = dto.AdvancePaymentDone;
@@ -155,7 +152,7 @@ In `Backend/src/SmartInvest.Infrastructure/Services/ProcurementService.cs`, `Set
     }
 ```
 
-The `is > 0m or < 0m` guard is just "has a value and it's not exactly zero" written without triggering a nullable-warning on the `>`/`<` operators against a `decimal?` — it's cheaper to skip the funding lookup entirely when both amounts are null/zero, which is the common case before advance payment is configured at all.
+The funding lookup runs unconditionally — it's one indexed single-row query, and `decimal? > decimal` naturally evaluates to `false` when the left side is `null`, so the two `if` checks are already no-ops when the caller didn't set an advance amount. No need to guard the lookup itself.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -448,12 +445,12 @@ In `Backend/src/SmartInvest.Infrastructure/Services/BankAvailabilityService.cs`,
     private async Task<decimal> GetExecutionBankSpendAsync(int financialYearId, CancellationToken cancellationToken)
     {
         return await _context.ExecutionStages.AsNoTracking()
-            .Where(e => e.SubProjectFinancialYear!.FinancialYearId == financialYearId)
+            .Where(e => e.SubProjectFinancialYear != null && e.SubProjectFinancialYear.FinancialYearId == financialYearId)
             .SumAsync(e => e.BankFundingSpent, cancellationToken);
     }
 ```
 
-Note `RemainingAvailable` now uses `receipts` (the raw sum, kept as a local variable) rather than the now-net `totalAvailable` — this preserves its existing meaning exactly ("how much more can still be deposited toward the plan"), unaffected by this change, per the spec's explicit instruction not to touch it. Check `ExecutionStage.SubProjectFinancialYear`'s nullability in the entity (`SubProjectFinancialYearId` is `int?` per earlier reads in this codebase) — if the navigation property is nullable, the `!` above is safe only if every row in practice has a value; if EF's InMemory provider complains or a null case is plausible, use `e.SubProjectFinancialYear != null && e.SubProjectFinancialYear.FinancialYearId == financialYearId` instead — verify against the actual entity before finalizing.
+`ExecutionStage.SubProjectFinancialYearId` is `int?` (nullable) and its `SubProjectFinancialYear` navigation is nullable too — a stage can in principle exist without a financial-year cycle attached, so the null-check is a real guard, not defensive boilerplate. Note `RemainingAvailable` now uses `receipts` (the raw sum, kept as a local variable) rather than the now-net `totalAvailable` — this preserves its existing meaning exactly ("how much more can still be deposited toward the plan"), unaffected by this change, per the spec's explicit instruction not to touch it.
 
 - [ ] **Step 4: Run test to verify it passes**
 
