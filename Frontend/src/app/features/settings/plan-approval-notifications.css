@@ -1,11 +1,7 @@
 :host { display:block; }
 .notifications-page { display:grid; gap:18px; color:var(--ink); }
-.page-intro { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:24px; border:1px solid var(--line); border-radius:var(--radius-lg); background:linear-gradient(135deg,var(--surface),var(--surface-2)); box-shadow:var(--shadow-sm); }
-.eyebrow { display:inline-flex; padding:5px 10px; border-radius:999px; color:var(--gold-700); background:var(--gold-100); font-size:12px; font-weight:800; }
-h2 { margin:9px 0 4px; color:var(--heading); font-size:26px; }
-.page-intro p { margin:0; color:var(--muted); }
 button, select { font:inherit; }
-.refresh,.primary { border:0; border-radius:11px; padding:12px 18px; color:var(--on-brand); background:var(--green-700); font-weight:800; cursor:pointer; }
+.primary { border:0; border-radius:11px; padding:12px 18px; color:var(--on-brand); background:var(--green-700); font-weight:800; cursor:pointer; }
 .secondary,.pagination button { border:1px solid var(--line-strong); border-radius:11px; padding:10px 14px; color:var(--ink); background:var(--surface); font-weight:700; cursor:pointer; }
 button:disabled { opacity:.55; cursor:not-allowed; }
 .filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; padding:16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
@@ -50,8 +46,7 @@ h4 { margin:22px 0 10px; color:var(--heading); }
 .spinner { width:20px; height:20px; border:2px solid var(--line-strong); border-top-color:var(--green-600); border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 @media (max-width:768px) {
-  .page-intro { align-items:stretch; flex-direction:column; padding:18px; }
-  .refresh,.filters,.filters label,.actions button { width:100%; }
+  .filters,.filters label,.actions button { width:100%; }
   .filters { grid-template-columns:1fr; }
   .card-head,.pagination { align-items:stretch; flex-direction:column; }
   .summary-grid,.recipients article { grid-template-columns:1fr; }

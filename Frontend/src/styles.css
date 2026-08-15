@@ -482,6 +482,70 @@ tr { transition: background-color var(--dur-fast) var(--ease); }
   }
 }
 
+/* ===== جداول الإعدادات: صفوف مستقلة واضحة بدل الشبكة التقليدية ===== */
+@media screen and (min-width: 769px) {
+  app-settings .si-responsive-table-wrap {
+    padding: 4px 12px 12px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(145deg, var(--surface-2), color-mix(in srgb, var(--green-50) 36%, var(--surface)));
+    box-shadow: var(--shadow-sm);
+  }
+
+  app-settings table.si-responsive-table {
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  app-settings .si-responsive-table thead th {
+    padding-block: 10px 5px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  app-settings .si-responsive-table tbody td {
+    padding-block: 15px;
+    border-block: 1px solid var(--line);
+    border-bottom-color: var(--line) !important;
+    background: var(--surface);
+    box-shadow: 0 7px 18px rgba(12, 59, 42, .055);
+    transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  }
+
+  app-settings .si-responsive-table tbody td:first-child {
+    border-inline-start: 1px solid var(--line);
+    border-start-start-radius: 13px;
+    border-end-start-radius: 13px;
+  }
+
+  app-settings .si-responsive-table tbody td:last-child {
+    border-inline-end: 1px solid var(--line);
+    border-start-end-radius: 13px;
+    border-end-end-radius: 13px;
+  }
+
+  app-settings .si-responsive-table tbody tr:hover td {
+    border-color: color-mix(in srgb, var(--green-500) 42%, var(--line));
+    background: color-mix(in srgb, var(--green-50) 44%, var(--surface));
+  }
+}
+
+@media screen and (max-width: 768px) {
+  app-settings .si-responsive-table-wrap { padding: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+  app-settings .si-responsive-table tbody > tr,
+  app-settings .si-responsive-table tfoot > tr {
+    padding: 8px 15px !important;
+    border-inline-start: 4px solid var(--green-600) !important;
+    border-radius: var(--radius-lg) !important;
+    background: linear-gradient(145deg, var(--surface), color-mix(in srgb, var(--green-50) 34%, var(--surface))) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+}
+
 .si-page-head {
   display: flex;
   align-items: flex-end;
