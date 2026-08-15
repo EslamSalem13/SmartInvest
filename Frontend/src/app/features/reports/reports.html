@@ -122,7 +122,7 @@
                 type="button"
                 class="si-btn primary report-download"
                 (click)="download(report)"
-                [disabled]="isDownloading(report.key) || aiGenerating()"
+                [disabled]="isDownloading(report.key)"
               >
                 @if (isDownloading(report.key)) {
                   <span class="spinner" aria-hidden="true"></span>
@@ -215,7 +215,7 @@
         type="button"
         class="si-btn primary ai-generate"
         (click)="generateAiReport()"
-        [disabled]="!canGenerateAi() || downloadingKeys().size > 0"
+        [disabled]="!canGenerateAi()"
       >
         @if (aiGenerating()) {
           <span class="spinner" aria-hidden="true"></span>

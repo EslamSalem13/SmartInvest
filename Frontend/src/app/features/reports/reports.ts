@@ -204,7 +204,7 @@ export class Reports {
   }
 
   protected download(report: ReportDefinition): void {
-    if (this.isDownloading(report.key) || this.aiGenerating()) return;
+    if (this.isDownloading(report.key)) return;
 
     this.actionError.set(null);
     this.setDownloading(report.key, true);
@@ -240,7 +240,7 @@ export class Reports {
       this.showActionError('اكتب وصفًا أوضح للتقرير المطلوب');
       return;
     }
-    if (prompt.length > MAX_AI_PROMPT_LENGTH || this.aiGenerating() || this.downloadingKeys().size > 0) {
+    if (prompt.length > MAX_AI_PROMPT_LENGTH || this.aiGenerating()) {
       return;
     }
 
