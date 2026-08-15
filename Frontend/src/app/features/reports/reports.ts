@@ -123,7 +123,7 @@ export class Reports {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);
-  protected readonly downloadingKey = signal<ReportKey | null>(null);
+  protected readonly downloadingKeys = signal<ReadonlySet<ReportKey>>(new Set());
   protected readonly aiPrompt = signal('');
   protected readonly aiGenerating = signal(false);
 
@@ -204,13 +204,13 @@ export class Reports {
   }
 
   protected download(report: ReportDefinition): void {
-    if (this.downloadingKey() != null || this.aiGenerating()) return;
+    if (this.isDownloading(report.key) || this.aiGenerating()) return;
 
     this.actionError.set(null);
-    this.downloadingKey.set(report.key);
+    this.setDownloading(report.key, true);
     this.reportsService
       .downloadReport(report.key, this.selectedYearId())
-      .pipe(finalize(() => this.downloadingKey.set(null)))
+      .pipe(finalize(() => this.setDownloading(report.key, false)))
       .subscribe({
         next: (response) => {
           try {
@@ -240,7 +240,7 @@ export class Reports {
       this.showActionError('اكتب وصفًا أوضح للتقرير المطلوب');
       return;
     }
-    if (prompt.length > MAX_AI_PROMPT_LENGTH || this.aiGenerating() || this.downloadingKey()) {
+    if (prompt.length > MAX_AI_PROMPT_LENGTH || this.aiGenerating() || this.downloadingKeys().size > 0) {
       return;
     }
 
@@ -268,7 +268,17 @@ export class Reports {
   }
 
   protected isDownloading(key: ReportKey): boolean {
-    return this.downloadingKey() === key;
+    return this.downloadingKeys().has(key);
+  }
+
+  private setDownloading(key: ReportKey, downloading: boolean): void {
+    const next = new Set(this.downloadingKeys());
+    if (downloading) {
+      next.add(key);
+    } else {
+      next.delete(key);
+    }
+    this.downloadingKeys.set(next);
   }
 
   private mergeCatalog(catalog: ReportCatalogItem[]): ReportDefinition[] {
