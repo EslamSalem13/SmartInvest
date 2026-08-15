@@ -1,15 +1,26 @@
 <div class="page">
-  <header class="page-head">
-    <div>
+  <header class="page-head dashboard-hero">
+    <div class="hero-copy">
+      <span class="eyebrow"><span class="eyebrow-dot"></span> مركز مؤشرات الخطة الاستثمارية</span>
       <h1>لوحة التحكم</h1>
       <p>مرحبًا، {{ auth.user()?.fullName }} — ملخص أداء الخطة الاستثمارية</p>
+      @if (overview(); as heroData) {
+        <div class="hero-chips" aria-label="ملخص السنة المالية المختارة">
+          <span>{{ heroData.year.financialYearName }}</span>
+          <span>{{ heroData.projectMetrics.totalSubProjects }} مشروع</span>
+          <span>{{ percent(heroData.projectMetrics.averagePhysicalProgress) }} متوسط التنفيذ</span>
+        </div>
+      }
     </div>
     <div class="grow"></div>
     <div class="head-tools">
       @if (sortedYears().length > 0) {
-        <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)" aria-label="اختيار السنة المالية">
-          @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
-        </select>
+        <label class="year-control">
+          <span>السنة المالية</span>
+          <select class="mini" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)" aria-label="اختيار السنة المالية">
+            @for (y of sortedYears(); track y.id) { <option [ngValue]="y.id">{{ y.name }}</option> }
+          </select>
+        </label>
       }
     </div>
   </header>
@@ -30,6 +41,13 @@
     </div>
   } @else if (overview(); as data) {
     <!-- كروت المؤشرات -->
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">نظرة فورية</span>
+        <h2>مؤشرات الأداء الرئيسية</h2>
+      </div>
+      <p>كل بطاقة تنقلك مباشرةً إلى التفاصيل المرتبطة بها</p>
+    </div>
     <div class="kpis">
       <a class="kpi" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()" aria-label="عرض كل المشروعات">
         <div class="kpi-top">
@@ -114,6 +132,13 @@
     </div>
 
     <!-- الرسوم البيانية -->
+    <div class="section-heading charts-heading">
+      <div>
+        <span class="section-kicker">تحليل بصري</span>
+        <h2>قراءة أداء الخطة</h2>
+      </div>
+      <p>المؤشرات محسوبة من بيانات السنة المالية المختارة</p>
+    </div>
     <div class="charts-grid">
       <div class="chart-card">
         <h3>توزيع التمويل: بنكي مقابل ذاتي</h3>
@@ -185,6 +210,13 @@
     </div>
 
     <!-- الأقسام التفصيلية -->
+    <div class="section-heading details-heading">
+      <div>
+        <span class="section-kicker">متابعة تشغيلية</span>
+        <h2>أحدث التفاصيل والتنبيهات</h2>
+      </div>
+      <p>الوصول السريع إلى الحالات التي تحتاج مراجعة</p>
+    </div>
     <div class="details-grid">
       <div class="detail-card">
         <div class="detail-card-head">

@@ -298,6 +298,13 @@ export class Dashboard implements OnDestroy {
   private buildFundingOption(data: DashboardOverview): EChartsOption {
     const { fundingDistribution } = data.charts;
     const palette = this.chartPalette();
+    const pieData = fundingDistribution.map((d, index) => ({
+      name: d.name,
+      value: this.thousandsNumber(d.value),
+      itemStyle: {
+        color: this.chartGradient(palette[index % palette.length], palette[(index + 2) % palette.length]),
+      },
+    }));
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط دائري يوضح توزيع التمويل بين البنكي والذاتي' },
@@ -307,12 +314,29 @@ export class Dashboard implements OnDestroy {
       series: [
         {
           type: 'pie',
+          silent: true,
+          radius: ['52%', '75%'],
+          center: ['50%', '47%'],
+          label: { show: false },
+          itemStyle: { color: this.chartDepthColor(), borderWidth: 0 },
+          data: pieData.map((item) => ({ name: item.name, value: item.value })),
+          z: 1,
+        },
+        {
+          type: 'pie',
           radius: ['52%', '75%'],
           center: ['50%', '44%'],
           avoidLabelOverlap: true,
-          itemStyle: { borderColor: this.cssToken('--surface', '#fff'), borderWidth: 2 },
+          itemStyle: {
+            borderColor: this.cssToken('--surface', '#fff'),
+            borderWidth: 2,
+            shadowBlur: 16,
+            shadowOffsetY: 8,
+            shadowColor: this.chartShadowColor(),
+          },
           label: { color: this.cssToken('--chart-text', '#647569'), formatter: '{b}\n{d}%', fontFamily: 'Tajawal', fontSize: 11.5 },
-          data: fundingDistribution.map((d) => ({ name: d.name, value: this.thousandsNumber(d.value) })),
+          data: pieData,
+          z: 2,
         },
       ],
     };
@@ -333,7 +357,16 @@ export class Dashboard implements OnDestroy {
           max: 100,
           radius: '92%',
           center: ['50%', '58%'],
-          progress: { show: true, width: 16, itemStyle: { color: palette[0] } },
+          progress: {
+            show: true,
+            width: 16,
+            itemStyle: {
+              color: this.chartGradient(palette[0], palette[5]),
+              shadowBlur: 14,
+              shadowOffsetY: 5,
+              shadowColor: this.chartShadowColor(),
+            },
+          },
           axisLine: { lineStyle: { width: 16, color: [[1, this.cssToken('--chart-track', '#EEF2EE')]] } },
           axisTick: { show: false },
           splitLine: { show: false },
@@ -367,8 +400,13 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 40,
-          itemStyle: { color: palette[0], borderRadius: [8, 8, 0, 0] },
-          data: items.map((i, idx) => ({ value: i.value, itemStyle: { color: palette[idx % palette.length] } })),
+          showBackground: true,
+          backgroundStyle: { color: this.cssToken('--chart-track', '#EEF2EE'), borderRadius: [8, 8, 0, 0] },
+          itemStyle: { borderRadius: [8, 8, 0, 0], shadowBlur: 10, shadowOffsetY: 5, shadowColor: this.chartShadowColor() },
+          data: items.map((i, idx) => ({
+            value: i.value,
+            itemStyle: { color: this.chartGradient(palette[idx % palette.length], palette[(idx + 2) % palette.length]) },
+          })),
         },
       ],
     };
@@ -400,8 +438,16 @@ export class Dashboard implements OnDestroy {
         triggerEvent: true,
       },
       series: [
-        { name: 'بنكي', type: 'bar', stack: 'funding', itemStyle: { color: palette[0] }, data: items.map((i) => this.thousandsNumber(i.bankFunding)) },
-        { name: 'ذاتي', type: 'bar', stack: 'funding', itemStyle: { color: palette[1] }, data: items.map((i) => this.thousandsNumber(i.selfFunding)) },
+        {
+          name: 'بنكي', type: 'bar', stack: 'funding',
+          itemStyle: { color: this.chartGradient(palette[0], palette[5], true), shadowBlur: 8, shadowOffsetY: 4, shadowColor: this.chartShadowColor() },
+          data: items.map((i) => this.thousandsNumber(i.bankFunding)),
+        },
+        {
+          name: 'ذاتي', type: 'bar', stack: 'funding',
+          itemStyle: { color: this.chartGradient(palette[1], palette[4], true), borderRadius: [0, 7, 7, 0], shadowBlur: 8, shadowOffsetY: 4, shadowColor: this.chartShadowColor() },
+          data: items.map((i) => this.thousandsNumber(i.selfFunding)),
+        },
       ],
     };
   }
@@ -425,9 +471,14 @@ export class Dashboard implements OnDestroy {
           smooth: true,
           symbol: 'circle',
           symbolSize: 7,
-          lineStyle: { color: palette[0], width: 3 },
-          itemStyle: { color: palette[0] },
-          areaStyle: { color: this.themeService.isDark() ? 'rgba(47,166,106,0.24)' : 'rgba(28,112,73,0.12)' },
+          lineStyle: { color: palette[0], width: 4, shadowBlur: 12, shadowOffsetY: 5, shadowColor: this.chartShadowColor() },
+          itemStyle: { color: palette[0], borderColor: this.cssToken('--surface', '#fff'), borderWidth: 2, shadowBlur: 8, shadowColor: palette[0] },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: this.themeService.isDark() ? 'rgba(47,166,106,.48)' : 'rgba(28,112,73,.34)' },
+              { offset: 1, color: 'rgba(28,112,73,0)' },
+            ]),
+          },
           data: items.map((i) => this.thousandsNumber(i.cumulativeAmount)),
         },
       ],
@@ -448,7 +499,9 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 18,
-          itemStyle: { color: palette[2], borderRadius: [0, 6, 6, 0] },
+          showBackground: true,
+          backgroundStyle: { color: this.cssToken('--chart-track', '#EEF2EE'), borderRadius: [0, 7, 7, 0] },
+          itemStyle: { color: this.chartGradient(palette[2], palette[0], true), borderRadius: [0, 7, 7, 0], shadowBlur: 9, shadowOffsetY: 4, shadowColor: this.chartShadowColor() },
           data: items.map((i) => i.value),
         },
       ],
@@ -458,6 +511,11 @@ export class Dashboard implements OnDestroy {
   private buildPriorityOption(data: DashboardOverview): EChartsOption {
     const items = data.charts.priorityDistribution;
     const palette = this.chartPalette();
+    const priorityData = items.map((item, index) => ({
+      name: item.name,
+      value: item.value,
+      itemStyle: { color: this.chartGradient(palette[index % palette.length], palette[(index + 3) % palette.length]) },
+    }));
     return {
       animation: false,
       aria: { enabled: true, description: 'مخطط وردي يوضح توزيع المشروعات حسب الأولوية' },
@@ -467,12 +525,30 @@ export class Dashboard implements OnDestroy {
       series: [
         {
           type: 'pie',
+          silent: true,
+          radius: ['20%', '75%'],
+          center: ['50%', '47%'],
+          roseType: 'radius',
+          label: { show: false },
+          itemStyle: { color: this.chartDepthColor(), borderWidth: 0 },
+          data: priorityData.map((item) => ({ name: item.name, value: item.value })),
+          z: 1,
+        },
+        {
+          type: 'pie',
           radius: ['20%', '75%'],
           center: ['50%', '44%'],
           roseType: 'radius',
-          itemStyle: { borderColor: this.cssToken('--surface', '#fff'), borderWidth: 2 },
+          itemStyle: {
+            borderColor: this.cssToken('--surface', '#fff'),
+            borderWidth: 2,
+            shadowBlur: 15,
+            shadowOffsetY: 7,
+            shadowColor: this.chartShadowColor(),
+          },
           label: { color: this.cssToken('--chart-text', '#647569'), fontFamily: 'Tajawal', fontSize: 11 },
-          data: items.map((i) => ({ name: i.name, value: i.value })),
+          data: priorityData,
+          z: 2,
         },
       ],
     };
@@ -492,19 +568,41 @@ export class Dashboard implements OnDestroy {
         {
           type: 'bar',
           barMaxWidth: 40,
-          itemStyle: { color: palette[5], borderRadius: [8, 8, 0, 0] },
+          showBackground: true,
+          backgroundStyle: { color: this.cssToken('--chart-track', '#EEF2EE'), borderRadius: [8, 8, 0, 0] },
+          itemStyle: { borderRadius: [8, 8, 0, 0], shadowBlur: 10, shadowOffsetY: 5, shadowColor: this.chartShadowColor() },
           data: items.map((i) => ({
             value: i.value,
             itemStyle: {
-              color: i.name === 'أكثر من 100%'
-                ? palette[3]
-                : i.name === '100%'
-                  ? palette[5]
-                  : palette[2],
+              color: this.chartGradient(
+                i.name === 'أكثر من 100%' ? palette[3] : i.name === '100%' ? palette[5] : palette[2],
+                i.name === 'أكثر من 100%' ? palette[4] : i.name === '100%' ? palette[0] : palette[5],
+              ),
             },
           })),
         },
       ],
     };
+  }
+
+  private chartGradient(from: string, to: string, horizontal = false): echarts.graphic.LinearGradient {
+    return new echarts.graphic.LinearGradient(
+      0,
+      0,
+      horizontal ? 1 : 0,
+      horizontal ? 0 : 1,
+      [
+        { offset: 0, color: from },
+        { offset: 1, color: to },
+      ],
+    );
+  }
+
+  private chartShadowColor(): string {
+    return this.themeService.isDark() ? 'rgba(0, 0, 0, .42)' : 'rgba(12, 59, 42, .22)';
+  }
+
+  private chartDepthColor(): string {
+    return this.themeService.isDark() ? 'rgba(0, 0, 0, .38)' : 'rgba(13, 66, 47, .18)';
   }
 }
