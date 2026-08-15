@@ -4,6 +4,7 @@
 }
 
 .home {
+  --login-field-text: #F3F8F4;
   position: relative;
   min-height: 100dvh;
   background:
@@ -16,6 +17,7 @@
 }
 
 :host-context(html[data-theme='light']) .home {
+  --login-field-text: var(--ink);
   background:
     radial-gradient(1050px 620px at 48% -12%, #f8efd6, transparent 62%),
     linear-gradient(155deg, #f8fbf8 0%, #e8f1eb 48%, #dcebe2 100%);
@@ -211,16 +213,21 @@
 }
 .box:focus-within { border-color: #E7CE8C; box-shadow: 0 0 0 4px rgba(231, 206, 140, .16); }
 .box svg { width: 19px; height: 19px; color: #A9C4B2; flex: none; }
-.box input { border: 0; flex: 1; font-family: inherit; font-size: 15px; background: transparent; outline: none; color: #F3F8F4; }
+.box input { border: 0; flex: 1; font-family: inherit; font-size: 15px; background: transparent; outline: none; color: var(--login-field-text); }
 .box input::placeholder { color: #7FA08D; }
 .box input:-webkit-autofill,
 .box input:-webkit-autofill:hover,
 .box input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #F3F8F4;
-  caret-color: #F3F8F4;
-  -webkit-box-shadow: 0 0 0 1000px rgba(7, 42, 30, .95) inset;
-  box-shadow: 0 0 0 1000px rgba(7, 42, 30, .95) inset;
-  transition: background-color 99999s ease-in-out 0s;
+  color: var(--login-field-text);
+  -webkit-text-fill-color: var(--login-field-text);
+  caret-color: var(--login-field-text);
+  background-color: transparent !important;
+  background-image: none !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 99999s ease-in-out 0s, color var(--dur-base) var(--ease);
 }
 .eye { border: 0; background: transparent; color: #A9C4B2; display: grid; place-items: center; padding: 0; }
 .eye:hover { color: #EAF3EC; }
