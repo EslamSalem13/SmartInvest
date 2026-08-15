@@ -309,14 +309,13 @@ export class Dashboard implements OnDestroy {
       animation: false,
       aria: { enabled: true, description: 'مخطط دائري يوضح توزيع التمويل بين البنكي والذاتي' },
       tooltip: { trigger: 'item', valueFormatter: (v) => this.chartThousandsLabel(v as number) },
-      legend: { bottom: 0, textStyle: { fontFamily: 'Tajawal' } },
       color: [palette[0], palette[1]],
       series: [
         {
           type: 'pie',
           silent: true,
           radius: ['52%', '75%'],
-          center: ['50%', '47%'],
+          center: ['50%', '53%'],
           label: { show: false },
           itemStyle: { color: this.chartDepthColor(), borderWidth: 0 },
           data: pieData.map((item) => ({ name: item.name, value: item.value })),
@@ -325,7 +324,7 @@ export class Dashboard implements OnDestroy {
         {
           type: 'pie',
           radius: ['52%', '75%'],
-          center: ['50%', '44%'],
+          center: ['50%', '50%'],
           avoidLabelOverlap: true,
           itemStyle: {
             borderColor: this.cssToken('--surface', '#fff'),
@@ -520,14 +519,13 @@ export class Dashboard implements OnDestroy {
       animation: false,
       aria: { enabled: true, description: 'مخطط وردي يوضح توزيع المشروعات حسب الأولوية' },
       tooltip: { trigger: 'item' },
-      legend: { bottom: 0, textStyle: { fontFamily: 'Tajawal' } },
       color: palette,
       series: [
         {
           type: 'pie',
           silent: true,
           radius: ['20%', '75%'],
-          center: ['50%', '47%'],
+          center: ['50%', '53%'],
           roseType: 'radius',
           label: { show: false },
           itemStyle: { color: this.chartDepthColor(), borderWidth: 0 },
@@ -537,7 +535,7 @@ export class Dashboard implements OnDestroy {
         {
           type: 'pie',
           radius: ['20%', '75%'],
-          center: ['50%', '44%'],
+          center: ['50%', '50%'],
           roseType: 'radius',
           itemStyle: {
             borderColor: this.cssToken('--surface', '#fff'),
