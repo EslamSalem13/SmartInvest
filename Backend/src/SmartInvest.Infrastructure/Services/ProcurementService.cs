@@ -282,6 +282,7 @@ public class ProcurementService : IProcurementService
             {
                 await AutoSetSupplyHandoverDateAsync(subProjectId, cancellationToken);
                 await _executionStageService.SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
+                await _executionStageService.SyncAdvancePaymentStageAsync(subProjectId, cancellationToken);
             }
             else if (!wasAlreadyCompleted)
             {
@@ -333,7 +334,13 @@ public class ProcurementService : IProcurementService
     {
         var doc = await GetEditableContractAwardAsync(subProjectId, cancellationToken);
         doc.AdvancePaymentDone = done;
+        if (done)
+        {
+            doc.AdvancePaymentDate ??= DateTime.UtcNow.Date;
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
+        await _executionStageService.SyncAdvancePaymentStageAsync(subProjectId, cancellationToken);
     }
 
     public async Task SetContractAwardDetailsAsync(int subProjectId, SetContractAwardDetailsDto dto, CancellationToken cancellationToken = default)
@@ -360,6 +367,10 @@ public class ProcurementService : IProcurementService
         doc.AdvancePaymentPercentage = dto.AdvancePaymentPercentage;
         doc.AdvancePaymentSelfAmount = dto.AdvancePaymentSelfAmount;
         doc.AdvancePaymentBankAmount = dto.AdvancePaymentBankAmount;
+        // تاريخ الصرف يُملأ من الشاشة، وإن تُرك فارغًا مع تأكيد الصرف نسجّل تاريخ اليوم
+        // حتى لا تظهر مرحلة الدفعة المقدمة في المتابعة بلا موعد.
+        doc.AdvancePaymentDate = dto.AdvancePaymentDate
+            ?? (dto.AdvancePaymentDone ? doc.AdvancePaymentDate ?? DateTime.UtcNow.Date : doc.AdvancePaymentDate);
         doc.ExecutionDurationMonths = dto.ExecutionDurationMonths;
         doc.ExecutionDurationDays = dto.ExecutionDurationDays;
         doc.SiteHandoverMode = dto.SiteHandoverMode is int mode ? (SiteHandoverMode)mode : null;
@@ -373,6 +384,7 @@ public class ProcurementService : IProcurementService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await _executionStageService.SyncAdvancePaymentStageAsync(subProjectId, cancellationToken);
     }
 
     public async Task SetSiteHandoverAsync(int subProjectId, DateTime handoverDate, FileUploadDto proofFile, CancellationToken cancellationToken = default)
@@ -767,6 +779,7 @@ public class ProcurementService : IProcurementService
                 x.AdvancePaymentPercentage,
                 x.AdvancePaymentSelfAmount,
                 x.AdvancePaymentBankAmount,
+                x.AdvancePaymentDate,
                 x.ExecutionDurationMonths,
                 x.ExecutionDurationDays,
                 x.SiteHandoverMode,
@@ -801,6 +814,7 @@ public class ProcurementService : IProcurementService
         details.AdvancePaymentPercentage = doc.AdvancePaymentPercentage;
         details.AdvancePaymentSelfAmount = doc.AdvancePaymentSelfAmount;
         details.AdvancePaymentBankAmount = doc.AdvancePaymentBankAmount;
+        details.AdvancePaymentDate = doc.AdvancePaymentDate;
         details.ExecutionDurationMonths = doc.ExecutionDurationMonths;
         details.ExecutionDurationDays = doc.ExecutionDurationDays;
         details.SiteHandoverMode = (int?)doc.SiteHandoverMode;

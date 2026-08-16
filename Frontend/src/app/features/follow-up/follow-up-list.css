@@ -246,6 +246,39 @@ td.notes { color: var(--muted); max-width: 240px; }
 .final-row { background: var(--surface-2); }
 .final-row td { font-weight: 700; }
 
+/* جدول المراحل داخل النافذة — 9 أعمدة تتسع كاملة بلا تمرير أفقي:
+   الوحدة أُخرجت من رؤوس الأعمدة إلى سطر واحد فوق الجدول، والحشو مضغوط. */
+.stages-modal .unit-note { color: var(--muted); font-size: 12px; font-weight: 700; margin: 0 0 10px; }
+/* auto لا hidden — لو ضاقت الشاشة عن الجدول يظهر التمرير بدل أن يُقتطع المحتوى */
+.stages-modal .tbl-wrap { overflow-x: auto; }
+.stages-modal table.si-responsive-table { width: 100%; min-width: 0; table-layout: auto; }
+.stages-modal th { font-size: 12px; padding: 12px 9px; }
+.stages-modal td { white-space: nowrap; vertical-align: middle; font-size: 13.5px; padding: 12px 9px; }
+.stages-modal .st-pill, .stages-modal .chip { font-size: 12px; }
+.stages-modal .si-btn.sm { font-size: 13px; }
+.stages-modal .file-lnk { font-size: 13.5px; }
+
+/* مرحلة الدفعة المقدمة — الاسم وحده بارز، وباقي الخلايا بوزن الجدول العادي */
+.advance-row { background: var(--surface-2); }
+.advance-row td { font-weight: 400; }
+.advance-row .stage-name { font-weight: 800; }
+/* اسم المرحلة وشارة «تلقائية» على سطر واحد */
+.stages-modal .stage-name-cell { white-space: nowrap; }
+.stages-modal .stage-name { display: inline-block; margin-inline-end: 5px; font-size: 13px; }
+.stages-modal .chip.lock-chip { font-size: 10.5px; padding: 2px 7px; }
+.stages-modal .amount-cell { text-align: start; }
+.stages-modal .penalty-cell { white-space: normal; }
+.stages-modal .wait { white-space: nowrap; font-size: 11.5px; padding: 3px 7px; }
+.stages-modal .muted-dash { color: var(--muted); }
+.stages-modal .file-lnk { padding: 2px 5px; margin-inline-start: 4px; font-size: 12.5px; }
+.stages-modal .si-btn.sm { padding: 6px 10px; }
+.stages-modal .stage-row-actions { flex-wrap: nowrap; gap: 6px; }
+
+@media (max-width: 768px) {
+  .stages-modal table.si-responsive-table { min-width: 0 !important; }
+  .stages-modal td { white-space: normal; }
+}
+
 @media (max-width: 768px) {
   .page { width: 100%; padding: 18px 16px; overflow-x: hidden; }
 

@@ -36,6 +36,7 @@ export class FollowUpService {
     const form = new FormData();
     form.append('financialYearId', String(financialYearId));
     form.append('name', payload.name);
+    if (payload.startDate) form.append('startDate', payload.startDate);
     form.append('deadline', payload.deadline);
     form.append('selfFundingSpent', String(payload.selfFundingSpent));
     form.append('bankFundingSpent', String(payload.bankFundingSpent));
@@ -108,6 +109,7 @@ export class FollowUpService {
     const form = new FormData();
     form.append('financialYearId', String(financialYearId));
     form.append('name', payload.name);
+    if (payload.startDate) form.append('startDate', payload.startDate);
     if (payload.deadline) form.append('deadline', payload.deadline);
     form.append('selfFundingSpent', String(payload.selfFundingSpent));
     form.append('bankFundingSpent', String(payload.bankFundingSpent));

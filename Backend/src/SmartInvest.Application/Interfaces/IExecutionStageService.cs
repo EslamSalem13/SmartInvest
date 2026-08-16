@@ -38,4 +38,11 @@ public interface IExecutionStageService
     /// لا يفعل شيئًا إذا لم تكن الترسية مكتملة.
     /// </summary>
     Task SyncFinalDeliveryStageAsync(int subProjectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ينشئ/يحدّث مرحلة الدفعة المقدمة المُدارة تلقائيًا من بيانات العقد والترسية (القيمة والتاريخ
+    /// وإثبات الصرف). آمن للاستدعاء المتكرر، ويحذف الصف إذا أُلغي تأكيد صرف الدفعة — الإثبات نفسه
+    /// يبقى دائمًا في إصدارات العقد والترسية ولا يُنسخ إلى مرحلة التنفيذ.
+    /// </summary>
+    Task SyncAdvancePaymentStageAsync(int subProjectId, CancellationToken cancellationToken = default);
 }

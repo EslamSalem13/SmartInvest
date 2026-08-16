@@ -73,6 +73,7 @@ export class ProcurementWorkflow implements OnInit {
   protected readonly aAdvancePercentage = signal<number | null>(null);
   protected readonly aAdvanceSelf = signal<number | null>(null);
   protected readonly aAdvanceSelfRaw = computed(() => thousandsToEgp(this.aAdvanceSelf()));
+  protected readonly aAdvanceDate = signal('');
   protected readonly aAdvanceBank = signal<number | null>(null);
   protected readonly aAdvanceBankRaw = computed(() => thousandsToEgp(this.aAdvanceBank()));
   protected readonly aDurationMonths = signal<number | null>(null);
@@ -175,6 +176,7 @@ export class ProcurementWorkflow implements OnInit {
     this.aAdvancePercentage.set(details.advancePaymentPercentage);
     this.aAdvanceSelf.set(egpToThousands(details.advancePaymentSelfAmount));
     this.aAdvanceBank.set(egpToThousands(details.advancePaymentBankAmount));
+    this.aAdvanceDate.set(details.advancePaymentDate?.slice(0, 10) ?? '');
     this.aDurationMonths.set(details.executionDurationMonths);
     this.aDurationDays.set(details.executionDurationDays);
     this.aHandoverMode.set(details.siteHandoverMode);
@@ -194,6 +196,7 @@ export class ProcurementWorkflow implements OnInit {
         advancePaymentPercentage: this.aAdvancePercentage(),
         advancePaymentSelfAmount: this.aAdvanceSelfRaw(),
         advancePaymentBankAmount: this.aAdvanceBankRaw(),
+        advancePaymentDate: this.aAdvanceDate() || null,
         executionDurationMonths: this.aDurationMonths(),
         executionDurationDays: this.aDurationDays(),
         siteHandoverMode: this.aHandoverMode(),

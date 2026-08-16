@@ -20,6 +20,8 @@ public class ExecutionStageService : IExecutionStageService
 
     public const string FinalDeliveryStageName = "التسليم الأولي";
 
+    public const string AdvancePaymentStageName = "الدفعة المقدمة للمقاول";
+
     public ExecutionStageService(
         AppDbContext context,
         IGenericRepository<ExecutionStage> stageRepository,
@@ -38,16 +40,20 @@ public class ExecutionStageService : IExecutionStageService
     {
         await GetCycleAsync(subProjectId, financialYearId, cancellationToken);
         await SyncFinalDeliveryStageAsync(subProjectId, cancellationToken);
+        await SyncAdvancePaymentStageAsync(subProjectId, cancellationToken);
         var stages = await _context.ExecutionStages.AsNoTracking()
             .Include(s => s.SubProjectFinancialYear)
             .Where(s => s.SubProjectId == subProjectId
                 && s.SubProjectFinancialYear!.FinancialYearId == financialYearId)
-            .OrderBy(s => s.IsFinalDelivery)
+            // الدفعة المقدمة أول الصرف الفعلي على المشروع، والتسليم الأولي آخره
+            .OrderByDescending(s => s.IsAdvancePayment)
+            .ThenBy(s => s.IsFinalDelivery)
             .ThenBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
 
         var contractualDeliveryDate = await GetContractualDeliveryDateAsync(subProjectId, cancellationToken);
-        return stages.Select(s => ToDto(s, contractualDeliveryDate)).ToList();
+        var advanceProofFileName = await GetAdvancePaymentProofFileNameAsync(subProjectId, cancellationToken);
+        return stages.Select(s => ToDto(s, contractualDeliveryDate, advanceProofFileName)).ToList();
     }
 
     public async Task<ExecutionStageDto> CreateAsync(int subProjectId, CreateExecutionStageDto dto, CancellationToken cancellationToken = default)
@@ -61,6 +67,11 @@ public class ExecutionStageService : IExecutionStageService
         {
             throw new BusinessRuleException("اسم المرحلة يجب ألا يتجاوز 250 حرفًا");
         }
+        if (dto.StartDate == null)
+        {
+            throw new BusinessRuleException("الموعد الابتدائي للمرحلة مطلوب");
+        }
+        EnsureDateRangeValid(dto.StartDate, dto.Deadline);
         if (dto.SelfFundingSpent < 0)
         {
             throw new BusinessRuleException("المصروف الذاتي لا يمكن أن يكون سالبًا");
@@ -108,8 +119,10 @@ public class ExecutionStageService : IExecutionStageService
             throw new BusinessRuleException("في مشروعات التوريدات، يجب تسجيل نسبة تنفيذ عيني قبل تسجيل أي صرف على نفس المرحلة");
         }
 
+        // صف الدفعة المقدمة مستبعَد — قيمته تأتي من العقد والترسية عبر GetAdvancePaymentTotalAsync أدناه،
+        // فجمعه من الاثنين معًا يحتسب الدفعة مرتين.
         var existingStages = await _context.ExecutionStages.AsNoTracking()
-            .Where(s => s.SubProjectFinancialYearId == cycle.SubProjectFinancialYearId)
+            .Where(s => s.SubProjectFinancialYearId == cycle.SubProjectFinancialYearId && !s.IsAdvancePayment)
             .ToListAsync(cancellationToken);
 
         var advanceSpent = await GetAdvancePaymentTotalAsync(subProjectId, cancellationToken);
@@ -128,6 +141,7 @@ public class ExecutionStageService : IExecutionStageService
             SubProjectFinancialYearId = cycle.SubProjectFinancialYearId,
             SubProjectFinancialYear = cycle,
             Name = dto.Name.Trim(),
+            StartDate = dto.StartDate,
             Deadline = dto.Deadline,
             SelfFundingSpent = dto.SelfFundingSpent,
             BankFundingSpent = dto.BankFundingSpent,
@@ -157,6 +171,7 @@ public class ExecutionStageService : IExecutionStageService
     public async Task<ExecutionStageDto> UpdateAsync(int subProjectId, int stageId, UpdateExecutionStageDto dto, CancellationToken cancellationToken = default)
     {
         var stage = await GetOwnedStageAsync(subProjectId, stageId, dto.FinancialYearId, cancellationToken);
+        EnsureNotAdvancePaymentStage(stage);
         if (stage.IsCompleted)
         {
             throw new BusinessRuleException("يجب إعادة فتح المرحلة المكتملة قبل تعديلها");
@@ -168,7 +183,9 @@ public class ExecutionStageService : IExecutionStageService
         ValidateStageValues(dto, stage);
 
         var otherSpent = await _context.ExecutionStages.AsNoTracking()
-            .Where(x => x.SubProjectFinancialYearId == stage.SubProjectFinancialYearId && x.ExecutionStageId != stageId)
+            .Where(x => x.SubProjectFinancialYearId == stage.SubProjectFinancialYearId
+                && x.ExecutionStageId != stageId
+                && !x.IsAdvancePayment)
             .SumAsync(x => x.SelfFundingSpent + x.BankFundingSpent, cancellationToken);
         var allowedCeiling = await GetAllowedCeilingAsync(subProjectId, subProject, cancellationToken);
         var newTotal = otherSpent + await GetAdvancePaymentTotalAsync(subProjectId, cancellationToken)
@@ -181,6 +198,7 @@ public class ExecutionStageService : IExecutionStageService
         if (!stage.IsFinalDelivery)
         {
             stage.Name = dto.Name.Trim();
+            stage.StartDate = dto.StartDate ?? stage.StartDate;
             stage.Deadline = dto.Deadline;
         }
         stage.SelfFundingSpent = dto.SelfFundingSpent;
@@ -206,6 +224,7 @@ public class ExecutionStageService : IExecutionStageService
     {
         await EnsureProjectOpenAsync(subProjectId, cancellationToken);
         var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
+        EnsureNotAdvancePaymentStage(stage);
         stage.IsCompleted = true;
         stage.CompletedAt = DateTime.UtcNow;
 
@@ -219,6 +238,7 @@ public class ExecutionStageService : IExecutionStageService
     {
         await EnsureProjectOpenAsync(subProjectId, cancellationToken);
         var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
+        EnsureNotAdvancePaymentStage(stage);
         stage.IsCompleted = false;
         stage.CompletedAt = null;
 
@@ -232,6 +252,7 @@ public class ExecutionStageService : IExecutionStageService
     {
         await EnsureProjectOpenAsync(subProjectId, cancellationToken);
         var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
+        EnsureNotAdvancePaymentStage(stage);
         stage.PenaltyAmount = dto.PenaltyAmount;
         stage.PenaltyPaid = dto.PenaltyPaid;
 
@@ -244,6 +265,21 @@ public class ExecutionStageService : IExecutionStageService
     public async Task<FileDownloadDto> DownloadFileAsync(int subProjectId, int stageId, int financialYearId, string fileKey, CancellationToken cancellationToken = default)
     {
         var stage = await GetOwnedStageAsync(subProjectId, stageId, financialYearId, cancellationToken);
+
+        // مرحلة الدفعة المقدمة لا تملك إثباتات خاصة بها — إثبات الصرف المرفوع في العقد والترسية
+        // هو نفسه المطلوب هنا، يُقرأ من مكانه الأصلي بلا نسخ ولا تكرار.
+        if (stage.IsAdvancePayment)
+        {
+            var advanceProof = await GetAdvancePaymentProofAsync(subProjectId, cancellationToken)
+                ?? throw new NotFoundException("لم يُرفع إثبات صرف الدفعة المقدمة بعد");
+
+            return new FileDownloadDto
+            {
+                FileName = advanceProof.FileName,
+                FileExtension = advanceProof.FileExtension,
+                Content = advanceProof.Content,
+            };
+        }
 
         var file = fileKey switch
         {
@@ -307,6 +343,7 @@ public class ExecutionStageService : IExecutionStageService
                     IsCompleted = s.IsCompleted,
                     CreatedAt = s.CreatedAt,
                     IsFinalDelivery = s.IsFinalDelivery,
+                    IsAdvancePayment = s.IsAdvancePayment,
                 })
                 .ToListAsync(cancellationToken))
             .GroupBy(s => s.SubProjectId)
@@ -338,13 +375,26 @@ public class ExecutionStageService : IExecutionStageService
         {
             stagesByProject.TryGetValue(s.SubProjectId, out var stages);
             stages ??= [];
+            awardByProject.TryGetValue(s.SubProjectId, out var award);
 
-            var financialPercent = s.TotalCost <= 0
+            // نسبة التنفيذ المالي = مراحل التنفيذ + الدفعة المقدمة المصروفة. الدفعة تُقرأ من الترسية
+            // (المصدر الوحيد) وصفّها التلقائي مستبعَد من مجموع المراحل حتى لا تُحتسب مرتين.
+            var advanceSpent = award?.AdvancePaymentDone == true
+                ? award.AdvancePaymentSelfAmount + award.AdvancePaymentBankAmount
+                : 0m;
+            var stageSpent = stages
+                .Where(x => !x.IsAdvancePayment)
+                .Sum(x => x.SelfFundingSpent + x.BankFundingSpent);
+
+            // القاعدة قيمة العقد — هي المبلغ المتعاقد على صرفه فعلًا. الإجمالي المخطط بديل
+            // احتياطي فقط للمشروعات القديمة التي لا تحمل قيمة عقد صحيحة.
+            var financialBase = award?.ContractValue is > 0m ? award.ContractValue!.Value : s.TotalCost;
+            var financialPercent = financialBase <= 0
                 ? 0
-                : Math.Round(stages.Sum(x => x.SelfFundingSpent + x.BankFundingSpent) / s.TotalCost * 100, 2);
+                : Math.Round((stageSpent + advanceSpent) / financialBase * 100, 2);
 
             var physicalTotal = stages
-                .Where(x => !x.IsFinalDelivery)
+                .Where(x => !x.IsFinalDelivery && !x.IsAdvancePayment)
                 .Sum(x => x.PhysicalProgressPercent);
 
             var nextDeadline = stages
@@ -353,19 +403,18 @@ public class ExecutionStageService : IExecutionStageService
                 .FirstOrDefault()?.Deadline;
 
             contractorNameByProject.TryGetValue(s.SubProjectId, out var contractorName);
-            awardByProject.TryGetValue(s.SubProjectId, out var award);
             var eligibility = ProjectCompletionPolicy.Evaluate(new ProjectCompletionFacts(
                 s.ExecutionCompletedAt != null || s.Status.StatusName == "منتهي",
                 award?.IsCompleted == true,
                 award?.ContractValue,
                 s.OverrunPercentage ?? 0,
-                stages.Sum(x => x.SelfFundingSpent),
-                stages.Sum(x => x.BankFundingSpent),
+                stages.Where(x => !x.IsAdvancePayment).Sum(x => x.SelfFundingSpent),
+                stages.Where(x => !x.IsAdvancePayment).Sum(x => x.BankFundingSpent),
                 award?.AdvancePaymentDone == true,
                 award?.AdvancePaymentSelfAmount ?? 0,
                 award?.AdvancePaymentBankAmount ?? 0,
                 stages.Select(x => new ExecutionStageCompletionFact(
-                    x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList(),
+                    x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent, x.IsAdvancePayment)).ToList(),
                 s.TotalCost));
 
             return new FollowUpListItemDto
@@ -476,13 +525,96 @@ public class ExecutionStageService : IExecutionStageService
                     SubProjectFinancialYearId = cycle.SubProjectFinancialYearId,
                     Name = FinalDeliveryStageName,
                     IsFinalDelivery = true,
+                    // بداية التسليم الأولي هي تسليم الأرضية نفسه — منها تُحسب المدة التعاقدية.
+                    StartDate = award.SiteHandoverDate,
                     Deadline = deadline,
                 }, cancellationToken);
             }
             else
             {
                 stage.Name = FinalDeliveryStageName;
+                stage.StartDate = award.SiteHandoverDate;
                 stage.Deadline = deadline;
+                _stageRepository.Update(stage);
+            }
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task SyncAdvancePaymentStageAsync(int subProjectId, CancellationToken cancellationToken = default)
+    {
+        var award = await _context.ContractAwards.AsNoTracking()
+            .Where(a => a.SubProjectId == subProjectId)
+            .Select(a => new
+            {
+                a.AdvancePaymentDone,
+                a.AdvancePaymentPercentage,
+                a.AdvancePaymentDate,
+                ContractDate = a.ProjectAssignment != null ? a.ProjectAssignment.ContractDate : null,
+                SelfAmount = a.AdvancePaymentSelfAmount ?? 0m,
+                BankAmount = a.AdvancePaymentBankAmount ?? 0m,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var existing = await _context.ExecutionStages
+            .Where(s => s.SubProjectId == subProjectId && s.IsAdvancePayment)
+            .ToListAsync(cancellationToken);
+
+        // لا دفعة مقدمة (أو تراجَع الموظف عن تأكيد صرفها) — الصف التلقائي لا يحمل أي بيانات
+        // خاصة به، فإزالته لا تفقد شيئًا، والإثبات نفسه يبقى في العقد والترسية.
+        if (award is not { AdvancePaymentDone: true } || award.SelfAmount + award.BankAmount <= 0m)
+        {
+            if (existing.Count > 0)
+            {
+                _context.ExecutionStages.RemoveRange(existing);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            return;
+        }
+
+        var cycles = await _context.Set<SubProjectFinancialYear>()
+            .Where(x => x.SubProjectId == subProjectId)
+            .ToListAsync(cancellationToken);
+
+        var notes = award.AdvancePaymentPercentage is decimal percentage and > 0m
+            ? $"دفعة مقدمة {percentage:0.##}% من قيمة العقد — مسجَّلة في مرحلة العقد والترسية"
+            : "دفعة مقدمة مسجَّلة في مرحلة العقد والترسية";
+
+        foreach (var cycle in cycles)
+        {
+            var stage = existing.FirstOrDefault(s => s.SubProjectFinancialYearId == cycle.SubProjectFinancialYearId);
+            var isNew = stage == null;
+
+            if (stage == null)
+            {
+                stage = new ExecutionStage
+                {
+                    SubProjectId = subProjectId,
+                    SubProjectFinancialYearId = cycle.SubProjectFinancialYearId,
+                    IsAdvancePayment = true,
+                };
+                await _stageRepository.AddAsync(stage, cancellationToken);
+            }
+
+            // المرحلة تبدأ بتسجيل العقد وتنتهي بصرف الدفعة فعليًا. كل تاريخ يقع على الآخر
+            // كبديل احتياطي حتى لا تظهر الخلية فارغة إذا لم يُسجَّل أحدهما بعد.
+            stage.Name = AdvancePaymentStageName;
+            stage.StartDate = award.ContractDate ?? award.AdvancePaymentDate;
+            stage.Deadline = award.AdvancePaymentDate ?? award.ContractDate;
+            stage.SelfFundingSpent = award.SelfAmount;
+            stage.BankFundingSpent = award.BankAmount;
+            stage.PhysicalProgressPercent = 0m;
+            stage.Notes = notes;
+            // الصرف واقعة تمت بالفعل عند تأكيدها في الترسية — لا شيء ينتظر إنهاءه هنا.
+            stage.IsCompleted = true;
+            stage.CompletedAt ??= stage.Deadline ?? DateTime.UtcNow;
+
+            // الصف الجديد متعقَّب بحالة Added ومعه مفتاح مؤقت — استدعاء Update عليه يحوّله إلى
+            // Modified فيفشل الحفظ، لذلك التحديث للصفوف القائمة فقط.
+            if (!isNew)
+            {
                 _stageRepository.Update(stage);
             }
         }
@@ -532,6 +664,9 @@ public class ExecutionStageService : IExecutionStageService
             throw new BusinessRuleException("اسم المرحلة مطلوب");
         if (!existing.IsFinalDelivery && dto.Deadline == null)
             throw new BusinessRuleException("الموعد النهائي مطلوب");
+        // المراحل المسجَّلة قبل إضافة الموعد الابتدائي تبقى قابلة للتعديل بلا إجبار على ملئه.
+        if (!existing.IsFinalDelivery)
+            EnsureDateRangeValid(dto.StartDate ?? existing.StartDate, dto.Deadline);
         if (dto.Name.Trim().Length > 250)
             throw new BusinessRuleException("اسم المرحلة يجب ألا يتجاوز 250 حرفًا");
         if (dto.SelfFundingSpent < 0 || dto.BankFundingSpent < 0)
@@ -558,6 +693,41 @@ public class ExecutionStageService : IExecutionStageService
         // وحد الصرف، لا يُطبَّق مرتين.
         return subProject.TotalCost * (1 + (subProject.OverrunPercentage ?? 0) / 100m);
     }
+
+    /// <summary>الموعد النهائي لا يسبق الموعد الابتدائي — يُطبَّق فقط عندما يوجد التاريخان معًا.</summary>
+    private static void EnsureDateRangeValid(DateTime? startDate, DateTime? deadline)
+    {
+        if (startDate != null && deadline != null && deadline < startDate)
+        {
+            throw new BusinessRuleException("الموعد النهائي لا يمكن أن يسبق الموعد الابتدائي للمرحلة");
+        }
+    }
+
+    /// <summary>مرحلة الدفعة المقدمة تُدار من العقد والترسية — أي تعديل عليها يتم من هناك.</summary>
+    private static void EnsureNotAdvancePaymentStage(ExecutionStage stage)
+    {
+        if (stage.IsAdvancePayment)
+        {
+            throw new BusinessRuleException(
+                "مرحلة الدفعة المقدمة تُدار تلقائيًا من مرحلة العقد والترسية ولا تُعدَّل من متابعة المشروعات");
+        }
+    }
+
+    /// <summary>إثبات صرف الدفعة المقدمة من أحدث إصدار للعقد والترسية يحمله — بلا نسخ إلى مرحلة التنفيذ.</summary>
+    private async Task<StoredFile?> GetAdvancePaymentProofAsync(int subProjectId, CancellationToken cancellationToken) =>
+        await _context.ContractAwardVersions.AsNoTracking()
+            .Where(v => v.ContractAward.SubProjectId == subProjectId && v.AdvancePaymentProof != null)
+            .OrderByDescending(v => v.VersionNumber)
+            .Select(v => v.AdvancePaymentProof)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    /// <summary>اسم ملف إثبات الدفعة المقدمة فقط — بلا تحميل بايتات الملف.</summary>
+    private async Task<string?> GetAdvancePaymentProofFileNameAsync(int subProjectId, CancellationToken cancellationToken) =>
+        await _context.ContractAwardVersions.AsNoTracking()
+            .Where(v => v.ContractAward.SubProjectId == subProjectId && v.AdvancePaymentProof != null)
+            .OrderByDescending(v => v.VersionNumber)
+            .Select(v => v.AdvancePaymentProof!.FileName)
+            .FirstOrDefaultAsync(cancellationToken);
 
     private async Task<decimal> GetAdvancePaymentTotalAsync(int subProjectId, CancellationToken cancellationToken) =>
         await _context.ContractAwards.AsNoTracking()
@@ -593,6 +763,7 @@ public class ExecutionStageService : IExecutionStageService
         public bool IsCompleted { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsFinalDelivery { get; set; }
+        public bool IsAdvancePayment { get; set; }
     }
 
     private sealed class AwardProjection
@@ -638,6 +809,7 @@ public class ExecutionStageService : IExecutionStageService
             .Select(x => new
             {
                 x.IsFinalDelivery,
+                x.IsAdvancePayment,
                 x.IsCompleted,
                 x.PhysicalProgressPercent,
                 x.SelfFundingSpent,
@@ -650,13 +822,14 @@ public class ExecutionStageService : IExecutionStageService
             award?.IsCompleted == true,
             award?.ContractValue,
             project.OverrunPercentage ?? 0,
-            stages.Sum(x => x.SelfFundingSpent),
-            stages.Sum(x => x.BankFundingSpent),
+            // صف الدفعة المقدمة مستبعَد هنا وتُضاف قيمته من الترسية أدناه — حتى لا تُحتسب مرتين.
+            stages.Where(x => !x.IsAdvancePayment).Sum(x => x.SelfFundingSpent),
+            stages.Where(x => !x.IsAdvancePayment).Sum(x => x.BankFundingSpent),
             award?.AdvancePaymentDone == true,
             award?.AdvanceSelf ?? 0,
             award?.AdvanceBank ?? 0,
             stages.Select(x => new ExecutionStageCompletionFact(
-                x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent)).ToList(),
+                x.IsFinalDelivery, x.IsCompleted, x.PhysicalProgressPercent, x.IsAdvancePayment)).ToList(),
             project.BankFunding + project.SelfFunding));
     }
 
@@ -671,25 +844,35 @@ public class ExecutionStageService : IExecutionStageService
     private static DateTime? ComputeContractualDeliveryDate(DateTime? handoverDate, int? months, int? days) =>
         handoverDate?.AddMonths(months ?? 0).AddDays(days ?? 0);
 
-    private static ExecutionStageDto ToDto(ExecutionStage s, DateTime? contractualDeliveryDate) => new()
+    private static ExecutionStageDto ToDto(
+        ExecutionStage s, DateTime? contractualDeliveryDate, string? advancePaymentProofFileName = null) => new()
     {
         Id = s.ExecutionStageId,
         SubProjectId = s.SubProjectId,
         FinancialYearId = s.SubProjectFinancialYear?.FinancialYearId,
         Name = s.Name,
+        StartDate = s.StartDate,
         Deadline = s.Deadline,
         IsFinalDelivery = s.IsFinalDelivery,
-        // مرحلة التسليم النهائي هي المرجع نفسه، فلا تُقارن بذاتها
+        IsAdvancePayment = s.IsAdvancePayment,
+        // مرحلة التسليم النهائي هي المرجع نفسه، فلا تُقارن بذاتها. ومرحلة الدفعة المقدمة واقعة
+        // صرف تمت قبل بدء التنفيذ، فمقارنتها بموعد التسليم بلا معنى.
         ExceedsContractualDeadline = !s.IsFinalDelivery
+            && !s.IsAdvancePayment
             && s.Deadline != null
             && contractualDeliveryDate != null
             && s.Deadline > contractualDeliveryDate,
         SelfFundingSpent = s.SelfFundingSpent,
         BankFundingSpent = s.BankFundingSpent,
-        HasSelfFundingProof = s.SelfFundingProofFile != null,
-        HasBankFundingProof = s.BankFundingProofFile != null,
-        SelfFundingProofFileName = s.SelfFundingProofFile?.FileName,
-        BankFundingProofFileName = s.BankFundingProofFile?.FileName,
+        // إثبات الدفعة المقدمة يعيش في العقد والترسية — يُعرض هنا مرتبطًا لا منسوخًا.
+        HasSelfFundingProof = s.IsAdvancePayment
+            ? advancePaymentProofFileName != null && s.SelfFundingSpent > 0
+            : s.SelfFundingProofFile != null,
+        HasBankFundingProof = s.IsAdvancePayment
+            ? advancePaymentProofFileName != null && s.BankFundingSpent > 0
+            : s.BankFundingProofFile != null,
+        SelfFundingProofFileName = s.IsAdvancePayment ? advancePaymentProofFileName : s.SelfFundingProofFile?.FileName,
+        BankFundingProofFileName = s.IsAdvancePayment ? advancePaymentProofFileName : s.BankFundingProofFile?.FileName,
         PhysicalProgressPercent = s.PhysicalProgressPercent,
         HasPhysicalProgressProof = s.PhysicalProgressProofFile != null,
         PhysicalProgressProofFileName = s.PhysicalProgressProofFile?.FileName,

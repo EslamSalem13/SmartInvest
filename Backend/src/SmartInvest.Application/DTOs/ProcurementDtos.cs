@@ -126,6 +126,9 @@ public class ContractAwardDetailsDto
     public decimal? AdvancePaymentSelfAmount { get; set; }
     public decimal? AdvancePaymentBankAmount { get; set; }
 
+    /// <summary>تاريخ صرف الدفعة المقدمة — يظهر كموعد مرحلة الدفعة المقدمة في متابعة المشروعات.</summary>
+    public DateTime? AdvancePaymentDate { get; set; }
+
     public int? ExecutionDurationMonths { get; set; }
     public int? ExecutionDurationDays { get; set; }
     public int? SiteHandoverMode { get; set; }
@@ -164,6 +167,7 @@ public class SetContractAwardDetailsDto
     public decimal? AdvancePaymentPercentage { get; set; }
     public decimal? AdvancePaymentSelfAmount { get; set; }
     public decimal? AdvancePaymentBankAmount { get; set; }
+    public DateTime? AdvancePaymentDate { get; set; }
 
     public int? ExecutionDurationMonths { get; set; }
     public int? ExecutionDurationDays { get; set; }

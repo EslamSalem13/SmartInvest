@@ -31,6 +31,11 @@ public class ExecutionStageConfiguration : IEntityTypeConfiguration<ExecutionSta
                .IsUnique()
                .HasFilter("[IsFinalDelivery] = 1 AND [SubProjectFinancialYearId] IS NOT NULL");
 
+        // مرحلة الدفعة المقدمة تلقائية أيضًا — صف واحد على الأكثر لكل دورة تنفيذ.
+        builder.HasIndex(x => new { x.SubProjectFinancialYearId, x.IsAdvancePayment })
+               .IsUnique()
+               .HasFilter("[IsAdvancePayment] = 1 AND [SubProjectFinancialYearId] IS NOT NULL");
+
         builder.OwnsStoredFile(x => x.SelfFundingProofFile, "SelfFundingProof_");
         builder.OwnsStoredFile(x => x.BankFundingProofFile, "BankFundingProof_");
         builder.OwnsStoredFile(x => x.PhysicalProgressProofFile, "PhysicalProgressProof_");

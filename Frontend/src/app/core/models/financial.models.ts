@@ -32,6 +32,8 @@ export interface ContractAwardDetails {
   advancePaymentPercentage: number | null;
   advancePaymentSelfAmount: number | null;
   advancePaymentBankAmount: number | null;
+  /** تاريخ صرف الدفعة المقدمة — موعد مرحلة الدفعة المقدمة في متابعة المشروعات */
+  advancePaymentDate: string | null;
 
   executionDurationMonths: number | null;
   executionDurationDays: number | null;
@@ -58,6 +60,7 @@ export interface SetContractAwardDetails {
   advancePaymentPercentage: number | null;
   advancePaymentSelfAmount: number | null;
   advancePaymentBankAmount: number | null;
+  advancePaymentDate: string | null;
   executionDurationMonths: number | null;
   executionDurationDays: number | null;
   siteHandoverMode: number | null;

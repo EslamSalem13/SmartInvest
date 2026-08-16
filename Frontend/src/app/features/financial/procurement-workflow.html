@@ -345,6 +345,11 @@
                           }
                         </div>
                         <div class="si-fld">
+                          <label>تاريخ صرف الدفعة</label>
+                          <input type="date" [ngModel]="aAdvanceDate()" (ngModelChange)="aAdvanceDate.set($event)" [disabled]="!awardEditable()" />
+                          <span class="hint">يظهر كالموعد النهائي لمرحلة الدفعة المقدمة في المتابعة (بدايتها تاريخ العقد)</span>
+                        </div>
+                        <div class="si-fld">
                           <label>المتبقي للتوزيع</label>
                           <input class="tnum" [value]="thousandsLabel(advanceRemaining())" disabled />
                           <span class="hint">يجب أن يصل إلى صفر</span>

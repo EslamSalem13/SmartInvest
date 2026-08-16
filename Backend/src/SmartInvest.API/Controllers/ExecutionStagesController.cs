@@ -42,13 +42,14 @@ public class ExecutionStagesController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>multipart/form-data: name, deadline, selfFundingSpent, bankFundingSpent, physicalProgressPercent, notes + حتى 3 ملفات (selfFundingProof / bankFundingProof / physicalProgressProof).</summary>
+    /// <summary>multipart/form-data: name, startDate, deadline, selfFundingSpent, bankFundingSpent, physicalProgressPercent, notes + حتى 3 ملفات (selfFundingProof / bankFundingProof / physicalProgressProof).</summary>
     [HttpPost("api/subprojects/{subProjectId:int}/execution-stages")]
     [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ExecutionStageDto>> Create(
         int subProjectId,
         [FromForm] int financialYearId,
         [FromForm] string name,
+        [FromForm] DateTime? startDate,
         [FromForm] DateTime deadline,
         [FromForm] decimal selfFundingSpent,
         [FromForm] decimal bankFundingSpent,
@@ -60,6 +61,7 @@ public class ExecutionStagesController : ControllerBase
         {
             FinancialYearId = financialYearId,
             Name = name,
+            StartDate = startDate,
             Deadline = deadline,
             SelfFundingSpent = selfFundingSpent,
             BankFundingSpent = bankFundingSpent,
@@ -111,6 +113,7 @@ public class ExecutionStagesController : ControllerBase
         int stageId,
         [FromForm] int financialYearId,
         [FromForm] string name,
+        [FromForm] DateTime? startDate,
         [FromForm] DateTime? deadline,
         [FromForm] decimal selfFundingSpent,
         [FromForm] decimal bankFundingSpent,
@@ -122,6 +125,7 @@ public class ExecutionStagesController : ControllerBase
         {
             FinancialYearId = financialYearId,
             Name = name,
+            StartDate = startDate,
             Deadline = deadline,
             SelfFundingSpent = selfFundingSpent,
             BankFundingSpent = bankFundingSpent,

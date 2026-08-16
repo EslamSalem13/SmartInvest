@@ -98,7 +98,7 @@
 
   @if (selectedItem(); as item) {
     <div class="si-overlay" (click)="closeStages()">
-      <div class="si-modal" (click)="$event.stopPropagation()" style="width:min(760px,100%)">
+      <div class="si-modal stages-modal" (click)="$event.stopPropagation()" style="width:min(1180px,100%)">
         <div class="si-modal-head">
           <div class="grow">
             <h3>مراحل تنفيذ: {{ item.subProjectName }}</h3>
@@ -117,12 +117,14 @@
           @if (stagesLoading()) {
             <div class="state"><span class="spinner"></span> جاري التحميل…</div>
           } @else {
+            <p class="unit-note">كل القيم المالية بالألف جنيه</p>
             <div class="tbl-wrap si-responsive-table-wrap">
               <table class="si-responsive-table">
                 <thead>
                   <tr>
                     <th>المرحلة</th>
-                    <th>الموعد</th>
+                    <th>الموعد الابتدائي</th>
+                    <th>الموعد النهائي</th>
                     <th>ذاتي</th>
                     <th>بنكي</th>
                     <th>تنفيذ عيني</th>
@@ -133,29 +135,39 @@
                 </thead>
                 <tbody>
                   @for (s of stages(); track s.id) {
-                    <tr [class.final-row]="s.isFinalDelivery">
-                      <td data-label="المرحلة">
-                        {{ s.isFinalDelivery ? 'التسليم الأولي' : s.name }}
-                        @if (s.isFinalDelivery) { <span class="chip lock-chip">تلقائية</span> }
+                    <tr [class.final-row]="s.isFinalDelivery" [class.advance-row]="s.isAdvancePayment">
+                      <td class="stage-name-cell" data-label="المرحلة">
+                        <span class="stage-name">{{ s.isFinalDelivery ? 'التسليم الأولي' : s.name }}</span>
+                        @if (isManagedStage(s)) {
+                          <span
+                            class="chip lock-chip"
+                            [title]="s.isAdvancePayment ? 'تُدار من مرحلة العقد والترسية' : 'تُحسب من تاريخ تسليم الأرضية ومدة التنفيذ'"
+                          >تلقائية</span>
+                        }
                       </td>
-                      <td class="tnum" data-label="الموعد" [class.warn]="s.exceedsContractualDeadline">
+                      <td class="tnum" data-label="الموعد الابتدائي">
+                        {{ s.startDate ? (s.startDate | date: 'yyyy/MM/dd') : '—' }}
+                      </td>
+                      <td class="tnum" data-label="الموعد النهائي" [class.warn]="s.exceedsContractualDeadline">
                         @if (s.deadline) {
                           {{ s.deadline | date: 'yyyy/MM/dd' }}
                           @if (s.exceedsContractualDeadline) {
                             <span class="chip warn-chip" title="يتجاوز تاريخ التسليم التعاقدي">تجاوز</span>
                           }
-                        } @else {
+                        } @else if (s.isFinalDelivery) {
                           <span class="wait">بانتظار تسليم الأرضية</span>
+                        } @else {
+                          —
                         }
                       </td>
-                      <td class="tnum" data-label="ذاتي">
-                        {{ thousandsLabel(s.selfFundingSpent) }}
+                      <td class="tnum amount-cell" data-label="ذاتي (ألف ج.م)">
+                        {{ thousandsNumber(s.selfFundingSpent) }}
                         @if (s.hasSelfFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف الذاتي" (click)="downloadProof(s, 'self')">📎</button>
                         }
                       </td>
-                      <td class="tnum" data-label="بنكي">
-                        {{ thousandsLabel(s.bankFundingSpent) }}
+                      <td class="tnum amount-cell" data-label="بنكي (ألف ج.م)">
+                        {{ thousandsNumber(s.bankFundingSpent) }}
                         @if (s.hasBankFundingProof) {
                           <button type="button" class="file-lnk" title="تنزيل إثبات الصرف البنكي" (click)="downloadProof(s, 'bank')">📎</button>
                         }
@@ -166,7 +178,7 @@
                           <button type="button" class="file-lnk" title="تنزيل إثبات التنفيذ العيني" (click)="downloadProof(s, 'progress')">📎</button>
                         }
                       </td>
-                      <td class="tnum penalty-cell" data-label="غرامة">
+                      <td class="tnum penalty-cell amount-cell" data-label="غرامة (ألف ج.م)">
                         @if (editingPenaltyStageId() === s.id) {
                           <div class="penalty-edit">
                             <input
@@ -174,7 +186,8 @@
                               min="0"
                               [ngModel]="penaltyAmountDraft()"
                               (ngModelChange)="updatePenaltyAmountDraft($event)"
-                              placeholder="بدون غرامة"
+                              placeholder="بالألف جنيه"
+                              title="القيمة بالألف جنيه"
                             />
                             <label class="paid-chk">
                               <input type="checkbox" [ngModel]="penaltyPaidDraft()" (ngModelChange)="penaltyPaidDraft.set($event)" />
@@ -184,17 +197,19 @@
                             <button class="si-btn sm" (click)="cancelEditPenalty()">إلغاء</button>
                           </div>
                         } @else {
-                          {{ s.penaltyAmount != null ? thousandsLabel(s.penaltyAmount) : '—' }}
+                          {{ s.penaltyAmount != null ? thousandsNumber(s.penaltyAmount) : '—' }}
                           @if (s.penaltyAmount != null) {
                             <span class="chip" [class.warn-chip]="!s.penaltyPaid">{{ s.penaltyPaid ? 'مدفوعة' : 'غير مدفوعة' }}</span>
                           }
-                          @if (isManager()) {
+                          @if (isManager() && !s.isAdvancePayment) {
                             <button type="button" class="file-lnk" title="تعديل الغرامة" (click)="startEditPenalty(s)">✏️</button>
                           }
                         }
                       </td>
                       <td data-label="الحالة">
-                        @if (s.isCompleted) {
+                        @if (s.isAdvancePayment) {
+                          <span class="st-pill ok">مصروفة</span>
+                        } @else if (s.isCompleted) {
                           <span class="st-pill ok">مكتملة</span>
                           @if (isManager()) {
                             <button type="button" class="file-lnk" title="إعادة فتح المرحلة" (click)="reopenStage(s)">↺</button>
@@ -205,15 +220,16 @@
                       </td>
                       <td data-label="إجراءات">
                         <div class="stage-row-actions">
-                          @if (!s.isCompleted) {
+                          @if (!s.isCompleted && !s.isAdvancePayment) {
                             <button class="si-btn sm" (click)="openEditStage(s)">تعديل</button>
                           }
                           @if (s.notes) { <span class="note-hint" [title]="s.notes">ملاحظات</span> }
+                          @if (!s.notes && isManagedStage(s)) { <span class="muted-dash">—</span> }
                         </div>
                       </td>
                     </tr>
                   } @empty {
-                    <tr><td colspan="8" class="empty si-table-empty">لا توجد مراحل تنفيذ بعد.</td></tr>
+                    <tr><td colspan="9" class="empty si-table-empty">لا توجد مراحل تنفيذ بعد.</td></tr>
                   }
                 </tbody>
               </table>
@@ -242,8 +258,12 @@
               <input [disabled]="editingStage()?.isFinalDelivery === true" [ngModel]="newStageName()" (ngModelChange)="newStageName.set($event)" placeholder="مثال: رصف الطبقة الأولى" />
             </div>
             <div class="si-fld">
+              <label>الموعد الابتدائي <span class="req">*</span></label>
+              <input type="date" [disabled]="editingStage()?.isFinalDelivery === true" [ngModel]="newStageStartDate()" (ngModelChange)="newStageStartDate.set($event)" />
+            </div>
+            <div class="si-fld">
               <label>الموعد النهائي <span class="req">*</span></label>
-              <input type="date" [disabled]="editingStage()?.isFinalDelivery === true" [ngModel]="newStageDeadline()" (ngModelChange)="newStageDeadline.set($event)" />
+              <input type="date" [disabled]="editingStage()?.isFinalDelivery === true" [min]="newStageStartDate()" [ngModel]="newStageDeadline()" (ngModelChange)="newStageDeadline.set($event)" />
             </div>
             <div class="si-fld">
               <label>نسبة التنفيذ العيني %</label>
@@ -252,10 +272,12 @@
             <div class="si-fld">
               <label>مصروف ذاتي</label>
               <input type="number" min="0" [ngModel]="newStageSelfSpent()" (ngModelChange)="newStageSelfSpent.set($event)" />
+              <span class="hint">بالألف جنيه</span>
             </div>
             <div class="si-fld">
               <label>مصروف بنكي</label>
               <input type="number" min="0" [ngModel]="newStageBankSpent()" (ngModelChange)="newStageBankSpent.set($event)" />
+              <span class="hint">بالألف جنيه</span>
             </div>
             <div class="si-fld">
               <label>إثبات الصرف الذاتي</label>
@@ -333,6 +355,9 @@
             <div><span>قيمة العقد</span><b>{{ thousandsLabel(item.completionEligibility.contractValue) }}</b></div>
             <div><span>المنصرف الذاتي</span><b>{{ thousandsLabel(item.completionEligibility.selfFundingSpent) }}</b></div>
             <div><span>المنصرف البنكي</span><b>{{ thousandsLabel(item.completionEligibility.bankFundingSpent) }}</b></div>
+            @if (item.completionEligibility.advancePaymentTotal > 0) {
+              <div><span>منها الدفعة المقدمة</span><b>{{ thousandsLabel(item.completionEligibility.advancePaymentTotal) }}</b></div>
+            }
             <div><span>إجمالي المنصرف</span><b>{{ thousandsLabel(item.completionEligibility.totalSpent) }}</b></div>
             <div><span>نسبة التجاوز</span><b class="tnum">{{ item.completionEligibility.overrunPercentage }}%</b></div>
             <div><span>الحد الأقصى المسموح</span><b>{{ thousandsLabel(item.completionEligibility.maximumAllowed) }}</b></div>

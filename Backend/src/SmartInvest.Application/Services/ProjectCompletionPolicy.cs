@@ -7,12 +7,14 @@ public static class ProjectCompletionPolicy
 {
     public static ProjectCompletionEligibilityDto Evaluate(ProjectCompletionFacts facts)
     {
-        var actualStages = facts.Stages.Where(x => !x.IsFinalDelivery).ToList();
+        // مرحلة الدفعة المقدمة صف عرض فقط — لا تُعدّ مرحلة تنفيذ فعلية ولا تحمل تنفيذًا عينيًا،
+        // وقيمتها المالية تُضاف أدناه من العقد والترسية (المصدر الوحيد) لا من صف المرحلة.
+        var actualStages = facts.Stages.Where(x => !x.IsFinalDelivery && !x.IsAdvancePayment).ToList();
         var physicalTotal = actualStages.Sum(x => x.PhysicalProgressPercent);
-        var selfSpent = facts.StageSelfFundingSpent
-            + (facts.AdvancePaymentDone ? facts.AdvancePaymentSelfAmount : 0m);
-        var bankSpent = facts.StageBankFundingSpent
-            + (facts.AdvancePaymentDone ? facts.AdvancePaymentBankAmount : 0m);
+        var advanceSelf = facts.AdvancePaymentDone ? facts.AdvancePaymentSelfAmount : 0m;
+        var advanceBank = facts.AdvancePaymentDone ? facts.AdvancePaymentBankAmount : 0m;
+        var selfSpent = facts.StageSelfFundingSpent + advanceSelf;
+        var bankSpent = facts.StageBankFundingSpent + advanceBank;
         var totalSpent = selfSpent + bankSpent;
         var overrun = Math.Max(0m, facts.OverrunPercentage);
         var validContractValue = facts.ContractValue is > 0m;
@@ -51,6 +53,7 @@ public static class ProjectCompletionPolicy
             SelfFundingSpent = selfSpent,
             BankFundingSpent = bankSpent,
             TotalSpent = totalSpent,
+            AdvancePaymentTotal = advanceSelf + advanceBank,
             OverrunPercentage = overrun,
             MinimumRequired = minimum,
             MaximumAllowed = maximum,

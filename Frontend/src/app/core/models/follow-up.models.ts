@@ -19,6 +19,8 @@ export interface ProjectCompletionEligibility {
   selfFundingSpent: number;
   bankFundingSpent: number;
   totalSpent: number;
+  /** الدفعة المقدمة المصروفة — جزء من إجمالي المنصرف، تُعرض منفصلة للتوضيح */
+  advancePaymentTotal: number;
   overrunPercentage: number;
   minimumRequired: number | null;
   maximumAllowed: number | null;
@@ -33,9 +35,13 @@ export interface ExecutionStage {
   subProjectId: number;
   financialYearId: number | null;
   name: string;
+  /** الموعد الابتدائي — null للمراحل المسجَّلة قبل إضافة الحقل */
+  startDate: string | null;
   /** null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية */
   deadline: string | null;
   isFinalDelivery: boolean;
+  /** مرحلة الدفعة المقدمة التلقائية — بياناتها من العقد والترسية، مقفولة هنا */
+  isAdvancePayment: boolean;
   exceedsContractualDeadline: boolean;
   selfFundingSpent: number;
   bankFundingSpent: number;
@@ -56,6 +62,7 @@ export interface ExecutionStage {
 
 export interface CreateExecutionStagePayload {
   name: string;
+  startDate: string;
   deadline: string;
   selfFundingSpent: number;
   bankFundingSpent: number;

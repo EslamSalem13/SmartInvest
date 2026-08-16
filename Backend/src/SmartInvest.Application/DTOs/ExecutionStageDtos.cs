@@ -6,11 +6,18 @@ public class ExecutionStageDto
     public int SubProjectId { get; set; }
     public int? FinancialYearId { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>الموعد الابتدائي — null للمراحل المسجَّلة قبل إضافة الحقل.</summary>
+    public DateTime? StartDate { get; set; }
+
     /// <summary>null فقط لمرحلة التسليم النهائي قبل تسليم الأرضية.</summary>
     public DateTime? Deadline { get; set; }
 
     /// <summary>مرحلة التسليم النهائي المُدارة تلقائيًا — مقفولة في الواجهة.</summary>
     public bool IsFinalDelivery { get; set; }
+
+    /// <summary>مرحلة الدفعة المقدمة المُدارة تلقائيًا — مقفولة في الواجهة، بياناتها من العقد والترسية.</summary>
+    public bool IsAdvancePayment { get; set; }
 
     /// <summary>موعد هذه المرحلة يتجاوز تاريخ التسليم التعاقدي — تحذير فقط، لا يمنع الحفظ.</summary>
     public bool ExceedsContractualDeadline { get; set; }
@@ -40,6 +47,7 @@ public class CreateExecutionStageDto
 {
     public int FinancialYearId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public DateTime? StartDate { get; set; }
     public DateTime Deadline { get; set; }
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }
@@ -54,6 +62,7 @@ public class UpdateExecutionStageDto
 {
     public int FinancialYearId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public DateTime? StartDate { get; set; }
     public DateTime? Deadline { get; set; }
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }
@@ -94,6 +103,10 @@ public class ProjectCompletionEligibilityDto
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }
     public decimal TotalSpent { get; set; }
+
+    /// <summary>الدفعة المقدمة المصروفة — جزء من إجمالي المنصرف أعلاه، تُعرض منفصلة للتوضيح فقط.</summary>
+    public decimal AdvancePaymentTotal { get; set; }
+
     public decimal OverrunPercentage { get; set; }
     public decimal? MinimumRequired { get; set; }
     public decimal? MaximumAllowed { get; set; }
@@ -103,7 +116,15 @@ public class ProjectCompletionEligibilityDto
     public List<string> Blockers { get; set; } = [];
 }
 
-public sealed record ExecutionStageCompletionFact(bool IsFinalDelivery, bool IsCompleted, decimal PhysicalProgressPercent);
+/// <summary>
+/// مرحلة الدفعة المقدمة صفٌّ للعرض فقط (IsAdvancePayment = true) — تُستبعد من عدّ مراحل التنفيذ
+/// الفعلية ومن مجموع التنفيذ العيني، وقيمتها المالية تأتي من العقد والترسية لا من الصف نفسه.
+/// </summary>
+public sealed record ExecutionStageCompletionFact(
+    bool IsFinalDelivery,
+    bool IsCompleted,
+    decimal PhysicalProgressPercent,
+    bool IsAdvancePayment = false);
 
 public sealed record ProjectCompletionFacts(
     bool IsProjectCompleted,

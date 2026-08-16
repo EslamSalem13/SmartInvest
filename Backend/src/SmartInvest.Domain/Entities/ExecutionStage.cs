@@ -19,6 +19,13 @@ public class ExecutionStage
     public virtual SubProjectFinancialYear? SubProjectFinancialYear { get; set; }
 
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// الموعد الابتدائي للمرحلة. null للمراحل المسجَّلة قبل إضافة الحقل، وللمراحل التلقائية
+    /// التي لم يتوفر لها تاريخ بداية حقيقي بعد (التسليم الأولي قبل تسليم الأرضية).
+    /// </summary>
+    public DateTime? StartDate { get; set; }
+
     public DateTime? Deadline { get; set; }
 
     /// <summary>
@@ -27,6 +34,13 @@ public class ExecutionStage
     /// Deadline تكون null طالما لم تُسلَّم الأرضية بعد (لا يوجد تاريخ حقيقي يُحسب منه).
     /// </summary>
     public bool IsFinalDelivery { get; set; }
+
+    /// <summary>
+    /// مرحلة الدفعة المقدمة المُدارة تلقائيًا — تُنشأ عند تأكيد صرف الدفعة المقدمة في العقد والترسية.
+    /// صفٌّ للعرض فقط: مصدر الحقيقة لقيمتها وتاريخها وإثبات صرفها هو <see cref="ContractAward"/>،
+    /// لذلك تُستبعَد قيمها من أي مجموع مراحل حتى لا تُحتسب الدفعة مرتين.
+    /// </summary>
+    public bool IsAdvancePayment { get; set; }
 
     public decimal SelfFundingSpent { get; set; }
     public decimal BankFundingSpent { get; set; }

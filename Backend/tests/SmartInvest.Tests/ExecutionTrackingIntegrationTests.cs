@@ -117,6 +117,34 @@ public class ExecutionTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task Financial_progress_percent_is_based_on_contract_value()
+    {
+        await using var context = CreateContext();
+        // المخطط 1000 (بنكي) وقيمة العقد 800 — المنصرف 1000 على المرحلة الفعلية.
+        var seeded = await SeedExecutionAsync(context, stageCompleted: true);
+        var assignment = await context.Set<ProjectAssignment>().FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        assignment.ContractValue = 800m;
+        await context.SaveChangesAsync();
+
+        var project = await context.SubProjects
+            .Include(x => x.MainProject)
+            .Include(x => x.Status)
+            .FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        var repository = new Mock<ISubProjectRepository>();
+        repository.Setup(x => x.SearchAsync(
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(((IReadOnlyList<SubProject>)[project], 1));
+        var service = CreateService(context, repository.Object);
+
+        var result = await service.GetFollowUpListAsync(seeded.YearId, null, null, null, null, null);
+
+        // 1000 / 800 = 125% — وليس 100% المحسوبة على الإجمالي المخطط
+        Assert.Equal(125m, Assert.Single(result).FinancialProgressPercent);
+    }
+
+    [Fact]
     public async Task View_only_role_fails_follow_up_write_policy()
     {
         var services = new ServiceCollection();
@@ -152,6 +180,7 @@ public class ExecutionTrackingIntegrationTests
         {
             FinancialYearId = seeded.YearId,
             Name = "مرحلة تختبر سقف الصرف",
+            StartDate = DateTime.UtcNow.Date,
             Deadline = DateTime.UtcNow.Date.AddDays(5),
             BankFundingSpent = 112_000m,
             BankFundingProofFile = File("bank-proof.pdf"),
@@ -159,6 +188,138 @@ public class ExecutionTrackingIntegrationTests
         }));
 
         Assert.Contains("يتجاوز الحد المسموح", ex.Message);
+    }
+
+    [Fact]
+    public async Task Stage_deadline_before_start_date_is_rejected()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 0m, contractValue: 100_000m);
+        var service = CreateService(context);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة بتواريخ معكوسة",
+            StartDate = DateTime.UtcNow.Date.AddDays(10),
+            Deadline = DateTime.UtcNow.Date.AddDays(3),
+        }));
+
+        Assert.Contains("لا يمكن أن يسبق الموعد الابتدائي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Stage_start_date_is_required_on_create()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 0m, contractValue: 100_000m);
+        var service = CreateService(context);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة بلا بداية",
+            Deadline = DateTime.UtcNow.Date.AddDays(3),
+        }));
+
+        Assert.Contains("الموعد الابتدائي", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_payment_stage_is_created_from_award_and_counted_once()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionAsync(context, stageCompleted: true);
+        var paymentDate = DateTime.UtcNow.Date.AddDays(-30);
+        var award = await context.ContractAwards.FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        award.AdvancePaymentDone = true;
+        award.AdvancePaymentPercentage = 25m;
+        award.AdvancePaymentBankAmount = 200m;
+        award.AdvancePaymentSelfAmount = 0m;
+        award.AdvancePaymentDate = paymentDate;
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var stages = await service.GetBySubProjectAsync(seeded.ProjectId, seeded.YearId);
+
+        var advance = Assert.Single(stages, x => x.IsAdvancePayment);
+        Assert.Equal(200m, advance.BankFundingSpent);
+        Assert.Equal(paymentDate, advance.StartDate);
+        Assert.Equal(paymentDate, advance.Deadline);
+        Assert.True(advance.IsCompleted);
+
+        // 1000 من المرحلة الفعلية + 200 دفعة مقدمة — مرة واحدة لا مرتين
+        var eligibility = await service.GetCompletionEligibilityAsync(seeded.ProjectId, seeded.YearId);
+        Assert.Equal(1200m, eligibility.TotalSpent);
+        Assert.Equal(200m, eligibility.AdvancePaymentTotal);
+        Assert.Equal(100m, eligibility.PhysicalProgressTotal);
+    }
+
+    [Fact]
+    public async Task Advance_payment_stage_starts_at_contract_date_and_ends_at_payment_date()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionAsync(context, stageCompleted: true);
+        var contractDate = DateTime.UtcNow.Date.AddDays(-60);
+        var paymentDate = DateTime.UtcNow.Date.AddDays(-45);
+        var assignment = await context.Set<ProjectAssignment>().FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        assignment.ContractDate = contractDate;
+        var award = await context.ContractAwards.FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        award.AdvancePaymentDone = true;
+        award.AdvancePaymentBankAmount = 200m;
+        award.AdvancePaymentDate = paymentDate;
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var stages = await service.GetBySubProjectAsync(seeded.ProjectId, seeded.YearId);
+
+        var advance = Assert.Single(stages, x => x.IsAdvancePayment);
+        Assert.Equal(contractDate, advance.StartDate);
+        Assert.Equal(paymentDate, advance.Deadline);
+    }
+
+    [Fact]
+    public async Task Advance_payment_stage_falls_back_to_contract_date_when_payment_date_is_missing()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionAsync(context, stageCompleted: true);
+        var contractDate = DateTime.UtcNow.Date.AddDays(-60);
+        var assignment = await context.Set<ProjectAssignment>().FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        assignment.ContractDate = contractDate;
+        var award = await context.ContractAwards.FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        award.AdvancePaymentDone = true;
+        award.AdvancePaymentBankAmount = 200m;
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        var stages = await service.GetBySubProjectAsync(seeded.ProjectId, seeded.YearId);
+
+        var advance = Assert.Single(stages, x => x.IsAdvancePayment);
+        Assert.Equal(contractDate, advance.StartDate);
+        Assert.Equal(contractDate, advance.Deadline);
+    }
+
+    [Fact]
+    public async Task Advance_payment_stage_is_removed_when_award_payment_is_undone()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionAsync(context, stageCompleted: true);
+        var award = await context.ContractAwards.FirstAsync(x => x.SubProjectId == seeded.ProjectId);
+        award.AdvancePaymentDone = true;
+        award.AdvancePaymentBankAmount = 200m;
+        award.AdvancePaymentDate = DateTime.UtcNow.Date;
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+        await service.SyncAdvancePaymentStageAsync(seeded.ProjectId);
+        Assert.True(await context.ExecutionStages.AnyAsync(x => x.IsAdvancePayment));
+
+        award.AdvancePaymentDone = false;
+        await context.SaveChangesAsync();
+        await service.SyncAdvancePaymentStageAsync(seeded.ProjectId);
+
+        Assert.False(await context.ExecutionStages.AnyAsync(x => x.IsAdvancePayment));
     }
 
     private static AppDbContext CreateContext() => new(

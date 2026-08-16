@@ -37,6 +37,9 @@ namespace SmartInvest.Domain.Entities
         [Column(TypeName = "decimal(18,2)")]
         public decimal? AdvancePaymentBankAmount { get; set; }
 
+        /// <summary>تاريخ صرف الدفعة المقدمة فعليًا — يظهر كموعد مرحلة الدفعة المقدمة في متابعة المشروعات.</summary>
+        public DateTime? AdvancePaymentDate { get; set; }
+
         // ===== مدة التنفيذ وتسليم الأرضية =====
 
         /// <summary>الحد الأقصى لمدة التنفيذ — الشهور.</summary>

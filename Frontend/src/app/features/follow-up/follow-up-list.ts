@@ -9,7 +9,7 @@ import { FinancialService } from '../../core/services/financial.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ExecutionStage, FollowUpListItem } from '../../core/models/follow-up.models';
 import { FinancialYear } from '../../core/models/project.models';
-import { formatEgpAsThousands } from '../../core/utils/budget.util';
+import { egpToThousands, formatEgpAsThousands, thousandsToEgp } from '../../core/utils/budget.util';
 
 @Component({
   selector: 'app-follow-up-list',
@@ -122,7 +122,9 @@ export class FollowUpList implements OnInit {
   protected readonly stageError = signal<string | null>(null);
 
   protected readonly newStageName = signal('');
+  protected readonly newStageStartDate = signal('');
   protected readonly newStageDeadline = signal('');
+  /** قيم الصرف في الشاشة بالألف جنيه — تُحوَّل إلى الجنيه مرة واحدة عند الإرسال فقط. */
   protected readonly newStageSelfSpent = signal(0);
   protected readonly newStageBankSpent = signal(0);
   protected readonly newStageProgress = signal(0);
@@ -211,6 +213,7 @@ export class FollowUpList implements OnInit {
   protected openAddStage(): void {
     this.editingStage.set(null);
     this.newStageName.set('');
+    this.newStageStartDate.set('');
     this.newStageDeadline.set('');
     this.newStageSelfSpent.set(0);
     this.newStageBankSpent.set(0);
@@ -229,15 +232,20 @@ export class FollowUpList implements OnInit {
   }
 
   protected openEditStage(stage: ExecutionStage): void {
+    if (stage.isAdvancePayment) {
+      this.toast.error('مرحلة الدفعة المقدمة تُدار من مرحلة العقد والترسية');
+      return;
+    }
     if (stage.isCompleted) {
       this.toast.error('يجب إعادة فتح المرحلة المكتملة قبل تعديلها');
       return;
     }
     this.editingStage.set(stage);
     this.newStageName.set(stage.name);
+    this.newStageStartDate.set(stage.startDate?.slice(0, 10) ?? '');
     this.newStageDeadline.set(stage.deadline?.slice(0, 10) ?? '');
-    this.newStageSelfSpent.set(stage.selfFundingSpent);
-    this.newStageBankSpent.set(stage.bankFundingSpent);
+    this.newStageSelfSpent.set(egpToThousands(stage.selfFundingSpent) ?? 0);
+    this.newStageBankSpent.set(egpToThousands(stage.bankFundingSpent) ?? 0);
     this.newStageProgress.set(stage.physicalProgressPercent);
     this.newStageNotes.set(stage.notes ?? '');
     this.newStageSelfFile = null;
@@ -265,8 +273,22 @@ export class FollowUpList implements OnInit {
     if (!item || financialYearId == null || this.savingStage()) return;
 
     const editing = this.editingStage();
-    if ((!editing?.isFinalDelivery && !this.newStageName().trim()) || (!editing?.isFinalDelivery && !this.newStageDeadline())) {
+    if (!editing?.isFinalDelivery && (!this.newStageName().trim() || !this.newStageDeadline())) {
       this.stageError.set('اسم المرحلة والموعد النهائي مطلوبان');
+      return;
+    }
+    // المرحلة الجديدة تُلزم بموعد ابتدائي؛ المراحل القديمة قبل إضافة الحقل تبقى قابلة للتعديل بدونه.
+    if (!editing && !this.newStageStartDate()) {
+      this.stageError.set('الموعد الابتدائي للمرحلة مطلوب');
+      return;
+    }
+    if (
+      !editing?.isFinalDelivery &&
+      this.newStageStartDate() &&
+      this.newStageDeadline() &&
+      this.newStageDeadline() < this.newStageStartDate()
+    ) {
+      this.stageError.set('الموعد النهائي لا يمكن أن يسبق الموعد الابتدائي للمرحلة');
       return;
     }
 
@@ -275,9 +297,11 @@ export class FollowUpList implements OnInit {
 
     const payload = {
         name: this.newStageName().trim(),
+        startDate: this.newStageStartDate(),
         deadline: this.newStageDeadline(),
-        selfFundingSpent: this.newStageSelfSpent(),
-        bankFundingSpent: this.newStageBankSpent(),
+        // الشاشة بالألف جنيه والـ API بالجنيه — التحويل هنا فقط، مرة واحدة.
+        selfFundingSpent: thousandsToEgp(this.newStageSelfSpent()),
+        bankFundingSpent: thousandsToEgp(this.newStageBankSpent()),
         physicalProgressPercent: this.newStageProgress(),
         notes: this.newStageNotes(),
         selfFundingProof: this.newStageSelfFile,
@@ -396,7 +420,8 @@ export class FollowUpList implements OnInit {
 
   protected startEditPenalty(stage: ExecutionStage): void {
     this.editingPenaltyStageId.set(stage.id);
-    this.penaltyAmountDraft.set(stage.penaltyAmount);
+    // الغرامة تُعرض بالألف جنيه في الجدول، فيُحرَّر الحقل بنفس الوحدة ويُحوَّل عند الحفظ.
+    this.penaltyAmountDraft.set(egpToThousands(stage.penaltyAmount));
     this.penaltyPaidDraft.set(stage.penaltyPaid);
   }
 
@@ -413,8 +438,15 @@ export class FollowUpList implements OnInit {
     const financialYearId = this.selectedYearId();
     if (!item || financialYearId == null || this.savingPenalty()) return;
     this.savingPenalty.set(true);
+    const draft = this.penaltyAmountDraft();
     this.followUp
-      .setPenalty(item.subProjectId, stage.id, financialYearId, this.penaltyAmountDraft(), this.penaltyPaidDraft())
+      .setPenalty(
+        item.subProjectId,
+        stage.id,
+        financialYearId,
+        draft == null ? null : thousandsToEgp(draft),
+        this.penaltyPaidDraft(),
+      )
       .subscribe({
         next: () => {
           this.savingPenalty.set(false);
@@ -450,6 +482,16 @@ export class FollowUpList implements OnInit {
 
   protected thousandsLabel(value: number | null | undefined): string {
     return formatEgpAsThousands(value);
+  }
+
+  /** رقم مجرد بالألف جنيه — للخلايا التي تحمل وحدتها في رأس العمود، فلا تتكرر «ألف ج.م» في كل صف. */
+  protected thousandsNumber(value: number | null | undefined): string {
+    return (egpToThousands(value) ?? 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+  }
+
+  /** مرحلة تلقائية لا تُعدَّل من هذه الشاشة (الدفعة المقدمة أو التسليم الأولي). */
+  protected isManagedStage(stage: ExecutionStage): boolean {
+    return stage.isAdvancePayment || stage.isFinalDelivery;
   }
 
   protected overdue(item: FollowUpListItem): boolean {
