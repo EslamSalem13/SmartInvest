@@ -12,6 +12,7 @@ namespace SmartInvest.Infrastructure.Services;
 /// </summary>
 public class DashboardService : IDashboardService
 {
+    /// <summary>يُنشأ خدمة لوحة التحكم.</summary>
     private readonly AppDbContext _context;
 
     public DashboardService(AppDbContext context)
