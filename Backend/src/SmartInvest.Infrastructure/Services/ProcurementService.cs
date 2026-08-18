@@ -3,6 +3,7 @@ using SmartInvest.Application.Common;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
+using SmartInvest.Application.Services;
 using SmartInvest.Domain.Common;
 using SmartInvest.Domain.Entities;
 using SmartInvest.Domain.Enums;
@@ -352,15 +353,21 @@ public class ProcurementService : IProcurementService
             .Select(x => new { x.SelfFunding, x.BankFunding })
             .FirstAsync(cancellationToken);
 
-        if (dto.AdvancePaymentSelfAmount > funding.SelfFunding)
+        // إن كانت قيمة العقد المُدخلة الآن أقل من الإجمالي المخطط، يُخصم الفرق أولًا من التمويل
+        // الذاتي ثم البنكي (ProjectFundingPolicy) قبل التحقق من سقف الدفعة المقدمة لكل مصدر -
+        // نفس القاعدة المستخدَمة لحساب "المتبقي" في متابعة المشروعات، مصدر واحد لا يتكرر.
+        var (adjustedSelfFunding, adjustedBankFunding) = ProjectFundingPolicy.ApplyContractSavings(
+            funding.SelfFunding, funding.BankFunding, funding.SelfFunding + funding.BankFunding, dto.ContractValue);
+
+        if (dto.AdvancePaymentSelfAmount > adjustedSelfFunding)
         {
             throw new BusinessRuleException(
-                $"الجزء المصروف من التمويل الذاتي ({dto.AdvancePaymentSelfAmount:N2} ج.م) يتجاوز التمويل الذاتي المخطط للمشروع ({funding.SelfFunding:N2} ج.م)");
+                $"الجزء المصروف من التمويل الذاتي ({dto.AdvancePaymentSelfAmount:N2} ج.م) يتجاوز التمويل الذاتي المتاح للمشروع ({adjustedSelfFunding:N2} ج.م)");
         }
-        if (dto.AdvancePaymentBankAmount > funding.BankFunding)
+        if (dto.AdvancePaymentBankAmount > adjustedBankFunding)
         {
             throw new BusinessRuleException(
-                $"الجزء المصروف من التمويل البنكي ({dto.AdvancePaymentBankAmount:N2} ج.م) يتجاوز التمويل البنكي المخطط للمشروع ({funding.BankFunding:N2} ج.م)");
+                $"الجزء المصروف من التمويل البنكي ({dto.AdvancePaymentBankAmount:N2} ج.م) يتجاوز التمويل البنكي المتاح للمشروع ({adjustedBankFunding:N2} ج.م)");
         }
 
         doc.AdvancePaymentDone = dto.AdvancePaymentDone;
@@ -1079,14 +1086,19 @@ public class ProcurementService : IProcurementService
             return $"مجموع المصروف ذاتيًا وبنكيًا يجب أن يساوي قيمة الدفعة المقدمة ({expected:N2} ج.م)";
         }
 
-        if (self > project.SelfFunding)
+        // نفس توزيع فرق العقد المستخدَم في متابعة المشروعات (ProjectFundingPolicy) - إن كانت قيمة
+        // العقد أقل من الإجمالي المخطط، المتاح الفعلي لكل مصدر أقل من مخططه الأصلي.
+        var (adjustedSelfFunding, adjustedBankFunding) = ProjectFundingPolicy.ApplyContractSavings(
+            project.SelfFunding, project.BankFunding, totalCost, contractValue);
+
+        if (self > adjustedSelfFunding)
         {
-            return $"المصروف من التمويل الذاتي يتجاوز المتاح ({project.SelfFunding:N2} ج.م)";
+            return $"المصروف من التمويل الذاتي يتجاوز المتاح ({adjustedSelfFunding:N2} ج.م)";
         }
 
-        if (bank > project.BankFunding)
+        if (bank > adjustedBankFunding)
         {
-            return $"المصروف من التمويل البنكي يتجاوز المتاح ({project.BankFunding:N2} ج.م)";
+            return $"المصروف من التمويل البنكي يتجاوز المتاح ({adjustedBankFunding:N2} ج.م)";
         }
 
         var latestHasProof = await db.ContractAwardVersions.AsNoTracking()

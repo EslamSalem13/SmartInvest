@@ -335,8 +335,10 @@ public sealed class ContractAwardReworkTests
             SiteHandoverMode = (int)SiteHandoverMode.Pending,
             AdvancePaymentDone = true,
             AdvancePaymentPercentage = 10m,
-            AdvancePaymentSelfAmount = 1_000m,
-            AdvancePaymentBankAmount = 5_000m, // 10% من قيمة العقد 60,000 = 6,000
+            // فرق العقد عن الإجمالي المخطط (100,000-60,000=40,000) يستهلك التمويل الذاتي كاملًا
+            // (10,000) عبر ProjectFundingPolicy، فلا يتبقى تمويل ذاتي متاح - الدفعة بالكامل من البنكي.
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 6_000m, // 10% من قيمة العقد 60,000 = 6,000
         });
 
         // لم يُرفَع أي شيء بعد على advance-payment-proof — لولا هذا الاستدعاء تفشل SetCompletionAsync أدناه
@@ -422,8 +424,10 @@ public sealed class ContractAwardReworkTests
             SiteHandoverMode = (int)SiteHandoverMode.Pending,
             AdvancePaymentDone = true,
             AdvancePaymentPercentage = 10m,
-            AdvancePaymentSelfAmount = 1_000m,
-            AdvancePaymentBankAmount = 5_000m,
+            // فرق العقد عن الإجمالي المخطط (100,000-60,000=40,000) يستهلك التمويل الذاتي كاملًا
+            // (10,000) عبر ProjectFundingPolicy، فلا يتبقى تمويل ذاتي متاح - الدفعة بالكامل من البنكي.
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 6_000m,
         });
         await service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf"));
 
@@ -453,8 +457,11 @@ public sealed class ContractAwardReworkTests
             SiteHandoverMode = (int)SiteHandoverMode.Pending,
             AdvancePaymentDone = true,
             AdvancePaymentPercentage = 10m,
-            AdvancePaymentSelfAmount = 4_000m,
-            AdvancePaymentBankAmount = 6_000m,
+            // فرق العقد عن الإجمالي المخطط يستهلك التمويل الذاتي كاملًا هنا (ProjectFundingPolicy) -
+            // كل الـ10,000 (الخاطئة عمدًا) من البنكي، فلا يصطدم بسقف التمويل الذاتي قبل الوصول
+            // لفحص المجموع المقصود اختباره أدناه.
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 10_000m,
         });
         await service.SetAdvancePaymentProofAsync(project.SubProjectId, File("advance-proof.pdf"));
 

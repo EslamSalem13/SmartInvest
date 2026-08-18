@@ -410,6 +410,12 @@ public class ExecutionStageService : IExecutionStageService
             var advanceSelfSpent = award?.AdvancePaymentDone == true ? award.AdvancePaymentSelfAmount : 0m;
             var advanceBankSpent = award?.AdvancePaymentDone == true ? award.AdvancePaymentBankAmount : 0m;
 
+            // إن كانت قيمة العقد أقل من الإجمالي المخطط، يُخصم الفرق أولًا من التمويل الذاتي ثم
+            // البنكي (ProjectFundingPolicy) قبل حساب "المتبقي" - فلا يظل المتبقي معروضًا وكأن
+            // الميزانية الأصلية كاملة متاحة رغم أن العقد أوفر منها فعليًا.
+            var (adjustedSelfFunding, adjustedBankFunding) = ProjectFundingPolicy.ApplyContractSavings(
+                s.SelfFunding, s.BankFunding, s.TotalCost, award?.ContractValue);
+
             contractorNameByProject.TryGetValue(s.SubProjectId, out var contractorName);
             var eligibility = ProjectCompletionPolicy.Evaluate(new ProjectCompletionFacts(
                 s.ExecutionCompletedAt != null || s.Status.StatusName == "منتهي",
@@ -437,8 +443,8 @@ public class ExecutionStageService : IExecutionStageService
                 PhysicalProgressPercent = physicalTotal,
                 NextDeadline = nextDeadline,
                 StageCount = stages.Count,
-                RemainingSelfFunding = s.SelfFunding - stageSelfSpent - advanceSelfSpent,
-                RemainingBankFunding = s.BankFunding - stageBankSpent - advanceBankSpent,
+                RemainingSelfFunding = adjustedSelfFunding - stageSelfSpent - advanceSelfSpent,
+                RemainingBankFunding = adjustedBankFunding - stageBankSpent - advanceBankSpent,
                 CompletionEligibility = eligibility,
             };
         }).ToList();
