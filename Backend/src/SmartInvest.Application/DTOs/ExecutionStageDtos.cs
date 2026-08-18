@@ -92,6 +92,12 @@ public class FollowUpListItemDto
     public decimal PhysicalProgressPercent { get; set; }
     public DateTime? NextDeadline { get; set; }
     public int StageCount { get; set; }
+
+    /// <summary>المتبقي من التمويل الذاتي = التمويل الذاتي الإجمالي − (منصرف مراحل التنفيذ + الدفعة المقدمة) من هذا المصدر.</summary>
+    public decimal RemainingSelfFunding { get; set; }
+
+    /// <summary>المتبقي من التمويل البنكي — نفس منطق RemainingSelfFunding لكن للمصدر البنكي.</summary>
+    public decimal RemainingBankFunding { get; set; }
     public ProjectCompletionEligibilityDto CompletionEligibility { get; set; } = new();
 }
 

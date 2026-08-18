@@ -272,12 +272,22 @@
             <div class="si-fld">
               <label>مصروف ذاتي</label>
               <input type="number" min="0" [ngModel]="newStageSelfSpent()" (ngModelChange)="newStageSelfSpent.set($event)" />
-              <span class="hint">بالألف جنيه</span>
+              <div class="hint hint-row">
+                <span>بالألف جنيه</span>
+                @if (remainingSelfPreview() !== null) {
+                  <span class="tnum" [class.warn]="remainingSelfPreview()! < 0">المتبقي: {{ thousandsLabel(remainingSelfPreview()) }}</span>
+                }
+              </div>
             </div>
             <div class="si-fld">
               <label>مصروف بنكي</label>
               <input type="number" min="0" [ngModel]="newStageBankSpent()" (ngModelChange)="newStageBankSpent.set($event)" />
-              <span class="hint">بالألف جنيه</span>
+              <div class="hint hint-row">
+                <span>بالألف جنيه</span>
+                @if (remainingBankPreview() !== null) {
+                  <span class="tnum" [class.warn]="remainingBankPreview()! < 0">المتبقي: {{ thousandsLabel(remainingBankPreview()) }}</span>
+                }
+              </div>
             </div>
             <div class="si-fld">
               <label>إثبات الصرف الذاتي</label>

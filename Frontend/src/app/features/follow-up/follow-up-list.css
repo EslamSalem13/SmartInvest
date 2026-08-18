@@ -231,6 +231,9 @@ td.notes { color: var(--muted); max-width: 240px; }
 .warn-chip { background: var(--bad-bg); color: var(--bad); margin-inline-start: 8px; }
 .tnum.warn { color: var(--bad); font-weight: 700; }
 
+/* يضع "بالألف جنيه" و"المتبقي" على نفس السطر تحت الحقل، مع دفع "المتبقي" لأقصى الشمال */
+.hint-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+
 /* رابط تنزيل ملف إثبات — نفس نمط .file-lnk في financial.css */
 .file-lnk { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); font-weight: 700; font-size: 12.5px; border-radius: var(--radius-sm); padding: 2px 7px; margin-inline-start: 6px; font-family: inherit; cursor: pointer; transition: background var(--dur-fast) var(--ease); }
 .file-lnk:hover { background: var(--ok-bg); }

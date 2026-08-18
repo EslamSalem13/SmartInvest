@@ -9,6 +9,10 @@ export interface FollowUpListItem {
   physicalProgressPercent: number;
   nextDeadline: string | null;
   stageCount: number;
+  /** المتبقي من التمويل الذاتي (ج.م كامل) = التمويل الذاتي الإجمالي − منصرف مراحل التنفيذ − الدفعة المقدمة من هذا المصدر. */
+  remainingSelfFunding: number;
+  /** المتبقي من التمويل البنكي — نفس منطق remainingSelfFunding لكن للمصدر البنكي. */
+  remainingBankFunding: number;
   completionEligibility: ProjectCompletionEligibility;
 }
 

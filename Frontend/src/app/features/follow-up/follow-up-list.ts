@@ -133,6 +133,28 @@ export class FollowUpList implements OnInit {
   protected newStageBankFile: File | null = null;
   protected newStageProgressFile: File | null = null;
 
+  /**
+   * المتبقي الحي من كل مصدر تمويل أثناء تعبئة النموذج — يبدأ من snapshot القائمة (selectedItem)
+   * الذي يحسبه الخادم فعليًا، ثم يُعدَّل محليًا: عند التعديل يُعاد مبلغ المرحلة الأصلي (لأنه محسوب
+   * ضمن "منصرف حتى الآن" في الـ snapshot ولا يجب خصمه من نفسه)، ثم يُطرح المبلغ المكتوب حاليًا في
+   * النموذج. كله بالجنيه الكامل داخليًا، ويُحوَّل للألف فقط عند العرض (thousandsLabel) - بلا تحويل مزدوج.
+   */
+  protected readonly remainingSelfPreview = computed<number | null>(() => {
+    const item = this.selectedItem();
+    if (!item) return null;
+    const editing = this.editingStage();
+    const baseline = item.remainingSelfFunding + (editing ? editing.selfFundingSpent : 0);
+    return baseline - thousandsToEgp(this.newStageSelfSpent());
+  });
+
+  protected readonly remainingBankPreview = computed<number | null>(() => {
+    const item = this.selectedItem();
+    if (!item) return null;
+    const editing = this.editingStage();
+    const baseline = item.remainingBankFunding + (editing ? editing.bankFundingSpent : 0);
+    return baseline - thousandsToEgp(this.newStageBankSpent());
+  });
+
   protected onSelectStages(item: FollowUpListItem): void {
     this.openStages(item);
     this.loadStages(item.subProjectId);

@@ -402,14 +402,22 @@ public class ExecutionStageService : IExecutionStageService
                 .OrderBy(x => x.Deadline)
                 .FirstOrDefault()?.Deadline;
 
+            // نفس مكوّنات "منصرف مراحل التنفيذ + الدفعة المقدمة" أعلاه (advanceSpent)، مقسومة على
+            // مصدرها بدل الإجمالي المشترك - تُستخدم أدناه لحساب المتبقي لكل مصدر تمويل على حدة،
+            // وتُمرَّر أيضًا لنفس Evaluate تحت بدل تكرار جمعها من جديد.
+            var stageSelfSpent = stages.Where(x => !x.IsAdvancePayment).Sum(x => x.SelfFundingSpent);
+            var stageBankSpent = stages.Where(x => !x.IsAdvancePayment).Sum(x => x.BankFundingSpent);
+            var advanceSelfSpent = award?.AdvancePaymentDone == true ? award.AdvancePaymentSelfAmount : 0m;
+            var advanceBankSpent = award?.AdvancePaymentDone == true ? award.AdvancePaymentBankAmount : 0m;
+
             contractorNameByProject.TryGetValue(s.SubProjectId, out var contractorName);
             var eligibility = ProjectCompletionPolicy.Evaluate(new ProjectCompletionFacts(
                 s.ExecutionCompletedAt != null || s.Status.StatusName == "منتهي",
                 award?.IsCompleted == true,
                 award?.ContractValue,
                 s.OverrunPercentage ?? 0,
-                stages.Where(x => !x.IsAdvancePayment).Sum(x => x.SelfFundingSpent),
-                stages.Where(x => !x.IsAdvancePayment).Sum(x => x.BankFundingSpent),
+                stageSelfSpent,
+                stageBankSpent,
                 award?.AdvancePaymentDone == true,
                 award?.AdvancePaymentSelfAmount ?? 0,
                 award?.AdvancePaymentBankAmount ?? 0,
@@ -429,6 +437,8 @@ public class ExecutionStageService : IExecutionStageService
                 PhysicalProgressPercent = physicalTotal,
                 NextDeadline = nextDeadline,
                 StageCount = stages.Count,
+                RemainingSelfFunding = s.SelfFunding - stageSelfSpent - advanceSelfSpent,
+                RemainingBankFunding = s.BankFunding - stageBankSpent - advanceBankSpent,
                 CompletionEligibility = eligibility,
             };
         }).ToList();
