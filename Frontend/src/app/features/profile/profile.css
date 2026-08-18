@@ -230,7 +230,29 @@
 
 @media (max-width: 900px) {
   .profile-page {
-    padding-top: 78px;
+    padding: 82px 16px 44px;
+  }
+  .profile-head {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 18px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .profile-head .eyebrow {
+    display: block;
+    margin-bottom: 2px;
+    line-height: 1.5;
+  }
+  .profile-head h1 {
+    font-size: 27px;
+    line-height: 1.3;
+  }
+  .profile-head p {
+    line-height: 1.7;
   }
   .profile-grid {
     grid-template-columns: 1fr;
@@ -242,7 +264,10 @@
 
 @media (max-width: 620px) {
   .profile-page {
-    padding-inline: 14px;
+    padding-inline: 12px;
+  }
+  .profile-head {
+    padding: 14px 16px;
   }
   .identity-card,
   .section-card {
