@@ -13,8 +13,11 @@ namespace SmartInvest.Infrastructure.Data.Configurations
         {
             builder.HasIndex(x => x.MainProjectCode);
 
-            builder.Property(x => x.IsApproved)
-           .HasDefaultValue(true);
+            // لا تُضِف HasDefaultValue(true) هنا: أي إنشاء يمرّر IsApproved = false صراحةً
+            // (القيمة الافتراضية لنوع bool في C#) يُعامله EF Core على أنه "لم يُحدَّد من التطبيق"
+            // ويترك عمود الإدراج فارغًا ليطبّق القاعدة الـ DEFAULT بدلًا منه - فيتحول كل مشروع رئيسي
+            // جديد غير مُعتمد (من استيراد خطة مقترحة أو إنشاء يدوي بلا كود) إلى "معتمد" في القاعدة
+            // رغم أن الكود صراحةً يضبطه false. راجع Migrations للتفاصيل.
         }
     }
 }

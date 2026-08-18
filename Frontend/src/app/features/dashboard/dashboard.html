@@ -28,7 +28,7 @@
   @if (loading() && !overview()) {
     <div class="skeletons">
       <div class="kpis">
-        @for (i of [1,2,3,4,5,6,7,8,9]; track i) { <div class="skeleton kpi-skel"></div> }
+        @for (i of [1,2,3,4,5,6,7,8,9,10]; track i) { <div class="skeleton kpi-skel"></div> }
       </div>
       <div class="charts-grid">
         @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="skeleton chart-skel"></div> }
@@ -92,6 +92,22 @@
         </div>
         <b class="val" [title]="data.projectMetrics.completedCount">{{ data.projectMetrics.completedCount }}</b>
         <span class="sub">مكتملة ضمن دورة السنة المختارة</span>
+      </a>
+
+      <a
+        class="kpi"
+        [class.ok]="data.financialMetrics.savings >= 0"
+        [class.bad]="data.financialMetrics.savings < 0"
+        [routerLink]="['/app/follow-up']"
+        [queryParams]="followUpQueryParams()"
+        aria-label="عرض المشروعات المكتملة في صفحة متابعة المشروعات"
+      >
+        <div class="kpi-top">
+          <span class="lab">الوفرة</span>
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h18M12 3v18" /></svg></span>
+        </div>
+        <b class="val" [title]="money(data.financialMetrics.savings) + ' ج.م'">{{ thousandsLabel(data.financialMetrics.savings) }}</b>
+        <span class="sub">{{ data.financialMetrics.savings >= 0 ? 'فائض' : 'عجز' }} من المشروعات المكتملة هذه السنة</span>
       </a>
 
       <a class="kpi gold" [routerLink]="['/app/projects']" [queryParams]="projectsQueryParams()" aria-label="عرض إجمالي التمويل في صفحة المشروعات">

@@ -165,6 +165,22 @@ public class DashboardService : IDashboardService
             AveragePhysicalProgress = averagePhysicalProgress,
         };
 
+        // الوفرة = مجموع (إجمالي المخطط − قيمة العقد) لكل مشروع فرعي مكتمل ضمن هذه السنة تحديدًا —
+        // نفس مجموعة completedProjectIds المستخدمة لبطاقة "المشروعات المكتملة" أعلاه (ExecutionCompletedAt
+        // + كل مراحل هذه السنة مكتملة + تنفيذ عيني 100%)، ونفس معادلة "وفرة" الموجودة بالفعل في مرحلة
+        // العقد والترسية (ProcurementService.GetContractAwardDetailsAsync) — بلا حد أدنى/أقصى هنا لأن
+        // القيمة قد تكون عجزًا (سالبة) لا فائضًا فقط.
+        var contractValueBySubProject = completedProjectIds.Count == 0
+            ? new Dictionary<int, decimal?>()
+            : await _context.ContractAwards.AsNoTracking()
+                .Where(a => completedProjectIds.Contains(a.SubProjectId))
+                .Select(a => new { a.SubProjectId, ContractValue = a.ProjectAssignment != null ? a.ProjectAssignment.ContractValue : null })
+                .ToDictionaryAsync(a => a.SubProjectId, a => a.ContractValue, cancellationToken);
+        var totalCostBySubProject = subProjects.ToDictionary(s => s.SubProjectId, s => s.BankFunding + s.SelfFunding);
+        var savings = completedProjectIds
+            .Where(id => contractValueBySubProject.TryGetValue(id, out var cv) && cv.HasValue)
+            .Sum(id => totalCostBySubProject[id] - contractValueBySubProject[id]!.Value);
+
         var bankFunding = subProjects.Sum(s => s.BankFunding);
         var selfFunding = subProjects.Sum(s => s.SelfFunding);
         var totalFunding = bankFunding + selfFunding;
@@ -194,6 +210,7 @@ public class DashboardService : IDashboardService
             SelfSpent = selfSpent,
             TotalSpent = totalSpent,
             SpentRateOfTotalFunding = spentRate,
+            Savings = savings,
         };
 
         var statusDistribution = new List<DashboardNamedValueDto>

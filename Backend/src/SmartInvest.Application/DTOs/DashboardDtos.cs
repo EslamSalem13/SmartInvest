@@ -51,6 +51,13 @@ public class DashboardFinancialMetricsDto
     public decimal SelfSpent { get; set; }
     public decimal TotalSpent { get; set; }
     public decimal SpentRateOfTotalFunding { get; set; }
+
+    /// <summary>
+    /// الوفرة: مجموع (إجمالي المخطط − قيمة العقد) لكل مشروع فرعي اكتمل تنفيذه ماليًا وعينيًا
+    /// ضمن هذه السنة المالية تحديدًا (نفس مجموعة CompletedCount أعلاه) — موجبة تعني فائضًا،
+    /// سالبة تعني عجزًا. لا تُحتسَب المشروعات غير المكتملة إطلاقًا.
+    /// </summary>
+    public decimal Savings { get; set; }
 }
 
 public class DashboardNamedValueDto

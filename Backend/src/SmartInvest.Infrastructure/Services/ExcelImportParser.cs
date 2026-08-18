@@ -29,6 +29,16 @@ public class ExcelImportParser : IExcelImportParser
 
     private static readonly string[] ExpectedHeaders = RequiredHeaders.Concat(OptionalHeaders).ToArray();
 
+    // Whether a "كود المشروع" cell is populated for every row / no row is exactly what decides
+    // ImportMode (Suggested vs Approved) below - and Approved mode auto-approves every project it
+    // touches. Letting the AI header-fallback guess these two columns risks mapping some unrelated
+    // always-filled column (e.g. a serial/row-number column) onto "كود المشروع", which would silently
+    // reclassify a genuine خطة مقترحة file as an approved plan and auto-approve its projects. These
+    // two must only ever be recognized by the deterministic diacritic-insensitive exact match; if
+    // that can't find them, leaving them unmapped (columns absent, codedCount stays 0) is the safe
+    // outcome - it just keeps the file correctly classified as Suggested.
+    private static readonly string[] AiFallbackExcludedHeaders = OptionalHeaders;
+
     // Real-world plan files are typed without tashkeel (e.g. "المكون العيني") even though
     // the reference header above carries a shadda ("المكوّن العيني") - matching is diacritic-
     // insensitive so a missing/extra harakah doesn't block recognizing the file's columns.
@@ -183,7 +193,9 @@ public class ExcelImportParser : IExcelImportParser
             return null;
         }
 
-        var stillUnmapped = ExpectedHeaders.Where(h => !bestMatches.ContainsKey(h)).ToList();
+        // AiFallbackExcludedHeaders (the code columns) are deliberately left out of what the AI is
+        // asked/allowed to resolve - see the field's comment for why a wrong guess there is unsafe.
+        var stillUnmapped = ExpectedHeaders.Where(h => !bestMatches.ContainsKey(h) && !AiFallbackExcludedHeaders.Contains(h)).ToList();
         _logger.LogWarning("Header row not fully recognized deterministically ({MatchedCount}/{ExpectedCount}) — falling back to AI header matching", bestMatches.Count, ExpectedHeaders.Length);
         var aiMapping = await ResolveHeadersWithAiAsync(bestUnmatchedCells.Select(c => c.Text).ToList(), stillUnmapped, cancellationToken);
         if (aiMapping == null)

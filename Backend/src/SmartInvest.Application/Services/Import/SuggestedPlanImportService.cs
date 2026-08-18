@@ -307,10 +307,28 @@ public class SuggestedPlanImportService
                     }
 
                     // Same duplicate guard as the main-project reuse above, one level down - a
-                    // sub-project with this exact name already under this main project (from an
-                    // earlier import of the same/overlapping file) is reused instead of duplicated.
-                    var existingSubProjects = await _subProjectRepository.FindByNameWithinMainProjectAsync(row.SubProjectName.Trim(), mainProject.MainProjectId, cancellationToken);
-                    subProject = existingSubProjects.Count == 1 ? existingSubProjects[0] : null;
+                    // sub-project with this exact name already under this main project is reused
+                    // instead of duplicated ONLY when it already belongs to THIS financial year
+                    // (i.e. this is a re-upload/correction of the same year's plan, same as the
+                    // main-project reuse above is meant to dedup). A same-named sub-project that
+                    // belongs to a DIFFERENT financial year is a separate project instance for
+                    // that year, not this one - reusing its row here would silently carry its
+                    // procurement documents/workflow state (e.g. مذكرة عرض, IsApproved) into a
+                    // year that never actually had any of that, since those all key off
+                    // SubProjectId alone. Give it a brand-new row instead so this year starts
+                    // clean; the other year's row and data are left completely untouched.
+                    var candidatesByName = await _subProjectRepository.FindByNameWithinMainProjectAsync(row.SubProjectName.Trim(), mainProject.MainProjectId, cancellationToken);
+                    subProject = null;
+                    foreach (var candidate in candidatesByName)
+                    {
+                        var linkedToThisYear = await _financialYearLinkRepository.FirstOrDefaultAsync(
+                            x => x.SubProjectId == candidate.SubProjectId && x.FinancialYearId == dto.FinancialYearId, cancellationToken);
+                        if (linkedToThisYear != null)
+                        {
+                            subProject = candidate;
+                            break;
+                        }
+                    }
 
                     if (subProject == null)
                     {

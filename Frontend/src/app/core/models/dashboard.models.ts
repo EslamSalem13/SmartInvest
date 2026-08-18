@@ -28,6 +28,8 @@ export interface DashboardFinancialMetrics {
   selfSpent: number;
   totalSpent: number;
   spentRateOfTotalFunding: number;
+  /** الوفرة: مجموع (إجمالي المخطط − قيمة العقد) للمشروعات المكتملة ضمن هذه السنة. موجبة = فائض، سالبة = عجز. */
+  savings: number;
 }
 
 export interface DashboardNamedValue {
