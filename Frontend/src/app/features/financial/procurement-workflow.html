@@ -330,7 +330,7 @@
                         </div>
                         <div class="si-fld">
                           <label>من التمويل الذاتي</label>
-                          <input type="number" [ngModel]="aAdvanceSelf()" (ngModelChange)="aAdvanceSelf.set($event)" [disabled]="!awardEditable()" />
+                          <input type="number" step="0.01" min="0" inputmode="decimal" [ngModel]="aAdvanceSelf()" (ngModelChange)="aAdvanceSelf.set($event)" [disabled]="!awardEditable()" />
                           <span class="hint">بالألف جنيه</span>
                           @if (aAdvanceSelfExceeds()) {
                             <span class="si-err">يتجاوز التمويل الذاتي المخطط ({{ thousandsLabel(aw.selfFunding) }})</span>
@@ -338,7 +338,7 @@
                         </div>
                         <div class="si-fld">
                           <label>من التمويل البنكي</label>
-                          <input type="number" [ngModel]="aAdvanceBank()" (ngModelChange)="aAdvanceBank.set($event)" [disabled]="!awardEditable()" />
+                          <input type="number" step="0.01" min="0" inputmode="decimal" [ngModel]="aAdvanceBank()" (ngModelChange)="aAdvanceBank.set($event)" [disabled]="!awardEditable()" />
                           <span class="hint">بالألف جنيه</span>
                           @if (aAdvanceBankExceeds()) {
                             <span class="si-err">يتجاوز التمويل البنكي المخطط ({{ thousandsLabel(aw.bankFunding) }})</span>
