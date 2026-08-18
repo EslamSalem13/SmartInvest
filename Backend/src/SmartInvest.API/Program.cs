@@ -8,10 +8,12 @@ using SmartInvest.Application.Common.Mappings;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// appsettings.Local.json حمّلها بآخر الترتيب فتغلب أي قيمة فارغة في appsettings.json — ملف
-// مش متتبّع بالـ git (.gitignore) عشان تحط فيه مفاتيح API الحقيقية وتغيّرها بسهولة بدون
-// أي أمر CLI. لو الملف مش موجود، التطبيق يشتغل عادي (optional: true).
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+// Development-only local secrets. Production uses environment variables and never loads
+// or publishes this untracked file.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+}
 
 // ---------------------------------------------------------------------------
 // Layer registrations (Onion composition root)
@@ -146,23 +148,38 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    const string superAdminEmail = "superadmin@gmail.com";
-    var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
-
-    if (superAdminUser == null)
+    var superAdminSeed = builder.Configuration.GetSection("Seed:SuperAdmin");
+    if (superAdminSeed.GetValue("Enabled", false))
     {
-        superAdminUser = new ApplicationUser
-        {
-            UserName = "superadmin",
-            Email = superAdminEmail,
-            FullName = "السوبر أدمن",
-            EmailConfirmed = true,
-            IsActive = true
-        };
+        var superAdminEmail = superAdminSeed["Email"];
+        var superAdminPassword = superAdminSeed["Password"];
 
-        var createResult = await userManager.CreateAsync(superAdminUser, "SuperAdmin@123");
-        if (createResult.Succeeded)
+        if (string.IsNullOrWhiteSpace(superAdminEmail) || string.IsNullOrWhiteSpace(superAdminPassword))
         {
+            throw new InvalidOperationException(
+                "SuperAdmin seed is enabled, but Seed:SuperAdmin:Email or Password is missing.");
+        }
+
+        var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
+
+        if (superAdminUser == null)
+        {
+            superAdminUser = new ApplicationUser
+            {
+                UserName = superAdminSeed["UserName"] ?? superAdminEmail.Split('@')[0],
+                Email = superAdminEmail,
+                FullName = superAdminSeed["FullName"] ?? "السوبر أدمن",
+                EmailConfirmed = true,
+                IsActive = true
+            };
+
+            var createResult = await userManager.CreateAsync(superAdminUser, superAdminPassword);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join("; ", createResult.Errors.Select(error => error.Description));
+                throw new InvalidOperationException($"Could not create the configured SuperAdmin seed: {errors}");
+            }
+
             await userManager.AddToRoleAsync(superAdminUser, Roles.SuperAdmin);
         }
     }
