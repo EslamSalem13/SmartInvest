@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   CreateExecutionStagePayload,
   ExecutionStage,
+  ExecutionTimeline,
   FollowUpFilters,
   FollowUpListItem,
   ProjectCompletionEligibility,
@@ -52,6 +53,11 @@ export class FollowUpService {
   updateStage(subProjectId: number, stageId: number, financialYearId: number, payload: CreateExecutionStagePayload): Observable<ExecutionStage> {
     const form = this.toStageForm(financialYearId, payload);
     return this.http.put<ExecutionStage>(`${this.base}/subprojects/${subProjectId}/execution-stages/${stageId}`, form);
+  }
+
+  /** خط زمني حياة المشروع الكامل — بلا financialYearId عمدًا، المخطط لا يتقيّد بسنة لوحة التحكم. */
+  getExecutionTimeline(subProjectId: number): Observable<ExecutionTimeline> {
+    return this.http.get<ExecutionTimeline>(`${this.base}/subprojects/${subProjectId}/execution-timeline`);
   }
 
   getCompletionEligibility(subProjectId: number, financialYearId: number): Observable<ProjectCompletionEligibility> {

@@ -135,6 +135,19 @@ public class ExecutionStageService : IExecutionStageService
                 $"إجمالي المصروف ({newTotalSpent:N2} ج.م) يتجاوز الحد المسموح ({allowedCeiling:N2} ج.م = التكلفة الإجمالية + نسبة التجاوز)");
         }
 
+        // سقف المشروع أعلاه (TotalCost × نسبة التجاوز) لا يكفي وحده — رقم خاص بهذا المشروع، بينما
+        // "المتاح" رصيد بنكي فعلي مشترك بين كل مشروعات السنة المالية. مشروع لم يتجاوز سقفه الخاص
+        // قد يطلب صرفًا بنكيًا لم يعد له غطاء فعلي من البنك.
+        if (dto.BankFundingSpent > 0)
+        {
+            var availableBank = await BankSpendCalculator.GetTotalAvailableAsync(_context, cycle.FinancialYearId, cancellationToken);
+            if (dto.BankFundingSpent > availableBank)
+            {
+                throw new BusinessRuleException(
+                    $"المصروف من التمويل البنكي ({dto.BankFundingSpent:N2} ج.م) يتجاوز المتاح الفعلي من البنك لهذه السنة المالية ({availableBank:N2} ج.م)");
+            }
+        }
+
         var stage = new ExecutionStage
         {
             SubProjectId = subProjectId,
@@ -193,6 +206,19 @@ public class ExecutionStageService : IExecutionStageService
         if (newTotal > allowedCeiling)
         {
             throw new BusinessRuleException($"إجمالي المنصرف ({newTotal:N2} ج.م) يتجاوز الحد المسموح ({allowedCeiling:N2} ج.م)");
+        }
+
+        // نفس تحقق "المتاح" المطبَّق في الإنشاء — يستبعد قيمة هذه المرحلة القديمة المخزَّنة حاليًا
+        // حتى لا تُحسب ضد قيمتها الجديدة المقترحة (وإلا فشل حتى إعادة حفظ نفس القيمة بلا تغيير).
+        if (dto.BankFundingSpent > 0)
+        {
+            var availableBank = await BankSpendCalculator.GetTotalAvailableAsync(
+                _context, dto.FinancialYearId, cancellationToken, excludeExecutionStageId: stageId);
+            if (dto.BankFundingSpent > availableBank)
+            {
+                throw new BusinessRuleException(
+                    $"المصروف من التمويل البنكي ({dto.BankFundingSpent:N2} ج.م) يتجاوز المتاح الفعلي من البنك لهذه السنة المالية ({availableBank:N2} ج.م)");
+            }
         }
 
         if (!stage.IsFinalDelivery)
@@ -455,6 +481,120 @@ public class ExecutionStageService : IExecutionStageService
     {
         var cycle = await GetCycleAsync(subProjectId, financialYearId, cancellationToken);
         return await BuildCompletionEligibilityAsync(subProjectId, cycle.SubProjectFinancialYearId, cancellationToken);
+    }
+
+    /// <summary>
+    /// خط زمني حياة المشروع الكامل لمخطط لوحة التحكم — انظر توثيق الواجهة. قاعدة تضمين المراحل
+    /// (استبعاد التسليم الأولي والدفعة المقدمة من التنفيذ العيني، واحتساب الدفعة المقدمة في الصرف
+    /// بتاريخها الخاص من العقد والترسية لا من صفها) تطابق عمدًا ProjectCompletionPolicy.Evaluate —
+    /// أي تعديل هناك يجب أن يُطبَّق هنا أيضًا حتى لا يتعارض المخطط مع شرط إكمال المشروع.
+    /// </summary>
+    public async Task<ExecutionTimelineDto> GetExecutionTimelineAsync(int subProjectId, CancellationToken cancellationToken = default)
+    {
+        var project = await _context.SubProjects.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new { x.SubProjectName, x.SubProjectCode, x.OverrunPercentage, x.BankFunding, x.SelfFunding })
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException($"المشروع الفرعي رقم {subProjectId} غير موجود");
+
+        var award = await _context.ContractAwards.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new
+            {
+                ContractValue = x.ProjectAssignment != null ? x.ProjectAssignment.ContractValue : null,
+                x.AdvancePaymentDone,
+                x.AdvancePaymentDate,
+                AdvanceSelf = x.AdvancePaymentSelfAmount ?? 0,
+                AdvanceBank = x.AdvancePaymentBankAmount ?? 0,
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var totalCost = project.BankFunding + project.SelfFunding;
+        var overrun = project.OverrunPercentage ?? 0;
+        var result = new ExecutionTimelineDto
+        {
+            SubProjectId = subProjectId,
+            SubProjectName = project.SubProjectName,
+            SubProjectCode = project.SubProjectCode,
+            TotalCost = totalCost,
+            OverrunPercentage = overrun,
+        };
+
+        // لا ترسية مكتملة بقيمة عقد صحيحة بعد — لا مقام صالح لنسبة الصرف ولا للسقفين، فتبقى النقاط فارغة.
+        if (award?.ContractValue is not > 0m)
+        {
+            return result;
+        }
+
+        var contractValue = award.ContractValue.Value;
+        result.HasContractValue = true;
+        result.ContractValue = contractValue;
+        result.ContractValueCeilingPercent = 100m;
+        result.MaxAllowedCeilingPercent = totalCost * (1m + overrun / 100m) / contractValue * 100m;
+
+        // كل المراحل عبر كل الدورات المالية للمشروع — بلا قيد SubProjectFinancialYearId عمدًا،
+        // فالخط الزمني يغطي عمر المشروع كله لا سنة واحدة (انظر توثيق الواجهة).
+        var stages = await _context.ExecutionStages.AsNoTracking()
+            .Where(x => x.SubProjectId == subProjectId)
+            .Select(x => new
+            {
+                x.IsFinalDelivery,
+                x.IsAdvancePayment,
+                x.IsCompleted,
+                x.CompletedAt,
+                x.Name,
+                x.PhysicalProgressPercent,
+                x.SelfFundingSpent,
+                x.BankFundingSpent,
+            })
+            .ToListAsync(cancellationToken);
+
+        var actualStages = stages.Where(s => !s.IsFinalDelivery && !s.IsAdvancePayment).ToList();
+
+        var events = new List<(DateTime Date, string Label, decimal Progress, decimal Spend)>();
+        foreach (var stage in actualStages.Where(s => s.IsCompleted))
+        {
+            events.Add((stage.CompletedAt!.Value, stage.Name, stage.PhysicalProgressPercent, stage.SelfFundingSpent + stage.BankFundingSpent));
+        }
+        if (award.AdvancePaymentDone && award.AdvancePaymentDate is DateTime advanceDate)
+        {
+            events.Add((advanceDate, "الدفعة المقدمة", 0m, award.AdvanceSelf + award.AdvanceBank));
+        }
+        events.Sort((a, b) => a.Date.CompareTo(b.Date));
+
+        var cumulativeProgress = 0m;
+        var cumulativeSpend = 0m;
+        foreach (var e in events)
+        {
+            cumulativeProgress += e.Progress;
+            cumulativeSpend += e.Spend;
+            result.Points.Add(new ExecutionTimelinePointDto
+            {
+                Date = e.Date,
+                Label = e.Label,
+                CumulativeProgressPercent = cumulativeProgress,
+                CumulativeSpendPercent = cumulativeSpend / contractValue * 100m,
+            });
+        }
+
+        // المرحلة الجارية غير المكتملة (إن وُجدت) — نقطة "اليوم" الختامية بقيمها المحفوظة فعليًا حاليًا
+        // (لا أي قيمة غير محفوظة في نموذج تعديل مفتوح)، فوق آخر مجموع تراكمي، حتى يصل الخط إلى الآن
+        // بدل التوقف عند آخر مرحلة مكتملة فقط.
+        var openStages = actualStages.Where(s => !s.IsCompleted).ToList();
+        if (openStages.Count > 0)
+        {
+            var openProgress = openStages.Sum(s => s.PhysicalProgressPercent);
+            var openSpend = openStages.Sum(s => s.SelfFundingSpent + s.BankFundingSpent);
+            result.Points.Add(new ExecutionTimelinePointDto
+            {
+                Date = DateTime.UtcNow,
+                Label = "اليوم",
+                CumulativeProgressPercent = cumulativeProgress + openProgress,
+                CumulativeSpendPercent = (cumulativeSpend + openSpend) / contractValue * 100m,
+            });
+        }
+
+        return result;
     }
 
     public async Task<ProjectCompletionEligibilityDto> CompleteExecutionAsync(

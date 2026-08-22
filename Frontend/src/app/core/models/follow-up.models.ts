@@ -85,3 +85,27 @@ export interface FollowUpFilters {
   priorityId?: number | null;
   searchTerm?: string | null;
 }
+
+/** خط زمني حياة المشروع الكامل (كل السنوات المالية) — لمخطط "تطور التنفيذ" بلوحة التحكم. */
+export interface ExecutionTimeline {
+  subProjectId: number;
+  subProjectName: string;
+  subProjectCode: string | null;
+  /** false = لا توجد ترسية مكتملة بقيمة عقد صحيحة بعد — points فارغة والسقوف null. */
+  hasContractValue: boolean;
+  contractValue: number | null;
+  totalCost: number;
+  overrunPercentage: number;
+  /** = 100 دائمًا عند hasContractValue. */
+  contractValueCeilingPercent: number | null;
+  maxAllowedCeilingPercent: number | null;
+  points: ExecutionTimelinePoint[];
+}
+
+export interface ExecutionTimelinePoint {
+  date: string;
+  /** اسم المرحلة، أو "الدفعة المقدمة"، أو "اليوم". */
+  label: string;
+  cumulativeProgressPercent: number;
+  cumulativeSpendPercent: number;
+}
