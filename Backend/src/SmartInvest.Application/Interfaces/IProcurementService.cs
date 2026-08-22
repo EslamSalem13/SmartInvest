@@ -9,7 +9,9 @@ namespace SmartInvest.Application.Interfaces;
 /// </summary>
 public interface IProcurementService
 {
-    Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default);
+    /// <param name="excludeMemoId">استبعاد مذكرة عرض بعينها من فحص التعارض (مكتملة/جارية) — تُستخدم عند
+    /// تعديل مذكرة قائمة حتى لا تُعتبر المذكرة نفسها تعارضًا مع مشروعاتها.</param>
+    Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, int? excludeMemoId = null, CancellationToken cancellationToken = default);
 
     Task<ProcurementOverviewDto> GetOverviewAsync(int subProjectId, CancellationToken cancellationToken = default);
 

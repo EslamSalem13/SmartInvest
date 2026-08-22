@@ -1,3 +1,4 @@
+using SmartInvest.Application.Common;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
@@ -171,8 +172,8 @@ public class SuggestedPlanImportService
             cancellationToken);
         var mainProjectGroups = GroupByMainProject(file.Rows, dto.MainProjectCodeResolutions);
         var neededSubProgramPairs = mainProjectGroups
-            .Where(g => mainProgramIdByName.ContainsKey(g.MainProgramName))
-            .Select(g => (MainProgramId: mainProgramIdByName[g.MainProgramName], SubProgramName: g.Rows[0].SubProgramName.Trim()))
+            .Where(g => mainProgramIdByName.ContainsKey(ArabicTextNormalizer.Normalize(g.MainProgramName)))
+            .Select(g => (MainProgramId: mainProgramIdByName[ArabicTextNormalizer.Normalize(g.MainProgramName)], SubProgramName: g.Rows[0].SubProgramName.Trim()))
             .Distinct()
             .ToList();
         var subProgramIdByName = await ResolveSubProgramAsync(dto.SubProgramResolutions, neededSubProgramPairs, cancellationToken);
@@ -203,7 +204,7 @@ public class SuggestedPlanImportService
 
         foreach (var group in mainProjectGroups)
         {
-            if (!mainProgramIdByName.TryGetValue(group.MainProgramName, out var mainProgramId))
+            if (!mainProgramIdByName.TryGetValue(ArabicTextNormalizer.Normalize(group.MainProgramName), out var mainProgramId))
             {
                 foreach (var row in group.Rows)
                 {
@@ -213,7 +214,8 @@ public class SuggestedPlanImportService
             }
 
             var subProgramName = group.Rows[0].SubProgramName.Trim();
-            if (!subProgramIdByName.TryGetValue((mainProgramId, subProgramName), out var subProgramId))
+            var normalizedSubProgramName = ArabicTextNormalizer.Normalize(subProgramName);
+            if (!subProgramIdByName.TryGetValue((mainProgramId, normalizedSubProgramName), out var subProgramId))
             {
                 // The name may already exist under a different main program - sub-program names
                 // aren't globally unique, but the preview's "unresolved names" check only flags a
@@ -223,7 +225,7 @@ public class SuggestedPlanImportService
                 var createdSubProgram = await _lookupService.CreateSubProgramAsync(
                     new CreateSubProgramDto { Name = subProgramName, MainProgramId = mainProgramId }, cancellationToken);
                 subProgramId = createdSubProgram.Id;
-                subProgramIdByName[(mainProgramId, subProgramName)] = subProgramId;
+                subProgramIdByName[(mainProgramId, normalizedSubProgramName)] = subProgramId;
             }
 
             MainProject? mainProject = null;
@@ -281,27 +283,27 @@ public class SuggestedPlanImportService
                 var subProjectCreatedHere = false;
                 try
                 {
-                    if (!markazIdByName.TryGetValue(row.MarkazName.Trim(), out var markazId))
+                    if (!markazIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.MarkazName), out var markazId))
                     {
                         throw new BusinessRuleException($"المركز «{row.MarkazName}» غير محلول");
                     }
 
-                    if (!agencyIdByName.TryGetValue(row.ExecutiveAgencyName.Trim(), out var agencyId))
+                    if (!agencyIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.ExecutiveAgencyName), out var agencyId))
                     {
                         throw new BusinessRuleException($"الجهة المنفذة «{row.ExecutiveAgencyName}» غير محلولة");
                     }
 
-                    if (!projectLevelIdByName.TryGetValue(row.ProjectLevelName.Trim(), out var projectLevelId))
+                    if (!projectLevelIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.ProjectLevelName), out var projectLevelId))
                     {
                         throw new BusinessRuleException($"مستوى المشروع «{row.ProjectLevelName}» غير محلول");
                     }
 
-                    if (!componentTypeIdByName.TryGetValue(row.ComponentTypeName.Trim(), out var componentTypeId))
+                    if (!componentTypeIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.ComponentTypeName), out var componentTypeId))
                     {
                         throw new BusinessRuleException($"المكوّن العيني «{row.ComponentTypeName}» غير محلول");
                     }
 
-                    if (!accountingUnitIdByName.TryGetValue(row.AccountingUnitName.Trim(), out var accountingUnitId))
+                    if (!accountingUnitIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.AccountingUnitName), out var accountingUnitId))
                     {
                         throw new BusinessRuleException($"الوحدة الحسابية «{row.AccountingUnitName}» غير محلولة");
                     }
@@ -451,9 +453,16 @@ public class SuggestedPlanImportService
 
     private static List<UnresolvedNameDto> Unresolved(List<ParsedImportRow> rows, Func<ParsedImportRow, string> selector, HashSet<string> existingNames)
     {
+        // Diacritic/whitespace-normalized comparison - a name that already exists but differs from
+        // the file's spelling by a missing harakah or an extra internal space must not be flagged
+        // as unresolved (and, if left on "create new" during reconciliation, silently duplicated).
+        var normalizedExisting = existingNames
+            .Select(ArabicTextNormalizer.Normalize)
+            .ToHashSet();
+
         return rows
             .Select(r => selector(r).Trim())
-            .Where(name => !string.IsNullOrWhiteSpace(name) && !existingNames.Contains(name))
+            .Where(name => !string.IsNullOrWhiteSpace(name) && !normalizedExisting.Contains(ArabicTextNormalizer.Normalize(name)))
             .GroupBy(name => name)
             .Select(g => new UnresolvedNameDto { Name = g.Key, RowCount = g.Count() })
             .ToList();
@@ -531,18 +540,19 @@ public class SuggestedPlanImportService
         var governorateId = governorates[0].GovernorateId;
 
         var existing = await _markazRepository.GetAllAsync(cancellationToken);
-        var result = existing.ToDictionary(x => x.MarkazName, x => x.MarkazId);
+        var result = existing.ToDictionary(x => ArabicTextNormalizer.Normalize(x.MarkazName), x => x.MarkazId);
 
         foreach (var resolution in resolutions.Where(r => r.CreateNew))
         {
             var name = resolution.Name.Trim();
-            if (result.ContainsKey(name))
+            var normalized = ArabicTextNormalizer.Normalize(name);
+            if (result.ContainsKey(normalized))
             {
                 continue;
             }
 
             var created = await _lookupService.CreateMarkazAsync(new CreateMarkazDto { Name = name, GovernorateId = governorateId }, cancellationToken);
-            result[name] = created.Id;
+            result[normalized] = created.Id;
         }
 
         foreach (var resolution in resolutions.Where(r => !r.CreateNew && r.ExistingId.HasValue))
@@ -550,7 +560,7 @@ public class SuggestedPlanImportService
             var match = existing.FirstOrDefault(x => x.MarkazId == resolution.ExistingId!.Value);
             if (match != null)
             {
-                result[resolution.Name.Trim()] = match.MarkazId;
+                result[ArabicTextNormalizer.Normalize(resolution.Name)] = match.MarkazId;
             }
         }
 
@@ -561,22 +571,26 @@ public class SuggestedPlanImportService
         List<ImportResolutionDto> resolutions, List<(int MainProgramId, string SubProgramName)> neededPairs, CancellationToken cancellationToken)
     {
         var existing = await _subProgramRepository.GetAllAsync(cancellationToken);
-        var result = existing.ToDictionary(x => (x.ProgramId, x.SubProgramName), x => x.SubProgramId);
+        var result = existing.ToDictionary(x => (x.ProgramId, ArabicTextNormalizer.Normalize(x.SubProgramName)), x => x.SubProgramId);
+        // neededPairs' SubProgramName values are compared against normalized names below, so
+        // normalize once here too rather than re-normalizing inside every loop iteration.
+        string NormalizedPairName((int MainProgramId, string SubProgramName) p) => ArabicTextNormalizer.Normalize(p.SubProgramName);
 
         foreach (var resolution in resolutions.Where(r => r.CreateNew))
         {
             var name = resolution.Name.Trim();
+            var normalizedName = ArabicTextNormalizer.Normalize(name);
             // Only create under the main program(s) this import file actually pairs this
             // sub-program name with - not every main program in the database (that used to
             // fan out one duplicate sub-program row per unrelated existing main program).
-            foreach (var mainProgramId in neededPairs.Where(p => p.SubProgramName == name).Select(p => p.MainProgramId).Distinct())
+            foreach (var mainProgramId in neededPairs.Where(p => NormalizedPairName(p) == normalizedName).Select(p => p.MainProgramId).Distinct())
             {
-                if (result.ContainsKey((mainProgramId, name)))
+                if (result.ContainsKey((mainProgramId, normalizedName)))
                 {
                     continue;
                 }
                 var created = await _lookupService.CreateSubProgramAsync(new CreateSubProgramDto { Name = name, MainProgramId = mainProgramId }, cancellationToken);
-                result[(mainProgramId, name)] = created.Id;
+                result[(mainProgramId, normalizedName)] = created.Id;
             }
         }
 
@@ -587,20 +601,20 @@ public class SuggestedPlanImportService
             {
                 continue;
             }
-            var name = resolution.Name.Trim();
+            var normalizedName = ArabicTextNormalizer.Normalize(resolution.Name);
             // Staff explicitly chose to map this unresolved name to an existing sub-program
             // regardless of that sub-program's own parent main program - key the mapping by
             // every main program this file's rows actually need it under (falling back to the
             // match's own parent if the file happens not to reference any group needing it,
             // e.g. all rows for that name were rejected earlier for an unrelated reason).
-            var targetProgramIds = neededPairs.Where(p => p.SubProgramName == name).Select(p => p.MainProgramId).Distinct().ToList();
+            var targetProgramIds = neededPairs.Where(p => NormalizedPairName(p) == normalizedName).Select(p => p.MainProgramId).Distinct().ToList();
             if (targetProgramIds.Count == 0)
             {
                 targetProgramIds.Add(match.ProgramId);
             }
             foreach (var mainProgramId in targetProgramIds)
             {
-                result[(mainProgramId, name)] = match.SubProgramId;
+                result[(mainProgramId, normalizedName)] = match.SubProgramId;
             }
         }
 
@@ -617,20 +631,25 @@ public class SuggestedPlanImportService
         where T : class
     {
         var existing = await repository.GetAllAsync(cancellationToken);
+        // Keyed by normalized name so a row-application lookup by the file's own (also normalized)
+        // text finds an existing record even when the two spellings differ by diacritics/whitespace.
         var result = new Dictionary<string, int>();
         foreach (var item in existing)
         {
-            result[nameSelector(item)] = idSelector(item);
+            result[ArabicTextNormalizer.Normalize(nameSelector(item))] = idSelector(item);
         }
 
         foreach (var resolution in resolutions.Where(r => r.CreateNew))
         {
             var name = resolution.Name.Trim();
-            if (result.ContainsKey(name))
+            var normalized = ArabicTextNormalizer.Normalize(name);
+            if (result.ContainsKey(normalized))
             {
                 continue;
             }
-            result[name] = await createNew(name);
+            // The newly-created record keeps the user's original spelling (with diacritics) -
+            // normalization is for matching only, never for what gets persisted.
+            result[normalized] = await createNew(name);
         }
 
         foreach (var resolution in resolutions.Where(r => !r.CreateNew && r.ExistingId.HasValue))
@@ -638,7 +657,7 @@ public class SuggestedPlanImportService
             var match = existing.FirstOrDefault(x => idSelector(x) == resolution.ExistingId!.Value);
             if (match != null)
             {
-                result[resolution.Name.Trim()] = resolution.ExistingId!.Value;
+                result[ArabicTextNormalizer.Normalize(resolution.Name)] = resolution.ExistingId!.Value;
             }
         }
 

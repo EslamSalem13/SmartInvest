@@ -20,10 +20,17 @@ export class FinancialService {
   private readonly base = environment.apiUrl;
 
   // ===== مراحل الطرح =====
-  getSubProjects(financialYearId?: number | null): Observable<ProcurementSubProjectListItem[]> {
+  /** excludeMemoId: استبعاد مذكرة عرض من فحص التعارض — تُمرَّر عند تعديل مذكرة قائمة. */
+  getSubProjects(
+    financialYearId?: number | null,
+    excludeMemoId?: number | null,
+  ): Observable<ProcurementSubProjectListItem[]> {
     const params: Record<string, number> = {};
     if (financialYearId != null) {
       params['financialYearId'] = financialYearId;
+    }
+    if (excludeMemoId != null) {
+      params['excludeMemoId'] = excludeMemoId;
     }
     return this.http.get<ProcurementSubProjectListItem[]>(`${this.base}/procurement/subprojects`, { params });
   }

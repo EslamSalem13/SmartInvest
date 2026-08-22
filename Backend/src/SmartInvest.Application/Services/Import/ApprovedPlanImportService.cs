@@ -1,3 +1,4 @@
+using SmartInvest.Application.Common;
 using SmartInvest.Application.Common.Exceptions;
 using SmartInvest.Application.DTOs;
 using SmartInvest.Application.Interfaces;
@@ -203,25 +204,32 @@ public class ApprovedPlanImportService
             ?? throw new BusinessRuleException("أولوية «منخفضة» الافتراضية غير موجودة في قاعدة البيانات");
         var runningStatusId = (await _statusRepository.FirstOrDefaultAsync(x => x.StatusName == "قيد التنفيذ", cancellationToken))?.StatusId
             ?? throw new BusinessRuleException("حالة «قيد التنفيذ» الافتراضية غير موجودة في قاعدة البيانات");
-        var unspecifiedProjectLevelId = (await _projectLevelRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
-            ?? throw new BusinessRuleException("مستوى «غير محدد» الافتراضي غير موجود في قاعدة البيانات");
-        var unspecifiedComponentTypeId = (await _componentTypeRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
-            ?? throw new BusinessRuleException("مكوّن عيني «غير محدد» الافتراضي غير موجود في قاعدة البيانات");
-        var unspecifiedAccountingUnitId = (await _accountingUnitRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken))?.Id
-            ?? throw new BusinessRuleException("وحدة حسابية «غير محدد» الافتراضية غير موجودة في قاعدة البيانات");
+        // These three "غير محدد" sentinels were originally seeded once by a data migration
+        // (20260730215742_AddComponentTypeProjectLevelAccountingUnitTables), not by LookupSeeder -
+        // unlike Governorate/MainProgram/ProjectPriority/ProjectStatus above, nothing recreates them
+        // if the tables are ever emptied outside a from-scratch migration replay (e.g. a data reset
+        // between test cycles). Self-heal instead of hard-failing every approved-mode import until
+        // someone notices and manually re-inserts the row.
+        var unspecifiedProjectLevelId = await GetOrCreateUnspecifiedProjectLevelIdAsync(cancellationToken);
+        var unspecifiedComponentTypeId = await GetOrCreateUnspecifiedComponentTypeIdAsync(cancellationToken);
+        var unspecifiedAccountingUnitId = await GetOrCreateUnspecifiedAccountingUnitIdAsync(cancellationToken);
 
         // A new SubProject needs a Markaz/SubProgram even when the row's own values don't match an
         // existing record (this mode has no per-row reconciliation for these two, unlike suggested
         // mode). Resolve by exact name from the row first; only fall back to an arbitrary existing
         // record - never a fabricated "unspecified" one, since neither table seeds such a sentinel.
+        // All five dictionaries below are keyed by diacritic/whitespace-normalized name (not raw
+        // .Trim()'d text) - a name that already exists but differs from the file's spelling by a
+        // missing harakah or an extra internal space must still resolve to the existing record,
+        // not silently fall through to the fallback/"غير محدد" sentinel or a fresh duplicate.
         var allMarkaz = await _markazRepository.GetAllAsync(cancellationToken);
-        var markazIdByName = allMarkaz.ToDictionary(x => x.MarkazName.Trim(), x => x.MarkazId);
+        var markazIdByName = allMarkaz.ToDictionary(x => ArabicTextNormalizer.Normalize(x.MarkazName), x => x.MarkazId);
         var fallbackMarkazId = allMarkaz.FirstOrDefault()?.MarkazId
             ?? throw new BusinessRuleException("لا يوجد أي مركز في قاعدة البيانات");
 
         var allSubPrograms = await _subProgramRepository.GetAllAsync(cancellationToken);
         var subProgramIdByName = allSubPrograms
-            .GroupBy(x => x.SubProgramName.Trim())
+            .GroupBy(x => ArabicTextNormalizer.Normalize(x.SubProgramName))
             .ToDictionary(g => g.Key, g => g.First().SubProgramId);
         var fallbackSubProgramId = allSubPrograms.FirstOrDefault()?.SubProgramId
             ?? throw new BusinessRuleException("لا يوجد أي برنامج فرعي في قاعدة البيانات لإنشاء مشروع رئيسي جديد عليه");
@@ -231,13 +239,13 @@ public class ApprovedPlanImportService
         // instead of always landing on "غير محدد". Unlike Markaz/SubProgram these three lookups DO
         // seed a real "غير محدد" sentinel, so that's the fallback (ExecutiveAgency has none - stays null).
         var projectLevelIdByName = (await _projectLevelRepository.GetAllAsync(cancellationToken))
-            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+            .GroupBy(x => ArabicTextNormalizer.Normalize(x.Name)).ToDictionary(g => g.Key, g => g.First().Id);
         var componentTypeIdByName = (await _componentTypeRepository.GetAllAsync(cancellationToken))
-            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+            .GroupBy(x => ArabicTextNormalizer.Normalize(x.Name)).ToDictionary(g => g.Key, g => g.First().Id);
         var accountingUnitIdByName = (await _accountingUnitRepository.GetAllAsync(cancellationToken))
-            .GroupBy(x => x.Name.Trim()).ToDictionary(g => g.Key, g => g.First().Id);
+            .GroupBy(x => ArabicTextNormalizer.Normalize(x.Name)).ToDictionary(g => g.Key, g => g.First().Id);
         var agencyIdByName = (await _agencyRepository.GetAllAsync(cancellationToken))
-            .GroupBy(x => x.AgencyName.Trim()).ToDictionary(g => g.Key, g => g.First().ExecutiveAgencyId);
+            .GroupBy(x => ArabicTextNormalizer.Normalize(x.AgencyName)).ToDictionary(g => g.Key, g => g.First().ExecutiveAgencyId);
 
         var result = new ImportCommitResultDto { Mode = "Approved" };
         var approvedSubProjectIds = new List<int>();
@@ -301,7 +309,7 @@ public class ApprovedPlanImportService
                             MainProjectName = row.MainProjectName.Trim(),
                             MainProjectCode = string.IsNullOrWhiteSpace(row.MainProjectCode) ? null : row.MainProjectCode.Trim(),
                             ExecutingAgency = string.Empty,
-                            SubProgramId = subProgramIdByName.TryGetValue(row.SubProgramName.Trim(), out var resolvedSubProgramId)
+                            SubProgramId = subProgramIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.SubProgramName), out var resolvedSubProgramId)
                                 ? resolvedSubProgramId
                                 : fallbackSubProgramId,
                             IsApproved = true,
@@ -333,9 +341,9 @@ public class ApprovedPlanImportService
                         ProjectLevelId = resolvedProjectLevelId,
                         ComponentTypeId = resolvedComponentTypeId,
                         AccountingUnitId = resolvedAccountingUnitId,
-                        ExecutiveAgencyId = agencyIdByName.TryGetValue(row.ExecutiveAgencyName.Trim(), out var resolvedAgencyId) ? resolvedAgencyId : null,
+                        ExecutiveAgencyId = agencyIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.ExecutiveAgencyName), out var resolvedAgencyId) ? resolvedAgencyId : null,
                         ProjectNature = row.ProjectNature,
-                        MarkazId = markazIdByName.TryGetValue(row.MarkazName.Trim(), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
+                        MarkazId = markazIdByName.TryGetValue(ArabicTextNormalizer.Normalize(row.MarkazName), out var resolvedMarkazId) ? resolvedMarkazId : fallbackMarkazId,
                         PriorityId = defaultPriorityId,
                         StatusId = runningStatusId,
                         BankFunding = row.BankFunding,
@@ -508,6 +516,51 @@ public class ApprovedPlanImportService
         }
     }
 
+    /// <summary>يضمن وجود سجل «غير محدد» في مستويات المشروع، وينشئه إن لم يوجد بدل رفض الاستيراد كله.</summary>
+    private async Task<int> GetOrCreateUnspecifiedProjectLevelIdAsync(CancellationToken cancellationToken)
+    {
+        var existing = await _projectLevelRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken);
+        if (existing != null)
+        {
+            return existing.Id;
+        }
+
+        var created = new ProjectLevel { Name = "غير محدد" };
+        await _projectLevelRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return created.Id;
+    }
+
+    /// <summary>يضمن وجود سجل «غير محدد» في المكوّنات العينية، وينشئه إن لم يوجد بدل رفض الاستيراد كله.</summary>
+    private async Task<int> GetOrCreateUnspecifiedComponentTypeIdAsync(CancellationToken cancellationToken)
+    {
+        var existing = await _componentTypeRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken);
+        if (existing != null)
+        {
+            return existing.Id;
+        }
+
+        var created = new ComponentType { Name = "غير محدد" };
+        await _componentTypeRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return created.Id;
+    }
+
+    /// <summary>يضمن وجود سجل «غير محدد» في الوحدات الحسابية، وينشئه إن لم يوجد بدل رفض الاستيراد كله.</summary>
+    private async Task<int> GetOrCreateUnspecifiedAccountingUnitIdAsync(CancellationToken cancellationToken)
+    {
+        var existing = await _accountingUnitRepository.FirstOrDefaultAsync(x => x.Name == "غير محدد", cancellationToken);
+        if (existing != null)
+        {
+            return existing.Id;
+        }
+
+        var created = new AccountingUnit { Name = "غير محدد" };
+        await _accountingUnitRepository.AddAsync(created, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        return created.Id;
+    }
+
     /// <summary>
     /// يبحث عن مستوى مشروع بنفس الاسم، وإن لم يوجد ينشئه بدلًا من الرجوع لـ«غير محدد» -
     /// القيمة في الملف حقيقية، فليست حالة تستحق الإسقاط الصامت.
@@ -519,7 +572,8 @@ public class ApprovedPlanImportService
         {
             return fallbackId;
         }
-        if (idByName.TryGetValue(name, out var existingId))
+        var normalized = ArabicTextNormalizer.Normalize(name);
+        if (idByName.TryGetValue(normalized, out var existingId))
         {
             return existingId;
         }
@@ -527,7 +581,7 @@ public class ApprovedPlanImportService
         var created = new ProjectLevel { Name = name };
         await _projectLevelRepository.AddAsync(created, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        idByName[name] = created.Id;
+        idByName[normalized] = created.Id;
         return created.Id;
     }
 
@@ -538,7 +592,8 @@ public class ApprovedPlanImportService
         {
             return fallbackId;
         }
-        if (idByName.TryGetValue(name, out var existingId))
+        var normalized = ArabicTextNormalizer.Normalize(name);
+        if (idByName.TryGetValue(normalized, out var existingId))
         {
             return existingId;
         }
@@ -546,7 +601,7 @@ public class ApprovedPlanImportService
         var created = new ComponentType { Name = name };
         await _componentTypeRepository.AddAsync(created, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        idByName[name] = created.Id;
+        idByName[normalized] = created.Id;
         return created.Id;
     }
 
@@ -557,7 +612,8 @@ public class ApprovedPlanImportService
         {
             return fallbackId;
         }
-        if (idByName.TryGetValue(name, out var existingId))
+        var normalized = ArabicTextNormalizer.Normalize(name);
+        if (idByName.TryGetValue(normalized, out var existingId))
         {
             return existingId;
         }
@@ -565,7 +621,7 @@ public class ApprovedPlanImportService
         var created = new AccountingUnit { Name = name };
         await _accountingUnitRepository.AddAsync(created, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        idByName[name] = created.Id;
+        idByName[normalized] = created.Id;
         return created.Id;
     }
 

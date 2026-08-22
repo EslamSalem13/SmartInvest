@@ -280,6 +280,92 @@ public sealed class ContractAwardReworkTests
         Assert.Contains("التمويل البنكي", ex.Message);
     }
 
+    /// <summary>سقف التمويل البنكي المخطط للمشروع (funding.BankFunding) لا يكفي وحده — رقم خاص بهذا
+    /// المشروع، بينما "المتاح" رصيد بنكي فعلي مشترك بين كل مشروعات السنة المالية. هنا المبلغ (5,000)
+    /// يمر من سقف المشروع (90,000) لكنه يتجاوز المتاح الفعلي المستلم من البنك لهذه السنة (4,000 فقط).</summary>
+    [Fact]
+    public async Task Advance_bank_amount_within_planned_funding_but_above_available_balance_is_blocked()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(
+            context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m, availableBankAmount: 4_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 5_000m,
+        };
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.SetContractAwardDetailsAsync(project.SubProjectId, dto));
+
+        Assert.Contains("المتاح", ex.Message);
+    }
+
+    [Fact]
+    public async Task Advance_bank_amount_within_available_balance_is_accepted()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(
+            context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m, availableBankAmount: 5_000m);
+        await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, new SetContractAwardDetailsDto
+        {
+            AdvancePaymentDone = false,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 0m,
+            AdvancePaymentBankAmount = 5_000m,
+        });
+
+        var saved = await context.ContractAwards.AsNoTracking().FirstAsync(x => x.SubProjectId == project.SubProjectId);
+        Assert.Equal(5_000m, saved.AdvancePaymentBankAmount);
+    }
+
+    /// <summary>يثبّت الاستبعاد الذاتي: الترسية الحالية تستهلك "المتاح" بالكامل بالفعل (5,000 من 5,000) —
+    /// إعادة حفظ نموذج الترسية بنفس مبلغ الدفعة المقدمة (مع تعديل حقل آخر فقط) يجب ألا تُرفض بدعوى أنها
+    /// تستهلك المتاح مرتين.</summary>
+    [Fact]
+    public async Task Resaving_same_advance_bank_amount_does_not_double_count_against_available()
+    {
+        await using var context = CreateContext();
+        var project = await SeedProjectAsync(
+            context, projectNature: "مقاولات", selfFunding: 10_000m, bankFunding: 90_000m, availableBankAmount: 5_000m);
+        var (memo, contractor, _) = await SeedAwardPrereqsAsync(context, project.SubProjectId);
+        var service = CreateService(context);
+
+        var dto = new SetContractAwardDetailsDto
+        {
+            ContractorId = contractor.ContractorId,
+            ContractDate = DateTime.UtcNow.Date,
+            // = الإجمالي المخطط (10,000 + 90,000) بالضبط، بلا وفرة — لو أقل، ProjectFundingPolicy
+            // بتخصم الفرق من التمويل الذاتي أولًا (قاعدة منفصلة تمامًا عن "المتاح" اللي الاختبار ده
+            // بيثبّته)، فكانت هتُسقط adjustedSelfFunding لصفر وترفض AdvancePaymentSelfAmount بلا علاقة
+            // بموضوع الاختبار.
+            ContractValue = 100_000m,
+            ExecutionDurationMonths = 1,
+            SiteHandoverMode = (int)SiteHandoverMode.Pending,
+            AdvancePaymentDone = true,
+            AdvancePaymentPercentage = 10m,
+            AdvancePaymentSelfAmount = 1_000m,
+            AdvancePaymentBankAmount = 5_000m, // يستهلك كل "المتاح" (5,000) بالضبط
+        };
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, dto);
+
+        // إعادة الحفظ بنفس المبلغ بالضبط (كما لو عدّل المستخدم حقلًا آخر وأعاد الحفظ) — يجب ألا تُرفض.
+        dto.PenaltyAmount = 500m;
+        await service.SetContractAwardDetailsAsync(project.SubProjectId, dto);
+
+        var saved = await context.ContractAwards.AsNoTracking().FirstAsync(x => x.SubProjectId == project.SubProjectId);
+        Assert.Equal(5_000m, saved.AdvancePaymentBankAmount);
+        Assert.Equal(500m, saved.PenaltyAmount);
+    }
+
     [Fact]
     public async Task Advance_payment_proof_slot_is_hidden_from_contract_award_file_slots()
     {
@@ -531,9 +617,13 @@ public sealed class ContractAwardReworkTests
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options);
 
+    /// <summary>يربط المشروع بسنة مالية ويسجّل إتاحة بنكية سخية (10 مليون) لها — لا لاختبار "المتاح" نفسه
+    /// (اختبارات ذلك في BankFundingSpendGate)، بل حتى تبقى اختبارات هذا الملف (المبنية على قيم دفعة مقدمة
+    /// صغيرة نسبيًا) غير محظورة بالخطأ بعد إضافة تحقق "المتاح" في SetContractAwardDetailsAsync، الذي
+    /// يتطلب أصلًا أن يكون المشروع مرتبطًا بسنة مالية ليحدد إليها ينسب الدفعة.</summary>
     private static async Task<SubProject> SeedProjectAsync(
         AppDbContext context, decimal bankFunding, decimal selfFunding,
-        string projectNature = "توريدات", decimal? overrunPercentage = null)
+        string projectNature = "توريدات", decimal? overrunPercentage = null, decimal availableBankAmount = 10_000_000m)
     {
         var project = new SubProject
         {
@@ -546,6 +636,28 @@ public sealed class ContractAwardReworkTests
         };
         context.SubProjects.Add(project);
         await context.SaveChangesAsync();
+
+        var year = new FinancialYear
+        {
+            Name = "2026/2027",
+            StartDate = DateTime.UtcNow.Date.AddYears(-1),
+            EndDate = DateTime.UtcNow.Date.AddYears(1),
+        };
+        context.FinancialYears.Add(year);
+        await context.SaveChangesAsync();
+        context.Set<SubProjectFinancialYear>().Add(new SubProjectFinancialYear
+        {
+            SubProjectId = project.SubProjectId,
+            FinancialYearId = year.FinancialYearId,
+        });
+        context.BankAvailabilities.Add(new BankAvailability
+        {
+            FinancialYearId = year.FinancialYearId,
+            Amount = availableBankAmount,
+            ReceivedDate = DateTime.UtcNow.Date,
+        });
+        await context.SaveChangesAsync();
+
         return project;
     }
 

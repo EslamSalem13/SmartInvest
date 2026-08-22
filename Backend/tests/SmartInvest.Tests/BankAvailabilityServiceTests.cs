@@ -42,6 +42,24 @@ public class BankAvailabilityServiceTests
         Assert.Equal(50_000m, result.RemainingAvailable);
     }
 
+    /// <summary>سقف الإتاحات البنكية (TotalBankFunding) يُحتسب من المشروعات المعتمدة فقط — مشروع
+    /// مقترح لم يُعتمد بعد لا يجب أن يوسّع السقف المسموح للإتاحة رغم أنه مرتبط بنفس السنة المالية.</summary>
+    [Fact]
+    public async Task TotalBankFunding_excludes_unapproved_subprojects()
+    {
+        await using var context = CreateContext();
+        var year = await SeedYearAsync(context);
+
+        await SeedProjectAsync(context, year.FinancialYearId, bankFunding: 200_000m, selfFunding: 0m, isApproved: true);
+        await SeedProjectAsync(context, year.FinancialYearId, bankFunding: 500_000m, selfFunding: 0m, isApproved: false);
+
+        var service = CreateService(context);
+        var result = await service.GetForFinancialYearAsync(year.FinancialYearId);
+
+        // فقط المشروع المعتمد (200,000) — المقترح (500,000) خارج السقف تمامًا.
+        Assert.Equal(200_000m, result.TotalBankFunding);
+    }
+
     [Fact]
     public async Task TotalAvailable_ignores_spend_from_other_financial_years()
     {
@@ -209,14 +227,14 @@ public class BankAvailabilityServiceTests
     }
 
     private static async Task<SubProject> SeedProjectAsync(
-        AppDbContext context, int financialYearId, decimal bankFunding, decimal selfFunding)
+        AppDbContext context, int financialYearId, decimal bankFunding, decimal selfFunding, bool isApproved = true)
     {
         var status = new ProjectStatus { StatusName = "قيد التنفيذ" };
         var project = new SubProject
         {
             SubProjectName = "مشروع اختبار المتاح",
             ProjectNature = "مقاولات",
-            IsApproved = true,
+            IsApproved = isApproved,
             Status = status,
             BankFunding = bankFunding,
             SelfFunding = selfFunding,

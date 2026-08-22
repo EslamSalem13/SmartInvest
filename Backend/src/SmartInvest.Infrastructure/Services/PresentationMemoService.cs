@@ -44,6 +44,7 @@ public class PresentationMemoService : IPresentationMemoService
                         SubProjectId = x.SubProjectId,
                         SubProjectName = x.SubProject.SubProjectName,
                         SubProjectCode = x.SubProject.SubProjectCode,
+                        ProjectNature = x.SubProject.ProjectNature,
                     })
                     .ToList(),
             })
@@ -78,6 +79,7 @@ public class PresentationMemoService : IPresentationMemoService
                         SubProjectId = x.SubProjectId,
                         SubProjectName = x.SubProject.SubProjectName,
                         SubProjectCode = x.SubProject.SubProjectCode,
+                        ProjectNature = x.SubProject.ProjectNature,
                     })
                     .ToList(),
             })

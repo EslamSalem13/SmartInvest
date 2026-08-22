@@ -27,9 +27,10 @@ public class ProcurementController : ControllerBase
 
     /// <summary>قائمة المشروعات الفرعية مع ملخص تقدم التعاقدات.</summary>
     [HttpGet("api/procurement/subprojects")]
-    public async Task<ActionResult<IReadOnlyList<ProcurementSubProjectListItemDto>>> GetSubProjects([FromQuery] int? financialYearId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ProcurementSubProjectListItemDto>>> GetSubProjects(
+        [FromQuery] int? financialYearId, [FromQuery] int? excludeMemoId, CancellationToken cancellationToken)
     {
-        var result = await _procurementService.GetSubProjectsAsync(financialYearId, cancellationToken);
+        var result = await _procurementService.GetSubProjectsAsync(financialYearId, excludeMemoId, cancellationToken);
         return Ok(result);
     }
 

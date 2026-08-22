@@ -228,6 +228,16 @@ public class ProcurementSubProjectListItemDto
     /// <summary>نوع التعاقد المأخوذ من المذكرة الفعّالة.</summary>
     public int? ContractingMethod { get; set; }
     public string? ContractingMethodLabel { get; set; }
+
+    // ===== تنبيه تعارض عند الإضافة لمذكرة عرض جديدة/أخرى =====
+    // مستقل عن "الفعّالة" أعلاه: هنا نريد أي مذكرة مكتملة (بصرف النظر عن كونها الأحدث) وأي مذكرة
+    // جارية (بها إصدار واحد على الأقل ولم تُكتمل) — مذكرة بلا إصدارات لا تُعتبر "جارية".
+
+    public bool HasCompletedMemo { get; set; }
+    public string? CompletedMemoTitle { get; set; }
+
+    public bool HasInProgressMemo { get; set; }
+    public string? InProgressMemoTitle { get; set; }
 }
 
 public class UploadProcurementVersionDto

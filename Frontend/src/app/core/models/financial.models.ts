@@ -137,6 +137,12 @@ export interface ProcurementSubProjectListItem {
   activeMemoTitle: string | null;
   contractingMethod: number | null;
   contractingMethodLabel: string | null;
+  /** تعارض: مذكرة عرض مكتملة أخرى تغطي هذا المشروع بالفعل (بصرف النظر عن السنة المالية). */
+  hasCompletedMemo: boolean;
+  completedMemoTitle: string | null;
+  /** تعارض: مذكرة عرض جارية (بها إصدار واحد على الأقل، غير مكتملة) تغطي هذا المشروع بالفعل. */
+  hasInProgressMemo: boolean;
+  inProgressMemoTitle: string | null;
 }
 
 /** أسماء مراحل الطرح الست بالترتيب — الفهرس = عدد المراحل المكتملة قبلها */
@@ -155,6 +161,8 @@ export interface MemoSubProject {
   subProjectId: number;
   subProjectName: string;
   subProjectCode: string | null;
+  /** "مقاولات" أو "توريدات" — تصنيف عرض قائمة مذكرة العرض حسب نوع المشروع. */
+  projectNature: string | null;
 }
 
 export interface PresentationMemo {

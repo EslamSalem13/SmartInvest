@@ -7,11 +7,21 @@
     [attr.aria-label]="sidebarCollapsed() ? 'إظهار القائمة الجانبية' : 'إخفاء القائمة الجانبية'"
     [attr.aria-expanded]="!sidebarCollapsed()"
   >
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="m15 6-6 6 6 6" />
+    </svg>
   </button>
 
-  <button class="mobile-menu-btn" type="button" (click)="toggleMobileNav()" aria-label="فتح القائمة الجانبية" [attr.aria-expanded]="mobileNavOpen()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+  <button
+    class="mobile-menu-btn"
+    type="button"
+    (click)="toggleMobileNav()"
+    aria-label="فتح القائمة الجانبية"
+    [attr.aria-expanded]="mobileNavOpen()"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
   </button>
 
   @if (mobileNavOpen()) {
@@ -31,7 +41,12 @@
     <div class="sec">القائمة الرئيسية</div>
     <nav class="nav-list">
       @for (item of nav(); track item.route) {
-        <a class="nav" [routerLink]="item.route" routerLinkActive="active" (click)="closeMobileNav()">
+        <a
+          class="nav"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          (click)="closeMobileNav()"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
             <path [attr.d]="item.icon" />
           </svg>
@@ -46,7 +61,13 @@
       <app-theme-toggle />
     </div>
 
-    <a class="me" routerLink="/app/profile" routerLinkActive="profile-active" (click)="closeMobileNav()" aria-label="فتح الملف الشخصي">
+    <a
+      class="me"
+      routerLink="/app/profile"
+      routerLinkActive="profile-active"
+      (click)="closeMobileNav()"
+      aria-label="فتح الملف الشخصي"
+    >
       <span class="av si-avatar">
         @if (avatarUrl()) {
           <img [src]="avatarUrl()" alt="" />
@@ -58,7 +79,9 @@
         <b>{{ user()?.fullName }}</b>
         <span>{{ roleLabel() }}</span>
       </div>
-      <svg class="me-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" /></svg>
+      <svg class="me-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m9 18 6-6-6-6" />
+      </svg>
     </a>
     <button class="logout" (click)="logout()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

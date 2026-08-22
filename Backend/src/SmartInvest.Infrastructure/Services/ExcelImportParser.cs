@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
 using SmartInvest.Application.Common.Ai;
@@ -42,7 +41,6 @@ public class ExcelImportParser : IExcelImportParser
     // Real-world plan files are typed without tashkeel (e.g. "المكون العيني") even though
     // the reference header above carries a shadda ("المكوّن العيني") - matching is diacritic-
     // insensitive so a missing/extra harakah doesn't block recognizing the file's columns.
-    private static readonly Regex ArabicDiacritics = new("[ً-ٰٟۖ-ۭ]", RegexOptions.Compiled);
 
     private static readonly Dictionary<string, string> NormalizedToExpectedHeader =
         ExpectedHeaders.ToDictionary(Normalize, h => h);
@@ -56,7 +54,10 @@ public class ExcelImportParser : IExcelImportParser
         _logger = logger;
     }
 
-    private static string Normalize(string text) => ArabicDiacritics.Replace(text, string.Empty).Trim();
+    // Delegates to the shared Application-layer normalizer so header matching and row-value
+    // matching (agency/component-type/etc. in Suggested/ApprovedPlanImportService) use the
+    // exact same rule instead of two independently-maintained copies.
+    private static string Normalize(string text) => SmartInvest.Application.Common.ArabicTextNormalizer.Normalize(text);
 
     public async Task<ParsedImportFile> ParseAsync(Stream fileStream, CancellationToken cancellationToken = default)
     {

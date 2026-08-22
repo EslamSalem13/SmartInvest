@@ -94,11 +94,6 @@ public class BankAvailabilityService : IBankAvailabilityService
             throw new BusinessRuleException("قيمة الإتاحة يجب أن تكون أكبر من صفر");
         }
 
-        var today = DateTime.UtcNow.Date;
-        if (dto.ReceivedDate.Date > today)
-        {
-            throw new BusinessRuleException("تاريخ استلام الإتاحة لا يمكن أن يكون في المستقبل");
-        }
         if (dto.ReceivedDate.Date < year.StartDate.Date || dto.ReceivedDate.Date > year.EndDate.Date)
         {
             throw new BusinessRuleException("تاريخ استلام الإتاحة يجب أن يقع ضمن فترة السنة المالية");
@@ -199,11 +194,6 @@ public class BankAvailabilityService : IBankAvailabilityService
             throw new BusinessRuleException("قيمة الإتاحة يجب أن تكون أكبر من صفر");
         }
 
-        var today = DateTime.UtcNow.Date;
-        if (dto.ReceivedDate.Date > today)
-        {
-            throw new BusinessRuleException("تاريخ استلام الإتاحة لا يمكن أن يكون في المستقبل");
-        }
         if (dto.ReceivedDate.Date < year.StartDate.Date || dto.ReceivedDate.Date > year.EndDate.Date)
         {
             throw new BusinessRuleException("تاريخ استلام الإتاحة يجب أن يقع ضمن فترة السنة المالية");
@@ -346,10 +336,13 @@ public class BankAvailabilityService : IBankAvailabilityService
         return file;
     }
 
+    /// <summary>سقف الإتاحات البنكية لسنة مالية — مجموع التمويل البنكي المخطط للمشروعات
+    /// المعتمدة فقط. مشروع مقترح غير معتمد لا يُحسب ضمن السقف حتى لا يُتاح تمويل بنكي
+    /// لمشروع قد لا يُعتمد أصلًا.</summary>
     private async Task<decimal> GetTotalBankFundingAsync(int financialYearId, CancellationToken cancellationToken)
     {
         return await _context.SubProjects.AsNoTracking()
-            .Where(s => s.FinancialYears.Any(fy => fy.FinancialYearId == financialYearId))
+            .Where(s => s.IsApproved && s.FinancialYears.Any(fy => fy.FinancialYearId == financialYearId))
             .SumAsync(s => s.BankFunding, cancellationToken);
     }
 }

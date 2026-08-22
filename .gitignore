@@ -527,3 +527,7 @@ Thumbs.db
 
 # Local project documentation and graduation artifacts
 docs/
+
+# Full DB backups — large binaries, kept locally only. Small check/reset scripts
+# under db-backups/ (*.sql, *.txt) stay tracked; only the .bak dumps are excluded.
+Backend/db-backups/*.bak
