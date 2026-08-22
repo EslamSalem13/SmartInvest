@@ -23,12 +23,16 @@
         <b class="tnum">{{ kpiTotal() }}</b>
       </div>
       <div class="kpi">
-        <span>متعثرة</span>
-        <b class="tnum warn">{{ kpiStalled() }}</b>
+        <span>قيد التنفيذ</span>
+        <b class="tnum">{{ kpiInProgress() }}</b>
       </div>
       <div class="kpi">
         <span>متأخرة عن الموعد</span>
         <b class="tnum warn">{{ kpiOverdue() }}</b>
+      </div>
+      <div class="kpi">
+        <span>مكتملة</span>
+        <b class="tnum ok">{{ kpiCompleted() }}</b>
       </div>
     </div>
 
