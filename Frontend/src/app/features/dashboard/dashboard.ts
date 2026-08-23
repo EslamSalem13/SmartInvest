@@ -3,18 +3,21 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import * as echarts from 'echarts/core';
 import { BarChart, GaugeChart, LineChart, PieChart } from 'echarts/charts';
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, LegendComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import { LabelLayout } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { ComposeOption } from 'echarts/core';
 import type { BarSeriesOption, GaugeSeriesOption, LineSeriesOption, PieSeriesOption } from 'echarts/charts';
-import type { GridComponentOption, LegendComponentOption, TooltipComponentOption } from 'echarts/components';
+import type { GridComponentOption, LegendComponentOption, MarkLineComponentOption, TooltipComponentOption } from 'echarts/components';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { FinancialYearsService } from '../../core/services/financial-years.service';
+import { FollowUpService } from '../../core/services/follow-up.service';
+import { ProjectsService } from '../../core/services/projects.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { DashboardOverview } from '../../core/models/dashboard.models';
-import { FinancialYear } from '../../core/models/project.models';
+import { ExecutionTimeline } from '../../core/models/follow-up.models';
+import { FinancialYear, SubProjectListItem } from '../../core/models/project.models';
 import { egpToThousands, formatEgpAsThousands } from '../../core/utils/budget.util';
 
 // LabelLayout يلزم صراحةً مع الاستيراد الانتقائي من echarts/core حتى تتموضع تسميات
@@ -26,13 +29,15 @@ echarts.use([
   PieChart,
   GridComponent,
   LegendComponent,
+  MarkLineComponent,
   TooltipComponent,
   LabelLayout,
   CanvasRenderer,
 ]);
 
 type EChartsOption = ComposeOption<
-  BarSeriesOption | GaugeSeriesOption | LineSeriesOption | PieSeriesOption | GridComponentOption | LegendComponentOption | TooltipComponentOption
+  | BarSeriesOption | GaugeSeriesOption | LineSeriesOption | PieSeriesOption
+  | GridComponentOption | LegendComponentOption | MarkLineComponentOption | TooltipComponentOption
 >;
 
 const PALETTE = ['#1C7049', '#C79A3A', '#2E6FB0', '#DB4657', '#C98A12', '#269560', '#8A6512', '#15603F', '#B4872C', '#0F4A34'];
@@ -48,6 +53,8 @@ export class Dashboard implements OnDestroy {
   protected readonly auth = inject(AuthService);
   private readonly dashboardService = inject(DashboardService);
   private readonly financialYearsService = inject(FinancialYearsService);
+  private readonly followUpService = inject(FollowUpService);
+  private readonly projectsService = inject(ProjectsService);
   private readonly themeService = inject(ThemeService);
 
   protected readonly financialYears = signal<FinancialYear[]>([]);
@@ -82,6 +89,7 @@ export class Dashboard implements OnDestroy {
   @ViewChild('markazChart') markazChartEl?: ElementRef<HTMLDivElement>;
   @ViewChild('priorityChart') priorityChartEl?: ElementRef<HTMLDivElement>;
   @ViewChild('progressChart') progressChartEl?: ElementRef<HTMLDivElement>;
+  @ViewChild('executionTimelineChart') executionTimelineChartEl?: ElementRef<HTMLDivElement>;
 
   protected readonly hasFundingData = computed(() => (this.overview()?.financialMetrics.totalFunding ?? 0) > 0);
   protected readonly hasStatusData = computed(() => (this.overview()?.projectMetrics.totalSubProjects ?? 0) > 0);
@@ -93,12 +101,32 @@ export class Dashboard implements OnDestroy {
     (this.overview()?.charts.progressDistribution.reduce((a, x) => a + x.value, 0) ?? 0) > 0,
   );
 
+  // ===== مخطط "تطور التنفيذ" — لكل مشروع على حدة، مستقل عن السنة المختارة في لوحة التحكم =====
+  /** القائمة الكاملة لكل المشروعات الفرعية بلا تقييد سنة — مصدر بحث القائمة المنسدلة. تُجلب مرة واحدة. */
+  protected readonly chartProjects = signal<SubProjectListItem[]>([]);
+  protected readonly chartProjectQuery = signal('');
+  protected readonly selectedChartProjectId = signal<number | null>(null);
+  protected readonly executionTimeline = signal<ExecutionTimeline | null>(null);
+  protected readonly timelineLoading = signal(false);
+  protected readonly timelineError = signal<string | null>(null);
+
+  protected readonly hasExecutionTimelineData = computed(() => (this.executionTimeline()?.points.length ?? 0) > 0);
+
+  private readonly chartProjectLabelToId = computed(() => {
+    const map = new Map<string, number>();
+    for (const p of this.chartProjects()) {
+      map.set(this.chartProjectLabel(p), p.id);
+    }
+    return map;
+  });
+
   constructor() {
     effect(() => {
       this.themeService.theme();
       setTimeout(() => this.renderAllCharts(), 0);
     });
     this.loadFinancialYears();
+    this.loadChartProjects();
   }
 
   ngOnDestroy(): void {
@@ -144,6 +172,47 @@ export class Dashboard implements OnDestroy {
     this.selectedYearId.set(id);
     this.financialYearsService.rememberSelectedYearId(id);
     this.load();
+  }
+
+  // ===== مخطط "تطور التنفيذ" =====
+  private loadChartProjects(): void {
+    // بلا financialYearId عمدًا — قائمة البحث تغطي كل المشروعات بصرف النظر عن سنة لوحة التحكم المختارة،
+    // فالمخطط نفسه يعرض عمر المشروع كله لا سنة واحدة.
+    this.projectsService.searchSubProjects({ page: 1, pageSize: 1000 }).subscribe({
+      next: (result) => this.chartProjects.set(result.items),
+      error: () => this.chartProjects.set([]),
+    });
+  }
+
+  protected chartProjectLabel(p: SubProjectListItem): string {
+    return p.code ? `${p.name} (${p.code})` : p.name;
+  }
+
+  /** كل ضغطة حرف أثناء الكتابة — لا تُغيّر المخطط المعروض إلا عندما يطابق النص المكتوب مشروعًا فعليًا. */
+  protected onChartProjectQueryChange(value: string): void {
+    this.chartProjectQuery.set(value);
+    const id = this.chartProjectLabelToId().get(value);
+    if (id != null && id !== this.selectedChartProjectId()) {
+      this.selectedChartProjectId.set(id);
+      this.loadExecutionTimeline(id);
+    }
+  }
+
+  private loadExecutionTimeline(subProjectId: number): void {
+    this.timelineLoading.set(true);
+    this.timelineError.set(null);
+    this.followUpService.getExecutionTimeline(subProjectId).subscribe({
+      next: (timeline) => {
+        this.executionTimeline.set(timeline);
+        this.timelineLoading.set(false);
+        setTimeout(() => this.renderAllCharts(), 0);
+      },
+      error: () => {
+        this.executionTimeline.set(null);
+        this.timelineLoading.set(false);
+        this.timelineError.set('تعذّر تحميل بيانات تنفيذ هذا المشروع');
+      },
+    });
   }
 
   // ===== تنسيق الأرقام =====
@@ -227,6 +296,11 @@ export class Dashboard implements OnDestroy {
     }
     if (this.hasProgressData() && this.progressChartEl) {
       this.renderChart('progress', this.progressChartEl.nativeElement, this.buildProgressOption(data));
+    }
+
+    const timeline = this.executionTimeline();
+    if (timeline && this.hasExecutionTimelineData() && this.executionTimelineChartEl) {
+      this.renderChart('executionTimeline', this.executionTimelineChartEl.nativeElement, this.buildExecutionTimelineOption(timeline));
     }
   }
 
@@ -578,6 +652,91 @@ export class Dashboard implements OnDestroy {
               ),
             },
           })),
+        },
+      ],
+    };
+  }
+
+  /**
+   * نسبة التنفيذ العيني التراكمية مقابل نسبة الصرف التراكمية من قيمة العقد، عبر عمر المشروع كله.
+   * سقفا مرجع أفقيان عبر markLine بدل سلسلتي بيانات إضافيتين: 100% (قيمة العقد) وسقف التجاوز الأقصى.
+   */
+  private buildExecutionTimelineOption(timeline: ExecutionTimeline): EChartsOption {
+    const palette = this.chartPalette();
+    const points = timeline.points;
+    const values = points.flatMap((p) => [p.cumulativeProgressPercent, p.cumulativeSpendPercent]);
+    const ceilings = [timeline.contractValueCeilingPercent, timeline.maxAllowedCeilingPercent].filter(
+      (v): v is number => v != null,
+    );
+    const maxY = Math.max(100, ...ceilings, ...values);
+
+    const ceilingMarkLine = (value: number | null, label: string, color: string) =>
+      value == null
+        ? undefined
+        : {
+            symbol: 'none' as const,
+            silent: true,
+            animation: false,
+            label: { formatter: label, fontFamily: 'Tajawal', fontSize: 11, position: 'insideEndTop' as const },
+            lineStyle: { color, type: 'dashed' as const, width: 1.5 },
+            data: [{ yAxis: value }],
+          };
+
+    return {
+      animation: false,
+      aria: { enabled: true, description: 'مخطط خطي يقارن نسبة التنفيذ العيني بنسبة الصرف من قيمة العقد عبر عمر المشروع' },
+      grid: { top: 24, right: 20, bottom: 30, left: 12, containLabel: true },
+      legend: { top: 0, textStyle: { fontFamily: 'Tajawal' } },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (params: unknown) => {
+          const items = (Array.isArray(params) ? params : [params]) as Array<{
+            dataIndex: number; marker: string; seriesName: string; data: number;
+          }>;
+          const point = points[items[0]?.dataIndex ?? -1];
+          if (!point) return '';
+          const rows = items.map((it) => `${it.marker} ${it.seriesName}: ${this.percent(it.data)}`).join('<br/>');
+          return `${point.label} — ${this.dateOnly(point.date)}<br/>${rows}`;
+        },
+      },
+      xAxis: {
+        type: 'category',
+        data: points.map((p) => this.dateOnly(p.date)),
+        axisLabel: { fontFamily: 'Tajawal', fontSize: 11 },
+      },
+      yAxis: {
+        type: 'value',
+        name: '%',
+        min: 0,
+        max: Math.ceil(maxY * 1.1),
+        nameTextStyle: { fontFamily: 'Tajawal' },
+      },
+      series: [
+        {
+          name: 'نسبة التنفيذ العيني',
+          type: 'line',
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 7,
+          lineStyle: { color: palette[0], width: 3 },
+          itemStyle: { color: palette[0] },
+          data: points.map((p) => p.cumulativeProgressPercent),
+          markLine: ceilingMarkLine(timeline.contractValueCeilingPercent, 'قيمة العقد (100%)', palette[5]),
+        },
+        {
+          name: 'نسبة الصرف من قيمة العقد',
+          type: 'line',
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 7,
+          lineStyle: { color: palette[3], width: 3 },
+          itemStyle: { color: palette[3] },
+          data: points.map((p) => p.cumulativeSpendPercent),
+          markLine: ceilingMarkLine(
+            timeline.maxAllowedCeilingPercent,
+            `السقف الأقصى المسموح (${this.percent(timeline.maxAllowedCeilingPercent)})`,
+            palette[4],
+          ),
         },
       ],
     };

@@ -98,6 +98,13 @@ public class ExecutionStagesController : ControllerBase
         return Ok(await _executionStageService.GetCompletionEligibilityAsync(subProjectId, financialYearId, cancellationToken));
     }
 
+    /// <summary>خط زمني حياة المشروع الكامل (كل السنوات) — لمخطط "تطور التنفيذ" بلوحة التحكم. بلا financialYearId عمدًا.</summary>
+    [HttpGet("api/subprojects/{subProjectId:int}/execution-timeline")]
+    public async Task<ActionResult<ExecutionTimelineDto>> GetExecutionTimeline(int subProjectId, CancellationToken cancellationToken)
+    {
+        return Ok(await _executionStageService.GetExecutionTimelineAsync(subProjectId, cancellationToken));
+    }
+
     [HttpPut("api/subprojects/{subProjectId:int}/complete-execution")]
     [Authorize(Roles = Roles.FollowUpStaff)]
     public async Task<ActionResult<ProjectCompletionEligibilityDto>> CompleteExecution(

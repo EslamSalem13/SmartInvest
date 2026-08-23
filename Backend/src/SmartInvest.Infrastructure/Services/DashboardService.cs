@@ -129,13 +129,18 @@ public class DashboardService : IDashboardService
         var totalSubProjects = subProjects.Count;
         var approvedList = subProjects.Where(s => s.IsApproved).ToList();
         var stalledCount = subProjects.Count(s => s.IsApproved && s.StatusName == "متعثر");
-        var approvedCount = subProjects.Count(s => s.IsApproved && s.StatusName != "متعثر");
         var proposedCount = subProjects.Count(s => !s.IsApproved);
         var completedProjectIds = subProjects
             .Where(IsCompletedInSelectedYear)
             .Select(s => s.SubProjectId)
             .ToHashSet();
         var completedCount = completedProjectIds.Count;
+        // "معتمد" = معتمد فعلًا وقيد إدارته حاليًا — يُستبعد منه المتعثر والمنتهي، بنفس القاعدة
+        // المستخدمة أصلًا في تصنيف statusDistribution أدناه (نفس completedProjectIds، مصدر واحد
+        // لا اثنان قد يتذبذبان بين بعضهما لاحقًا).
+        var approvedCount = subProjects.Count(s => s.IsApproved
+            && s.StatusName != "متعثر"
+            && !completedProjectIds.Contains(s.SubProjectId));
         var inProgressProjectIds = subProjects
             .Where(s => s.IsApproved
                 && s.StatusName != "متعثر"
@@ -181,8 +186,9 @@ public class DashboardService : IDashboardService
             .Where(id => contractValueBySubProject.TryGetValue(id, out var cv) && cv.HasValue)
             .Sum(id => totalCostBySubProject[id] - contractValueBySubProject[id]!.Value);
 
-        var bankFunding = subProjects.Sum(s => s.BankFunding);
-        var selfFunding = subProjects.Sum(s => s.SelfFunding);
+        // المشروعات المعتمدة فقط — تمويل مشروع مقترح لم يُعتمد بعد لا يُحسب ضمن إجماليات التمويل.
+        var bankFunding = approvedList.Sum(s => s.BankFunding);
+        var selfFunding = approvedList.Sum(s => s.SelfFunding);
         var totalFunding = bankFunding + selfFunding;
         // صافٍ من الصرف (دفعات مقدمة + صرف تنفيذ) بنفس حساب BankAvailabilityService.GetForFinancialYearAsync —
         // حتى لا يختلف رقم "إجمالي المتاح" بين لوحة التحكم وشاشة المشروعات لنفس السنة المالية (BankSpendCalculator المشترك).

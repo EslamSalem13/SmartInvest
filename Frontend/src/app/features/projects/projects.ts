@@ -98,8 +98,9 @@ export class Projects {
   protected readonly kpiApproved = computed(() => this.subs().filter((s) => s.isApproved && !this.isStalled(s)).length);
   protected readonly kpiPending = computed(() => this.subs().filter((s) => !s.isApproved).length);
   protected readonly kpiStalled = computed(() => this.subs().filter((s) => this.isStalled(s)).length);
-  protected readonly kpiBank = computed(() => this.subs().reduce((a, s) => a + s.bankFunding, 0));
-  protected readonly kpiSelf = computed(() => this.subs().reduce((a, s) => a + s.selfFunding, 0));
+  // المشروعات المعتمدة فقط — تمويل مشروع مقترح لم يُعتمد بعد لا يُحسب ضمن الإجماليات المالية.
+  protected readonly kpiBank = computed(() => this.subs().filter((s) => s.isApproved).reduce((a, s) => a + s.bankFunding, 0));
+  protected readonly kpiSelf = computed(() => this.subs().filter((s) => s.isApproved).reduce((a, s) => a + s.selfFunding, 0));
   protected readonly kpiTotalFunding = computed(() => this.kpiBank() + this.kpiSelf());
   protected readonly kpiAvailable = computed(() => this.availabilityData()?.totalAvailable ?? 0);
 
@@ -361,8 +362,11 @@ export class Projects {
     if (this.fAgency() && s.executiveAgencyName !== this.fAgency()) return false;
     if (this.fMarkaz() && String(s.markazId) !== this.fMarkaz()) return false;
     if (this.fPriority() && String(s.priorityId) !== this.fPriority()) return false;
-    if (this.fFunding() === 'bank' && s.bankFunding <= 0) return false;
-    if (this.fFunding() === 'self' && s.selfFunding <= 0) return false;
+    // تصنيف حصري: "بنكي فقط"/"ذاتي فقط" يستبعدان أي مبلغ من المصدر الآخر، و"مختلط" يشترط الاثنين معًا —
+    // وليس مجرد "فيه مبلغ من هذا المصدر ولو جزئيًا"، وإلا يطابق "بنكي" شبه كل المشروعات لأن أغلبها له تمويل بنكي جزئي.
+    if (this.fFunding() === 'bank' && !(s.bankFunding > 0 && s.selfFunding <= 0)) return false;
+    if (this.fFunding() === 'self' && !(s.selfFunding > 0 && s.bankFunding <= 0)) return false;
+    if (this.fFunding() === 'mixed' && !(s.bankFunding > 0 && s.selfFunding > 0)) return false;
     return true;
   }
 

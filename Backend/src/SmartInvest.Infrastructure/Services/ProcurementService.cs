@@ -38,7 +38,7 @@ public class ProcurementService : IProcurementService
     // الواجهة العامة
     // ------------------------------------------------------------------
 
-    public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProcurementSubProjectListItemDto>> GetSubProjectsAsync(int? financialYearId = null, int? excludeMemoId = null, CancellationToken cancellationToken = default)
     {
         var items = await _context.SubProjects.AsNoTracking()
             .Where(s => s.IsApproved
@@ -62,16 +62,20 @@ public class ProcurementService : IProcurementService
             })
             .ToListAsync(cancellationToken);
 
-        await AttachActiveMemosAsync(items, cancellationToken);
+        await AttachActiveMemosAsync(items, excludeMemoId, cancellationToken);
         return items;
     }
 
     /// <summary>
-    /// يملأ بيانات المذكرة الفعّالة لكل مشروع عبر استعلام منفصل ثم دمج في الذاكرة.
-    /// ضم جدول الروابط داخل الاستعلام الرئيسي يُضاعف الصفوف (cartesian join) — وهو ما جرى تفاديه سابقًا.
+    /// يملأ بيانات المذكرة الفعّالة لكل مشروع، وتنبيهات التعارض (مكتملة/جارية)، عبر استعلام منفصل
+    /// ثم دمج في الذاكرة. ضم جدول الروابط داخل الاستعلام الرئيسي يُضاعف الصفوف (cartesian join) —
+    /// وهو ما جرى تفاديه سابقًا.
     /// </summary>
+    /// <param name="excludeMemoId">مذكرة تُستبعد من فحص التعارض فقط (المذكرة قيد التعديل نفسها) —
+    /// "الفعّالة" (Active*) تبقى تحسب من كل المذكرات بلا استبعاد، فهي معلومة عرض عامة لا فحص تعارض.</param>
     private async Task AttachActiveMemosAsync(
         List<ProcurementSubProjectListItemDto> items,
+        int? excludeMemoId,
         CancellationToken cancellationToken)
     {
         var subProjectIds = items.Where(i => i.HasPresentationMemo).Select(i => i.SubProjectId).ToList();
@@ -89,11 +93,34 @@ public class ProcurementService : IProcurementService
                 x.PresentationMemo.Title,
                 x.PresentationMemo.CreatedAt,
                 x.PresentationMemo.ContractingMethod,
+                x.PresentationMemo.IsCompleted,
+                x.PresentationMemo.CurrentVersionNumber,
             })
             .ToListAsync(cancellationToken);
 
-        // الفعّالة = الأحدث إنشاءً، وعند التساوي الأعلى Id — ترتيب حتمي لا يتذبذب بين الطلبات
+        // الفعّالة = الأحدث إنشاءً بلا استبعاد، وعند التساوي الأعلى Id — ترتيب حتمي لا يتذبذب بين الطلبات.
+        // معلومة عرض عامة (تظهر في شاشة الإدارة المالية) وليست فحص تعارض، فلا تستبعد المذكرة قيد التعديل.
         var activeBySubProject = links
+            .GroupBy(x => x.SubProjectId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.MemoId).First());
+
+        // فحص التعارض: يستبعد المذكرة قيد التعديل (إن وُجدت) حتى لا يُعتبر المشروع متعارضًا مع
+        // المذكرة التي هو أصلًا جزء منها. بلا قيد سنة مالية عمدًا — تعارض حقيقي بصرف النظر عن سنته.
+        var conflictLinks = excludeMemoId is int excluded
+            ? links.Where(x => x.MemoId != excluded).ToList()
+            : links;
+
+        var completedBySubProject = conflictLinks
+            .Where(x => x.IsCompleted)
+            .GroupBy(x => x.SubProjectId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.MemoId).First());
+
+        var inProgressBySubProject = conflictLinks
+            .Where(x => !x.IsCompleted && x.CurrentVersionNumber > 0)
             .GroupBy(x => x.SubProjectId)
             .ToDictionary(
                 g => g.Key,
@@ -101,6 +128,18 @@ public class ProcurementService : IProcurementService
 
         foreach (var item in items)
         {
+            if (completedBySubProject.TryGetValue(item.SubProjectId, out var completed))
+            {
+                item.HasCompletedMemo = true;
+                item.CompletedMemoTitle = completed.Title;
+            }
+
+            if (inProgressBySubProject.TryGetValue(item.SubProjectId, out var inProgress))
+            {
+                item.HasInProgressMemo = true;
+                item.InProgressMemoTitle = inProgress.Title;
+            }
+
             if (!activeBySubProject.TryGetValue(item.SubProjectId, out var active))
             {
                 continue;
@@ -388,6 +427,23 @@ public class ProcurementService : IProcurementService
         if (dto.ContractorId is int contractorId)
         {
             await UpsertAssignmentAsync(doc, contractorId, dto, cancellationToken);
+        }
+
+        // الشرطان أعلاه (self/bank مقابل تمويل المشروع المخطط) لا يكفيان وحدهما — رقمان خاصان
+        // بهذا المشروع، بينما "المتاح" رصيد بنكي فعلي مشترك بين كل مشروعات السنة المالية. يُتحقق منه
+        // هنا (بعد استقرار doc.ProjectAssignmentId) حتى يُحسب تاريخ الترسية الصحيح لتحديد السنة
+        // المالية المالكة لهذه الدفعة — نفس قاعدة BankSpendCalculator.GetAdvancePaymentsSpentAsync تمامًا.
+        if (dto.AdvancePaymentBankAmount is decimal bankAmount and > 0m)
+        {
+            var owningYearId = await BankSpendCalculator.ResolveAdvancePaymentFinancialYearIdAsync(
+                _context, subProjectId, doc.ProjectAssignmentId, cancellationToken);
+            var availableBank = await BankSpendCalculator.GetTotalAvailableAsync(
+                _context, owningYearId, cancellationToken, excludeContractAwardId: doc.Id);
+            if (bankAmount > availableBank)
+            {
+                throw new BusinessRuleException(
+                    $"الجزء المصروف من التمويل البنكي في الدفعة المقدمة ({bankAmount:N2} ج.م) يتجاوز المتاح الفعلي من البنك لهذه السنة المالية ({availableBank:N2} ج.م)");
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);

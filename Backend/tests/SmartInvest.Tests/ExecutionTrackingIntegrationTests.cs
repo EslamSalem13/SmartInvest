@@ -190,6 +190,95 @@ public class ExecutionTrackingIntegrationTests
         Assert.Contains("يتجاوز الحد المسموح", ex.Message);
     }
 
+    /// <summary>يثبّت أن سقف المشروع الخاص (TotalCost × نسبة التجاوز) لا يكفي وحده لضبط الصرف البنكي —
+    /// هنا الصرف المطلوب (8,000) أقل بكثير من سقف المشروع (110,000) فيمر منه، لكنه يتجاوز "المتاح" الفعلي
+    /// المستلم من البنك لهذه السنة (5,000 فقط) فيجب أن يُرفض رغم ذلك.</summary>
+    [Fact]
+    public async Task Bank_spend_within_project_ceiling_but_above_available_balance_is_blocked()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 10m, contractValue: 90_000m,
+            availableBankAmount: 5_000m);
+        var service = CreateService(context);
+
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(() => service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة تختبر المتاح",
+            StartDate = DateTime.UtcNow.Date,
+            Deadline = DateTime.UtcNow.Date.AddDays(5),
+            BankFundingSpent = 8_000m,
+            BankFundingProofFile = File("bank-proof.pdf"),
+            PhysicalProgressPercent = 0m,
+        }));
+
+        Assert.Contains("المتاح", ex.Message);
+    }
+
+    [Fact]
+    public async Task Bank_spend_within_available_balance_is_accepted()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 10m, contractValue: 90_000m,
+            availableBankAmount: 5_000m);
+        var service = CreateService(context);
+
+        await service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة تختبر المتاح",
+            StartDate = DateTime.UtcNow.Date,
+            Deadline = DateTime.UtcNow.Date.AddDays(5),
+            BankFundingSpent = 5_000m,
+            BankFundingProofFile = File("bank-proof.pdf"),
+            PhysicalProgressPercent = 0m,
+        });
+
+        var stage = await context.ExecutionStages.AsNoTracking().SingleAsync(x => x.SubProjectId == seeded.ProjectId);
+        Assert.Equal(5_000m, stage.BankFundingSpent);
+    }
+
+    /// <summary>يثبّت الاستبعاد الذاتي عند التعديل: مرحلة صرفها البنكي الحالي يستهلك "المتاح" بالكامل بالفعل
+    /// (5,000 من 5,000) — إعادة حفظها بنفس القيمة يجب ألا تُرفض بدعوى أنها تستهلك المتاح مرتين.</summary>
+    [Fact]
+    public async Task Updating_stage_to_same_bank_amount_does_not_double_count_against_available()
+    {
+        await using var context = CreateContext();
+        var seeded = await SeedExecutionWithOverrunAsync(
+            context, bankFunding: 80_000m, selfFunding: 20_000m, overrunPercentage: 10m, contractValue: 90_000m,
+            availableBankAmount: 5_000m);
+        var service = CreateService(context);
+
+        var created = await service.CreateAsync(seeded.ProjectId, new CreateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة تختبر المتاح",
+            StartDate = DateTime.UtcNow.Date,
+            Deadline = DateTime.UtcNow.Date.AddDays(5),
+            BankFundingSpent = 5_000m,
+            BankFundingProofFile = File("bank-proof.pdf"),
+            PhysicalProgressPercent = 0m,
+        });
+
+        // إعادة الحفظ بنفس المبلغ البنكي بالضبط، مع تعديل حقل آخر فقط (الملاحظات) — يجب ألا تُرفض.
+        await service.UpdateAsync(seeded.ProjectId, created.Id, new UpdateExecutionStageDto
+        {
+            FinancialYearId = seeded.YearId,
+            Name = "مرحلة تختبر المتاح",
+            StartDate = DateTime.UtcNow.Date,
+            Deadline = DateTime.UtcNow.Date.AddDays(5),
+            BankFundingSpent = 5_000m,
+            PhysicalProgressPercent = 0m,
+            Notes = "تعديل بلا تغيير في الصرف البنكي",
+        });
+
+        var stage = await context.ExecutionStages.AsNoTracking().SingleAsync(x => x.ExecutionStageId == created.Id);
+        Assert.Equal(5_000m, stage.BankFundingSpent);
+        Assert.Equal("تعديل بلا تغيير في الصرف البنكي", stage.Notes);
+    }
+
     [Fact]
     public async Task Stage_deadline_before_start_date_is_rejected()
     {
@@ -402,9 +491,13 @@ public class ExecutionTrackingIntegrationTests
     }
 
     /// <summary>يبذر مشروعًا فرعيًا مُرسى عليه بقيمة عقد ونسبة تجاوز محددتين، بلا مرحلة تنفيذ مبدئية —
-    /// يُستخدم لاختبار سقف الصرف المسموح به (GetAllowedCeilingAsync) مباشرة عبر CreateAsync.</summary>
+    /// يُستخدم لاختبار سقف الصرف المسموح به (GetAllowedCeilingAsync) مباشرة عبر CreateAsync.
+    /// <paramref name="availableBankAmount"/>: null (الافتراضي) لا يبذر أي إتاحة بنكية — سلوك الاختبارات
+    /// القائمة قبل إضافة تحقق "المتاح" (لا تصطدم به لأنها إما لا تصرف بنكيًا أو تُرفض أصلًا من سقف
+    /// المشروع الخاص قبل الوصول لتحقق المتاح). قيمة محددة تبذر إتاحة بهذا المبلغ بالضبط لاختبار المتاح نفسه.</summary>
     private static async Task<(int ProjectId, int YearId)> SeedExecutionWithOverrunAsync(
-        AppDbContext context, decimal bankFunding, decimal selfFunding, decimal overrunPercentage, decimal contractValue)
+        AppDbContext context, decimal bankFunding, decimal selfFunding, decimal overrunPercentage, decimal contractValue,
+        decimal? availableBankAmount = null)
     {
         var status = new ProjectStatus { StatusName = "قيد التنفيذ" };
         var project = new SubProject
@@ -442,6 +535,15 @@ public class ExecutionTrackingIntegrationTests
             ProjectAssignmentId = assignment.AssignmentId,
             ProjectAssignment = assignment,
         });
+        if (availableBankAmount is decimal amount)
+        {
+            context.BankAvailabilities.Add(new BankAvailability
+            {
+                FinancialYearId = year.FinancialYearId,
+                Amount = amount,
+                ReceivedDate = DateTime.UtcNow.Date,
+            });
+        }
         await context.SaveChangesAsync();
         return (project.SubProjectId, year.FinancialYearId);
     }

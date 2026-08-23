@@ -144,3 +144,41 @@ public sealed record ProjectCompletionFacts(
     decimal AdvancePaymentBankAmount,
     IReadOnlyCollection<ExecutionStageCompletionFact> Stages,
     decimal TotalCost);
+
+/// <summary>
+/// خط زمني حياة المشروع الكامل (كل الدورات المالية مدموجة) لمخطط لوحة التحكم: نسبة التنفيذ العيني
+/// التراكمية مقابل نسبة الصرف التراكمية من قيمة العقد، مع سقفي مرجع. نفس أرقام
+/// <see cref="ProjectCompletionEligibilityDto"/> (MinimumRequired/MaximumAllowed) لكن مُعاد
+/// التعبير عنها كنسب من قيمة العقد بدل مبالغ، لتقع على نفس محور الرسم.
+/// </summary>
+public sealed class ExecutionTimelineDto
+{
+    public int SubProjectId { get; set; }
+    public string SubProjectName { get; set; } = string.Empty;
+    public string? SubProjectCode { get; set; }
+
+    /// <summary>false = لا يوجد ترسية مكتملة بقيمة عقد صحيحة بعد؛ Points فارغة والسقوف null.</summary>
+    public bool HasContractValue { get; set; }
+    public decimal? ContractValue { get; set; }
+    public decimal TotalCost { get; set; }
+    public decimal OverrunPercentage { get; set; }
+
+    /// <summary>= 100 دائمًا عند HasContractValue — سقف قيمة العقد، صريح حتى لا يفترض الفرونت قيمته ضمنيًا.</summary>
+    public decimal? ContractValueCeilingPercent { get; set; }
+
+    /// <summary>= (TotalCost × (1 + OverrunPercentage/100)) ÷ ContractValue × 100.</summary>
+    public decimal? MaxAllowedCeilingPercent { get; set; }
+
+    public List<ExecutionTimelinePointDto> Points { get; set; } = [];
+}
+
+public sealed class ExecutionTimelinePointDto
+{
+    public DateTime Date { get; set; }
+
+    /// <summary>اسم المرحلة، أو "الدفعة المقدمة"، أو "اليوم" لنقطة المرحلة الجارية غير المكتملة.</summary>
+    public string Label { get; set; } = string.Empty;
+
+    public decimal CumulativeProgressPercent { get; set; }
+    public decimal CumulativeSpendPercent { get; set; }
+}

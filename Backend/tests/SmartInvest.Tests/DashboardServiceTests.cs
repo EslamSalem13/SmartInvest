@@ -65,6 +65,95 @@ public class DashboardServiceTests
         Assert.Equal(1, second.Charts.StatusDistribution.Single(x => x.Name == "جاري التنفيذ").Value);
     }
 
+    /// <summary>ApprovedCount يجب ألا يحتسب مشروعًا منتهيًا ضمنه — بنفس قاعدة استبعاد المتعثر
+    /// الموجودة أصلًا، ومن نفس مجموعة completedProjectIds المستخدمة لبطاقة "المكتملة" وشريحة
+    /// "معتمد" في الرسم البياني، لا تعريف مستقل قد يتذبذب عنها لاحقًا.</summary>
+    [Fact]
+    public async Task ApprovedCount_excludes_completed_projects_same_as_stalled()
+    {
+        await using var context = CreateContext();
+        var year = new FinancialYear
+        {
+            Name = "2026/2027",
+            StartDate = new DateTime(2026, 7, 1),
+            EndDate = new DateTime(2027, 6, 30),
+        };
+
+        var completedProject = CreateCompletedProject();
+        var inProgressProject = new SubProject
+        {
+            SubProjectName = "مشروع معتمد قيد التنفيذ",
+            ProjectNature = "مقاولات",
+            IsApproved = true,
+            Status = new ProjectStatus { StatusName = "قيد التنفيذ" },
+            MainProject = completedProject.MainProject,
+            Markaz = new Markaz { MarkazName = "مركز آخر" },
+            Priority = new ProjectPriority { Priority = "متوسطة" },
+            BankFunding = 1000m,
+            SelfFunding = 0m,
+        };
+        context.AddRange(year, completedProject, inProgressProject);
+        await context.SaveChangesAsync();
+
+        var completedCycle = new SubProjectFinancialYear { SubProjectId = completedProject.SubProjectId, FinancialYearId = year.FinancialYearId };
+        var inProgressCycle = new SubProjectFinancialYear { SubProjectId = inProgressProject.SubProjectId, FinancialYearId = year.FinancialYearId };
+        context.AddRange(completedCycle, inProgressCycle);
+        await context.SaveChangesAsync();
+
+        context.ExecutionStages.AddRange(
+            Stage(completedProject, completedCycle, "المرحلة الأولى", 100m, 0m, 0m, isCompleted: true),
+            Stage(completedProject, completedCycle, "التسليم النهائي", 0m, 0m, 0m, isCompleted: true, isFinal: true));
+        await context.SaveChangesAsync();
+
+        var service = new DashboardService(context);
+        var overview = await service.GetOverviewAsync(year.FinancialYearId);
+
+        Assert.Equal(1, overview.ProjectMetrics.CompletedCount);
+        // معتمد = المشروع قيد التنفيذ فقط — المنتهي احتُسب في CompletedCount لا هنا.
+        Assert.Equal(1, overview.ProjectMetrics.ApprovedCount);
+    }
+
+    /// <summary>BankFunding/SelfFunding في بطاقات الإجماليات يجب ألا يحتسبا تمويل مشروع مقترح
+    /// لم يُعتمد بعد — نفس القاعدة المطبَّقة على kpiBank/kpiSelf في شاشة المشروعات.</summary>
+    [Fact]
+    public async Task Financial_totals_exclude_unapproved_subprojects()
+    {
+        await using var context = CreateContext();
+        var year = new FinancialYear
+        {
+            Name = "2026/2027",
+            StartDate = new DateTime(2026, 7, 1),
+            EndDate = new DateTime(2027, 6, 30),
+        };
+        var approvedProject = CreateCompletedProject(); // IsApproved = true, BankFunding 5000 / SelfFunding 3000
+        var proposedProject = new SubProject
+        {
+            SubProjectName = "مشروع مقترح غير معتمد",
+            ProjectNature = "مقاولات",
+            IsApproved = false,
+            Status = new ProjectStatus { StatusName = "جديد" },
+            MainProject = approvedProject.MainProject,
+            Markaz = new Markaz { MarkazName = "مركز ثالث" },
+            Priority = new ProjectPriority { Priority = "منخفضة" },
+            BankFunding = 50_000m,
+            SelfFunding = 20_000m,
+        };
+        context.AddRange(year, approvedProject, proposedProject);
+        await context.SaveChangesAsync();
+
+        context.AddRange(
+            new SubProjectFinancialYear { SubProjectId = approvedProject.SubProjectId, FinancialYearId = year.FinancialYearId },
+            new SubProjectFinancialYear { SubProjectId = proposedProject.SubProjectId, FinancialYearId = year.FinancialYearId });
+        await context.SaveChangesAsync();
+
+        var service = new DashboardService(context);
+        var overview = await service.GetOverviewAsync(year.FinancialYearId);
+
+        // فقط المشروع المعتمد — الـ 50,000/20,000 الخاصة بالمقترح غير المعتمد مُستبعدة تمامًا.
+        Assert.Equal(5000m, overview.FinancialMetrics.BankFunding);
+        Assert.Equal(3000m, overview.FinancialMetrics.SelfFunding);
+    }
+
     /// <summary>يغطي I2: TotalBankAvailabilities في لوحة التحكم يجب أن يوافق TotalAvailable في سجل الإتاحات
     /// (BankAvailabilityServiceTests.TotalAvailable_subtracts_done_advance_payments_and_execution_spend) —
     /// كلاهما يستخدم BankSpendCalculator المشترك الآن، فلا يتذبذب رقم "إجمالي المتاح" بين الشاشتين.</summary>

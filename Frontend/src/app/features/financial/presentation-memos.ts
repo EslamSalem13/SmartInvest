@@ -7,6 +7,7 @@ import { FinancialYearsService } from '../../core/services/financial-years.servi
 import { FinancialYear } from '../../core/models/project.models';
 import {
   CONTRACTING_METHODS,
+  MemoSubProject,
   PresentationMemo,
   PresentationMemoDetail,
   ProcurementSubProjectListItem,
@@ -79,6 +80,24 @@ export class PresentationMemos implements OnInit {
   protected readonly openMemoId = signal<number | null>(null);
   protected readonly memoDetail = signal<PresentationMemoDetail | null>(null);
   protected readonly detailLoading = signal(false);
+
+  /** فئات المشروعات الفرعية المفتوحة داخل المذكرة الحالية — "مقاولات"/"توريدات"، الاثنتان يمكن أن تكونا مفتوحتين معًا. */
+  protected readonly expandedNatures = signal<Set<string>>(new Set());
+  protected readonly PROJECT_NATURES = ['مقاولات', 'توريدات'] as const;
+
+  protected subsByNature(nature: string): MemoSubProject[] {
+    return (this.memoDetail()?.subProjects ?? []).filter((s) => s.projectNature === nature);
+  }
+
+  protected toggleNature(nature: string): void {
+    const current = new Set(this.expandedNatures());
+    if (current.has(nature)) {
+      current.delete(nature);
+    } else {
+      current.add(nature);
+    }
+    this.expandedNatures.set(current);
+  }
 
   /** نموذج إنشاء/تعديل */
   protected readonly showForm = signal(false);
@@ -205,14 +224,14 @@ export class PresentationMemos implements OnInit {
     this.reload();
   }
 
-  private loadSubProjects(onLoaded?: () => void): void {
+  private loadSubProjects(onLoaded?: () => void, excludeMemoId?: number | null): void {
     // بدون سنة مالية محددة يرجع الـ API مشروعات كل السنوات — وهذا يخالف شرط
     // أن تكون مشروعات المذكرة تابعة للسنة المتصفَّحة. نفشل مغلقًا بقائمة فارغة.
     if (this.selectedYearId() == null) {
       this.subProjects.set([]);
       return;
     }
-    this.financial.getSubProjects(this.selectedYearId()).subscribe({
+    this.financial.getSubProjects(this.selectedYearId(), excludeMemoId).subscribe({
       next: (items) => {
         this.subProjects.set(items);
         onLoaded?.();
@@ -246,6 +265,7 @@ export class PresentationMemos implements OnInit {
       return;
     }
     this.openMemoId.set(memo.id);
+    this.expandedNatures.set(new Set());
     this.closeUpload();
     this.loadDetail(memo.id);
   }
@@ -275,6 +295,8 @@ export class PresentationMemos implements OnInit {
     this.formError.set(null);
     this.pickerSearch.set('');
     this.showForm.set(true);
+    // إعادة تحميل بلا استبعاد — القائمة قد تكون محمَّلة باستبعاد مذكرة من جلسة تعديل سابقة.
+    this.loadSubProjects();
   }
 
   protected openEdit(memo: PresentationMemo): void {
@@ -285,6 +307,8 @@ export class PresentationMemos implements OnInit {
     this.formError.set(null);
     this.pickerSearch.set('');
     this.showForm.set(true);
+    // استبعاد هذه المذكرة نفسها من فحص التعارض — مشروعاتها الحالية لا تتعارض مع نفسها.
+    this.loadSubProjects(undefined, memo.id);
   }
 
   protected closeForm(): void {

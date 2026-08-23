@@ -86,11 +86,31 @@
               } @else if (memoDetail()) {
                 <div class="memo-subs">
                   <span class="lbl">المشروعات المغطاة:</span>
-                  @for (sub of memoDetail()!.subProjects; track sub.subProjectId) {
-                    <a class="memo-chip" [routerLink]="['/app/financial', sub.subProjectId]">
-                      {{ sub.subProjectName }}
-                      @if (sub.subProjectCode) { <span class="tnum">({{ sub.subProjectCode }})</span> }
-                    </a>
+                  <div class="nature-tabs">
+                    @for (nature of PROJECT_NATURES; track nature) {
+                      <button
+                        type="button"
+                        class="si-btn sm nature-tab"
+                        [class.on]="expandedNatures().has(nature)"
+                        (click)="toggleNature(nature)"
+                      >
+                        {{ nature }} <span class="tnum">({{ subsByNature(nature).length }})</span>
+                      </button>
+                    }
+                  </div>
+                  @for (nature of PROJECT_NATURES; track nature) {
+                    @if (expandedNatures().has(nature)) {
+                      <div class="nature-subs">
+                        @for (sub of subsByNature(nature); track sub.subProjectId) {
+                          <a class="memo-chip" [routerLink]="['/app/financial', sub.subProjectId]">
+                            {{ sub.subProjectName }}
+                            @if (sub.subProjectCode) { <span class="tnum">({{ sub.subProjectCode }})</span> }
+                          </a>
+                        } @empty {
+                          <span class="empty-nature">لا توجد مشروعات {{ nature }} في هذه المذكرة.</span>
+                        }
+                      </div>
+                    }
                   }
                 </div>
 
@@ -316,7 +336,11 @@
               </div>
               <div class="check-list">
                 @for (sub of filteredSubProjects(); track sub.subProjectId) {
-                  <label class="check-item">
+                  <label
+                    class="check-item"
+                    [class.conflict-completed]="sub.hasCompletedMemo"
+                    [class.conflict-active]="!sub.hasCompletedMemo && sub.hasInProgressMemo"
+                  >
                     <input
                       type="checkbox"
                       [checked]="isChecked(sub.subProjectId)"
@@ -324,6 +348,11 @@
                     />
                     <span>{{ sub.subProjectName }}</span>
                     @if (sub.subProjectCode) { <span class="tnum muted">({{ sub.subProjectCode }})</span> }
+                    @if (sub.hasCompletedMemo) {
+                      <span class="conflict-note">— مغطى بالفعل بمذكرة عرض مكتملة: {{ sub.completedMemoTitle }}</span>
+                    } @else if (sub.hasInProgressMemo) {
+                      <span class="conflict-note">— له مذكرة عرض جارية بالفعل: {{ sub.inProgressMemoTitle }}</span>
+                    }
                   </label>
                 } @empty {
                   @if (pickerSearch().trim()) {

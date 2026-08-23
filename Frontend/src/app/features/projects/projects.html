@@ -127,7 +127,7 @@
       </div>
       <div class="fld"><label>نوع التمويل</label>
         <select [ngModel]="fFunding()" (ngModelChange)="fFunding.set($event)">
-          <option value="">الكل</option><option value="bank">تمويل بنكي</option><option value="self">تمويل ذاتي</option>
+          <option value="">الكل</option><option value="bank">بنكي فقط</option><option value="self">ذاتي فقط</option><option value="mixed">مختلط (بنكي وذاتي)</option>
         </select>
       </div>
       <div class="fld end"><button class="si-btn" (click)="clearFilters()">مسح الكل</button></div>

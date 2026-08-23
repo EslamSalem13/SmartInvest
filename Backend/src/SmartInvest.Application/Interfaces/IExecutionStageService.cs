@@ -29,6 +29,12 @@ public interface IExecutionStageService
     Task<ProjectCompletionEligibilityDto> GetCompletionEligibilityAsync(
         int subProjectId, int financialYearId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// خط زمني حياة المشروع الكامل عبر كل الدورات المالية (لمخطط لوحة التحكم) — بلا financialYearId
+    /// عمدًا، فالمخطط لا يتقيّد بالسنة المختارة في لوحة التحكم.
+    /// </summary>
+    Task<ExecutionTimelineDto> GetExecutionTimelineAsync(int subProjectId, CancellationToken cancellationToken = default);
+
     Task<ProjectCompletionEligibilityDto> CompleteExecutionAsync(
         int subProjectId, int financialYearId, CancellationToken cancellationToken = default);
 

@@ -5,6 +5,9 @@ public class MemoSubProjectDto
     public int SubProjectId { get; set; }
     public string SubProjectName { get; set; } = string.Empty;
     public string? SubProjectCode { get; set; }
+
+    /// <summary>"مقاولات" أو "توريدات" — تصنيف واجهة قائمة مذكرة العرض حسب نوع المشروع.</summary>
+    public string? ProjectNature { get; set; }
 }
 
 public class PresentationMemoDto

@@ -53,9 +53,15 @@ export class FollowUpList implements OnInit {
   });
 
   protected readonly kpiTotal = computed(() => this.items().length);
-  protected readonly kpiStalled = computed(() => this.items().filter((x) => x.isStalled).length);
+  /** قيد التنفيذ = غير متعثر وغير مكتمل — الباقي بعد استبعاد الحالتين الأخريين من الإجمالي. */
+  protected readonly kpiInProgress = computed(
+    () => this.items().filter((x) => !x.isStalled && !x.completionEligibility.isProjectCompleted).length,
+  );
   protected readonly kpiOverdue = computed(
     () => this.items().filter((x) => x.nextDeadline && new Date(x.nextDeadline) < new Date()).length,
+  );
+  protected readonly kpiCompleted = computed(
+    () => this.items().filter((x) => x.completionEligibility.isProjectCompleted).length,
   );
 
   protected readonly selectedItem = signal<FollowUpListItem | null>(null);

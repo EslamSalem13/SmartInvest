@@ -223,6 +223,42 @@
           <div class="chart-empty">لا توجد مراحل تنفيذ في السنة المختارة</div>
         }
       </div>
+
+      <div class="chart-card wide">
+        <div class="chart-card-head">
+          <h3>تطور التنفيذ لمشروع محدد</h3>
+          <input
+            class="chart-search"
+            list="chart-project-options"
+            [ngModel]="chartProjectQuery()"
+            (ngModelChange)="onChartProjectQueryChange($event)"
+            placeholder="ابحث بكود المشروع أو الاسم…"
+            aria-label="اختيار مشروع لعرض تطور تنفيذه"
+          />
+          <datalist id="chart-project-options">
+            @for (p of chartProjects(); track p.id) { <option [value]="chartProjectLabel(p)"></option> }
+          </datalist>
+        </div>
+        <p class="chart-card-note">
+          يعرض عمر المشروع كله بكل سنواته المالية — وليس السنة المختارة أعلى الصفحة فقط. لمطابقته
+          مع "متابعة المشروعات" اختر سنة كل نقطة بالتاريخ الظاهر عليها هناك.
+        </p>
+        @if (selectedChartProjectId() == null) {
+          <div class="chart-empty">ابحث عن مشروع لعرض تطور نسبة تنفيذه ونسبة الصرف منه عبر الزمن.</div>
+        } @else if (timelineLoading()) {
+          <div class="chart-empty"><span class="spinner"></span> جاري التحميل…</div>
+        } @else if (timelineError()) {
+          <div class="chart-empty">{{ timelineError() }}</div>
+        } @else if (executionTimeline(); as timeline) {
+          @if (!timeline.hasContractValue) {
+            <div class="chart-empty">لا توجد قيمة عقد مسجلة لهذا المشروع بعد — لا يمكن حساب نسبة الصرف بلا قيمة عقد.</div>
+          } @else if (!hasExecutionTimelineData()) {
+            <div class="chart-empty">لا توجد مراحل تنفيذ مسجلة لهذا المشروع بعد.</div>
+          } @else {
+            <div #executionTimelineChart class="chart-box tall"></div>
+          }
+        }
+      </div>
     </div>
 
     <!-- الأقسام التفصيلية -->
