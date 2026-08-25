@@ -208,7 +208,13 @@ type Step = 'upload' | 'reconcile' | 'confirm' | 'result';
             @if (step() === 'result' && result(); as r) {
               <p>تم الاستيراد بنجاح — الخطة: {{ r.planName }} ({{ r.planStatus }})</p>
               @if (r.mode === 'Suggested') {
-                <p>مشروعات رئيسية: {{ r.mainProjectsCreated }} — مشروعات فرعية: {{ r.subProjectsCreated }}</p>
+                <p>مشروعات رئيسية جديدة: {{ r.mainProjectsCreated }} — مشروعات فرعية جديدة: {{ r.subProjectsCreated }}</p>
+                @if (r.mainProjectsAlreadyExisted > 0) {
+                  <p class="hint">{{ r.mainProjectsAlreadyExisted }} مشروع رئيسي كان موجودًا بالفعل بنفس الاسم — تم استخدامه بدل إنشاء نسخة جديدة.</p>
+                }
+                @if (r.subProjectsAlreadyLinked > 0) {
+                  <p class="hint">{{ r.subProjectsAlreadyLinked }} مشروع فرعي كان موجودًا بالفعل ومرتبطًا بهذه السنة المالية — تم تخطيه دون تكرار.</p>
+                }
               } @else {
                 <p>معتمدة: {{ r.subProjectsApproved }} — جديدة ومعتمدة: {{ r.subProjectsCreatedAndApproved }}</p>
                 @if (r.subProjectsAlreadyLinked > 0) {

@@ -553,6 +553,8 @@ export interface ImportRowFailure {
 export interface ImportCommitResult {
   mode: 'Suggested' | 'Approved';
   mainProjectsCreated: number;
+  /** مشروع رئيسي بنفس الاسم كان موجودًا بالفعل فأُعيد استخدامه — يوضّح سبب mainProjectsCreated=0. */
+  mainProjectsAlreadyExisted: number;
   subProjectsCreated: number;
   subProjectsApproved: number;
   subProjectsCreatedAndApproved: number;
