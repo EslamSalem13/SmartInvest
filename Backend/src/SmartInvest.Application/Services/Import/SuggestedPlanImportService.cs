@@ -256,6 +256,12 @@ public class SuggestedPlanImportService
                     mainProjectCreatedHere = true;
                     result.MainProjectsCreated++;
                 }
+                else
+                {
+                    // نفس فكرة SubProjectsAlreadyLinked أدناه — بدونها MainProjectsCreated قد يكون
+                    // صفرًا بلا أي تفسير في واجهة النتيجة إذا كان كل شيء في الملف موجودًا بالفعل.
+                    result.MainProjectsAlreadyExisted++;
+                }
             }
             catch (Exception ex)
             {

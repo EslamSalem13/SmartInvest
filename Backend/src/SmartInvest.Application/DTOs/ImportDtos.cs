@@ -135,6 +135,12 @@ public class ImportCommitResultDto
 {
     public string Mode { get; set; } = string.Empty;
     public int MainProjectsCreated { get; set; }
+
+    /// <summary>مشروع رئيسي بنفس الاسم كان موجودًا بالفعل فأُعيد استخدامه بدل إنشاء نسخة جديدة —
+    /// نفس فكرة SubProjectsAlreadyLinked أدناه لكن للمشروع الرئيسي. يوضّح للمستخدم لماذا قد يكون
+    /// MainProjectsCreated صفرًا رغم نجاح الاستيراد (كل شيء كان موجودًا بالفعل).</summary>
+    public int MainProjectsAlreadyExisted { get; set; }
+
     public int SubProjectsCreated { get; set; }
     public int SubProjectsApproved { get; set; }
     public int SubProjectsCreatedAndApproved { get; set; }
